@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using JaysAi.Finale.AI;
 
-namespace JaysAi.Core
+namespace JaysAi.finale.Core    
 {
     public class ModelLoader
     {

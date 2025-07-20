@@ -1,45 +1,49 @@
-﻿//monarch v2.1
+﻿//monarch v2.1 – YOLOv8 Model Loader
 using System;
 using System.IO;
-using Microsoft.ML.OnnxRuntime;
-using Microsoft.ML.OnnxRuntime.Tensors;
+using JaysAi.Finale.Utility;
+using OpenCvSharp.Dnn;
 
 namespace JaysAi.Finale.AI
 {
     public class ModelLoader
     {
-        public InferenceSession Session { get; private set; }
-        public string ModelPath { get; private set; }
+        private Net _net;
+        private string _weightsPath;
 
-        public ModelLoader(string modelPath)
+        public bool IsLoaded => _net != null && !_net.Empty();
+
+        public ModelLoader(string weightsFileName = "yolov8.onnx")
         {
-            if (!File.Exists(modelPath))
-                throw new FileNotFoundException($"Model file not found: {modelPath}");
-
-            ModelPath = modelPath;
-
-            var options = new SessionOptions();
-            options.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_WARNING;
-
-            // Enable CPU by default, can be upgraded later for GPU
-            options.AppendExecutionProvider_CPU();
-
-            Session = new InferenceSession(ModelPath, options);
+            _weightsPath = Path.Combine(Directory.GetCurrentDirectory(), "Assets", "Models", weightsFileName);
         }
 
-        public IDisposableReadOnlyCollection<DisposableNamedOnnxValue> RunInference(DenseTensor<float> input)
+        public bool Load()
         {
-            var inputs = new List<NamedOnnxValue>
+            if (!File.Exists(_weightsPath))
             {
-                NamedOnnxValue.CreateFromTensor("images", input)
-            };
+                Logger.Log($"Model file not found: {_weightsPath}", LogLevel.Error);
+                return false;
+            }
 
-            return Session.Run(inputs);
+            try
+            {
+                _net = CvDnn.ReadNetFromONNX(_weightsPath);
+                _net.SetPreferableBackend(Backend.OPENCV);
+                _net.SetPreferableTarget(Target.CPU); // Optionally change to Target.CUDA if GPU is available
+                Logger.Log("YOLOv8 model successfully loaded.", LogLevel.Info);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Failed to load model: {ex.Message}", LogLevel.Error);
+                return false;
+            }
         }
 
-        public void Dispose()
+        public Net GetNetwork()
         {
-            Session?.Dispose();
+            return _net;
         }
     }
 }

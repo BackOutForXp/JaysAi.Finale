@@ -1,4 +1,4 @@
-﻿//monarch v2.1
+﻿//monarch v2.1 – Real-time controller state model
 namespace JaysAi.Finale.Input
 {
     public class ControllerState
@@ -8,32 +8,25 @@ namespace JaysAi.Finale.Input
         public float RightStickX { get; set; }
         public float RightStickY { get; set; }
 
-        public float LeftTrigger { get; set; }
-        public float RightTrigger { get; set; }
-
         public bool A { get; set; }
         public bool B { get; set; }
         public bool X { get; set; }
         public bool Y { get; set; }
 
-        public bool LB { get; set; }
-        public bool RB { get; set; }
+        public bool DpadUp { get; set; }
+        public bool DpadDown { get; set; }
+        public bool DpadLeft { get; set; }
+        public bool DpadRight { get; set; }
 
-        public bool DPadUp { get; set; }
-        public bool DPadDown { get; set; }
-        public bool DPadLeft { get; set; }
-        public bool DPadRight { get; set; }
+        public bool LeftBumper { get; set; }
+        public bool RightBumper { get; set; }
+
+        public bool LeftTriggerPressed { get; set; }
+        public bool RightTriggerPressed { get; set; }
 
         public bool Start { get; set; }
         public bool Select { get; set; }
 
-        public void Reset()
-        {
-            LeftStickX = LeftStickY = RightStickX = RightStickY = 0f;
-            LeftTrigger = RightTrigger = 0f;
-            A = B = X = Y = LB = RB = false;
-            DPadUp = DPadDown = DPadLeft = DPadRight = false;
-            Start = Select = false;
-        }
+        public bool IsConnected { get; set; }
     }
 }

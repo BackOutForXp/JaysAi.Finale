@@ -1,44 +1,23 @@
-﻿// Monarch v1.0 – DetectedObject.cs
-// ✅ Monarch Fix Checklist
-// [x] Includes velocity, center, and team checks
-// [x] Safe structure for YOLO/ESP fusion
-// [x] Designed for modular upgrades
-
-using OpenCvSharp;
-using System;
+﻿//monarch v2.1 – Fully Refactored & Synced
 
 namespace JaysAi.Finale.Modules
 {
     public class DetectedObject
     {
-        public Rect BoundingBox { get; set; }
-        public Point2f Center2D => new(
-            BoundingBox.X + BoundingBox.Width / 2f,
-            BoundingBox.Y + BoundingBox.Height / 2f);
+        public string Name { get; set; }
+        public bool IsEnemy { get; set; }
+        public bool IsVisible { get; set; }
 
-        public Point2f Velocity { get; set; } = new(0, 0);
-        public DateTime LastSeenTime { get; set; } = DateTime.Now;
-        public bool IsVisible { get; set; } = true;
+        public float ScreenX { get; set; }
+        public float ScreenY { get; set; }
 
-        public int ObjectID { get; set; } = -1;
-        public string Label { get; set; } = "";
-        public float Confidence { get; set; } = 0.0f;
+        public float ScreenDistance => CalculateScreenDistance(ScreenX, ScreenY);
 
-        public bool IsEnemy { get; set; } = true;
-        public bool IsTracked { get; set; } = false;
-
-        public void UpdateVelocity(Point2f previousCenter)
+        private float CalculateScreenDistance(float x, float y)
         {
-            var currentTime = DateTime.Now;
-            var timeDiff = (float)(currentTime - LastSeenTime).TotalSeconds;
-            if (timeDiff > 0)
-            {
-                Velocity = new Point2f(
-                    (Center2D.X - previousCenter.X) / timeDiff,
-                    (Center2D.Y - previousCenter.Y) / timeDiff
-                );
-            }
-            LastSeenTime = currentTime;
+            float centerX = 960; // assume 1920x1080 for now (replace with dynamic center)
+            float centerY = 540;
+            return (float)System.Math.Sqrt(System.Math.Pow(centerX - x, 2) + System.Math.Pow(centerY - y, 2));
         }
     }
 }

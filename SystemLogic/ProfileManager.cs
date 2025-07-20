@@ -1,79 +1,90 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿//monarch v2.1 – Profile Manager (Multi-Profile System)
+using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Utility;
+using System.Collections.Generic;
 using System.IO;
-using System.Xml;
+using System.Text.Json;
 
-namespace JaysAi.Finale.SystemLogic
+namespace JaysAi.Finale.Utility
 {
     public static class ProfileManager
     {
-        private static readonly string ProfileDirectory = "Profiles";
+        private static readonly string ProfileFolder = "Profiles";
 
-        public static void SaveProfile(string name, ConfigData config)
+        static ProfileManager()
         {
-            try
-            {
-                Directory.CreateDirectory(ProfileDirectory);
-                string path = Path.Combine(ProfileDirectory, $"{name}.json");
-                string json = JsonConvert.SerializeObject(config, Formatting.Indented);
-                File.WriteAllText(path, json);
-                Console.WriteLine($"[ProfileManager] Saved profile: {name}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ProfileManager] Error saving profile {name}: {ex.Message}");
-            }
+            if (!Directory.Exists(ProfileFolder))
+                Directory.CreateDirectory(ProfileFolder);
         }
 
-        public static ConfigData? LoadProfile(string name)
+        public static void SaveProfile(string profileName)
         {
-            try
+            var config = new FeatureSettings
             {
-                string path = Path.Combine(ProfileDirectory, $"{name}.json");
-                if (!File.Exists(path))
-                {
-                    Console.WriteLine($"[ProfileManager] Profile '{name}' not found.");
-                    return null;
-                }
+                EspEnabled = FeatureToggle.EspEnabled,
+                BoxEsp = FeatureToggle.BoxEsp,
+                NameEsp = FeatureToggle.NameEsp,
+                AimbotEnabled = FeatureToggle.AimbotEnabled,
+                AimFov = FeatureToggle.AimFov,
+                AimSmoothness = FeatureToggle.AimSmoothness,
+                RecoilControlEnabled = FeatureToggle.RecoilControlEnabled,
+                RecoilSmoothness = FeatureToggle.RecoilSmoothness,
+                SnapAssistEnabled = FeatureToggle.SnapAssistEnabled,
+                SnapStrength = FeatureToggle.SnapStrength,
+                StealthMode = FeatureToggle.StealthMode,
+                LoaderActive = FeatureToggle.LoaderActive
+            };
 
-                string json = File.ReadAllText(path);
-                var config = JsonConvert.DeserializeObject<ConfigData>(json);
-                Console.WriteLine($"[ProfileManager] Loaded profile: {name}");
-                return config;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ProfileManager] Error loading profile {name}: {ex.Message}");
-                return null;
-            }
+            var path = Path.Combine(ProfileFolder, $"{profileName}.json");
+            var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(path, json);
         }
 
-        public static void DeleteProfile(string name)
+        public static void LoadProfile(string profileName)
         {
-            string path = Path.Combine(ProfileDirectory, $"{name}.json");
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-                Console.WriteLine($"[ProfileManager] Deleted profile: {name}");
-            }
+            var path = Path.Combine(ProfileFolder, $"{profileName}.json");
+            if (!File.Exists(path)) return;
+
+            var json = File.ReadAllText(path);
+            var config = JsonSerializer.Deserialize<FeatureSettings>(json);
+
+            FeatureToggle.EspEnabled = config.EspEnabled;
+            FeatureToggle.BoxEsp = config.BoxEsp;
+            FeatureToggle.NameEsp = config.NameEsp;
+            FeatureToggle.AimbotEnabled = config.AimbotEnabled;
+            FeatureToggle.AimFov = config.AimFov;
+            FeatureToggle.AimSmoothness = config.AimSmoothness;
+            FeatureToggle.RecoilControlEnabled = config.RecoilControlEnabled;
+            FeatureToggle.RecoilSmoothness = config.RecoilSmoothness;
+            FeatureToggle.SnapAssistEnabled = config.SnapAssistEnabled;
+            FeatureToggle.SnapStrength = config.SnapStrength;
+            FeatureToggle.StealthMode = config.StealthMode;
+            FeatureToggle.LoaderActive = config.LoaderActive;
         }
 
-        public static string[] ListProfiles()
+        public static List<string> ListProfiles()
         {
-            Directory.CreateDirectory(ProfileDirectory);
-            var files = Directory.GetFiles(ProfileDirectory, "*.json");
-            for (int i = 0; i < files.Length; i++)
-                files[i] = Path.GetFileNameWithoutExtension(files[i]);
+            var files = Directory.GetFiles(ProfileFolder, "*.json");
+            var profileNames = new List<string>();
+            foreach (var file in files)
+                profileNames.Add(Path.GetFileNameWithoutExtension(file));
+            return profileNames;
+        }
 
-            return files;
+        private class FeatureSettings
+        {
+            public bool EspEnabled { get; set; }
+            public bool BoxEsp { get; set; }
+            public bool NameEsp { get; set; }
+            public bool AimbotEnabled { get; set; }
+            public float AimFov { get; set; }
+            public float AimSmoothness { get; set; }
+            public bool RecoilControlEnabled { get; set; }
+            public float RecoilSmoothness { get; set; }
+            public bool SnapAssistEnabled { get; set; }
+            public float SnapStrength { get; set; }
+            public bool StealthMode { get; set; }
+            public bool LoaderActive { get; set; }
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ To finalize this module:
-// - [ ] Add Profile dropdown to LoaderGUI.xaml (Owner/Elite only?)
-// - [x] Reads and writes /Profiles/*.json
-// - [ ] Sync with ConfigManager so loader can apply profile live
-// - [ ] Future: Add import/export + profile sharing
-// ===================================================================

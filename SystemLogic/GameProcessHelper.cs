@@ -1,43 +1,41 @@
-﻿// File: System\GameProcessHelper.cs
+﻿//monarch v2.1 – Process checker and handle grabber
 using System;
 using System.Diagnostics;
-using System.Linq;
+using System.Runtime.InteropServices;
 
-namespace JaysAi.Finale.SystemLogic
+namespace JaysAi.Finale.Utility
 {
     public static class GameProcessHelper
     {
-        private static readonly string[] SupportedProcesses = { "cod", "valorant", "csgo", "apex" };
-        private static Process? _attachedProcess;
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
 
-        public static Process? AttachedProcess => _attachedProcess;
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
-        public static bool TryAttachToGame()
+        public static Process GetTargetProcess(string processName)
         {
-            foreach (string name in SupportedProcesses)
+            foreach (var process in Process.GetProcessesByName(processName))
             {
-                var process = Process.GetProcessesByName(name).FirstOrDefault();
-                if (process != null && !process.HasExited)
-                {
-                    _attachedProcess = process;
-                    return true;
-                }
+                if (!process.HasExited)
+                    return process;
             }
-
-            _attachedProcess = null;
-            return false;
+            return null;
         }
 
-        public static nint GetWindowHandle()
+        public static IntPtr GetWindowHandle(string processName)
         {
-            return _attachedProcess?.MainWindowHandle ?? nint.Zero;
+            var process = GetTargetProcess(processName);
+            return process?.MainWindowHandle ?? IntPtr.Zero;
         }
 
-        public static bool IsAttached => _attachedProcess != null && !_attachedProcess.HasExited;
-
-        public static void Detach()
+        public static bool IsTargetProcessActive(string processName)
         {
-            _attachedProcess = null;
+            var foregroundWindow = GetForegroundWindow();
+            GetWindowThreadProcessId(foregroundWindow, out uint processId);
+
+            var target = GetTargetProcess(processName);
+            return target != null && target.Id == processId;
         }
     }
 }

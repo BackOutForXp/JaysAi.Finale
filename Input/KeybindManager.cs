@@ -1,58 +1,45 @@
-﻿// File: Input/KeybindManager.cs
-using System;
+﻿//monarch v2.1 – Key Bind Manager
 using System.Collections.Generic;
+using System.Windows.Input;
 
-namespace JaysAi.Finale.Input
+namespace JaysAi.Finale.Utility
 {
-    public class KeybindManager
+    public static class KeyBindManager
     {
-        private readonly Dictionary<int, Action> _bindings = new();
-        private readonly HashSet<int> _cooldown = new();
-
-        public KeybindManager()
+        // Default Keybinds (can be expanded later)
+        private static readonly Dictionary<string, Key> keyBindings = new()
         {
-            InputLogger.OnKeyPressed += HandleKeyPress;
+            { "ToggleESP", Key.F1 },
+            { "ToggleAimbot", Key.F2 },
+            { "ToggleSnapAssist", Key.F3 },
+            { "ToggleStealthMode", Key.F4 },
+            { "ReloadConfig", Key.F5 },
+            { "Panic", Key.Delete }
+        };
+
+        public static bool IsKeyPressed(string action)
+        {
+            if (!keyBindings.ContainsKey(action)) return false;
+            return Keyboard.IsKeyDown(keyBindings[action]);
         }
 
-        public void Bind(int keyCode, Action callback)
+        public static Key GetKeyBind(string action)
         {
-            _bindings[keyCode] = callback;
+            return keyBindings.ContainsKey(action) ? keyBindings[action] : Key.None;
         }
 
-        public void Unbind(int keyCode)
+        public static void SetKeyBind(string action, Key newKey)
         {
-            if (_bindings.ContainsKey(keyCode))
-                _bindings.Remove(keyCode);
+            if (keyBindings.ContainsKey(action))
+                keyBindings[action] = newKey;
+            else
+                keyBindings.Add(action, newKey);
         }
 
-        private void HandleKeyPress(int keyCode)
+        public static Dictionary<string, Key> GetAllBindings()
         {
-            if (_bindings.TryGetValue(keyCode, out var callback))
-            {
-                if (!_cooldown.Contains(keyCode))
-                {
-                    callback.Invoke();
-                    _cooldown.Add(keyCode);
-                }
-            }
-        }
-
-        public void Update()
-        {
-            // Clear cooldown on keys no longer pressed
-            foreach (var key in new List<int>(_cooldown))
-            {
-                if (!InputLogger.IsKeyDown(key))
-                    _cooldown.Remove(key);
-            }
+            return new Dictionary<string, Key>(keyBindings);
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Clean keybind logic with no dependency on Forms
-// ✅ Supports multiple hotkey bindings
-// ✅ Works with InputLogger to monitor key presses
-// TODO: Add support for modifier keys (Ctrl/Alt/Shift)
-// TODO: Add string-based key mapping support (e.g., "F1", "A", etc.)
-// ===================================================================
+ 

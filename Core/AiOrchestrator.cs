@@ -1,12 +1,10 @@
 ﻿//monarch v2.0
-using System.Collections.Generic;
 using JaysAi.AI;
-using JaysAi.SystemLogic;
 using JaysAi.Finale.AI;
 using JaysAi.Finale.Input;
 using JaysAi.Finale.Visuals;
 
-namespace JaysAi.Core
+namespace JaysAi.finale.Core
 {
     public class AiOrchestrator
     {

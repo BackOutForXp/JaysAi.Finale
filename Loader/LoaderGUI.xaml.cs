@@ -1,55 +1,61 @@
-﻿// File: Loader/LoaderGUI.xaml.cs
-using JaysAi.Finale.Settings;
-using JaysAi.Finale.UI;
+﻿//monarch v2.1 – Loader GUI logic and live toggle handlers
 using System.Windows;
-using System.Windows.Controls;
+using System.Windows.Input;
+using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Input;
 
 namespace JaysAi.Finale.Loader
 {
     public partial class LoaderGUI : Window
     {
-        private readonly AppSettings _settings;
-
         public LoaderGUI()
         {
             InitializeComponent();
-            _settings = SettingsManager<AppSettings>.Settings;
-
-            InitializeCheckboxes();
-            AttachCheckboxEvents();
+            UpdateLabels();
+            LoaderState.MarkStarted();
         }
 
-        private void InitializeCheckboxes()
+        private void ToggleEsp_Click(object sender, RoutedEventArgs e)
         {
-            EspCheckbox.IsChecked = _settings.EnableESP;
-            AimAssistCheckbox.IsChecked = _settings.EnableAimAssist;
-            StickAssistCheckbox.IsChecked = _settings.EnableStickAssist;
-            StealthCheckbox.IsChecked = _settings.EnableStealth;
-            BoneEspCheckbox.IsChecked = _settings.EnableBoneESP;
+            FeatureToggle.EspEnabled = !FeatureToggle.EspEnabled;
+            UpdateLabels();
         }
 
-        private void AttachCheckboxEvents()
+        private void ToggleAimAssist_Click(object sender, RoutedEventArgs e)
         {
-            EspCheckbox.Checked += (s, e) => UpdateSetting(x => x.EnableESP = true);
-            EspCheckbox.Unchecked += (s, e) => UpdateSetting(x => x.EnableESP = false);
-
-            AimAssistCheckbox.Checked += (s, e) => UpdateSetting(x => x.EnableAimAssist = true);
-            AimAssistCheckbox.Unchecked += (s, e) => UpdateSetting(x => x.EnableAimAssist = false);
-
-            StickAssistCheckbox.Checked += (s, e) => UpdateSetting(x => x.EnableStickAssist = true);
-            StickAssistCheckbox.Unchecked += (s, e) => UpdateSetting(x => x.EnableStickAssist = false);
-
-            StealthCheckbox.Checked += (s, e) => UpdateSetting(x => x.EnableStealth = true);
-            StealthCheckbox.Unchecked += (s, e) => UpdateSetting(x => x.EnableStealth = false);
-
-            BoneEspCheckbox.Checked += (s, e) => UpdateSetting(x => x.EnableBoneESP = true);
-            BoneEspCheckbox.Unchecked += (s, e) => UpdateSetting(x => x.EnableBoneESP = false);
+            FeatureToggle.AimAssistEnabled = !FeatureToggle.AimAssistEnabled;
+            UpdateLabels();
         }
 
-        private void UpdateSetting(System.Action<AppSettings> update)
+        private void ToggleSnap_Click(object sender, RoutedEventArgs e)
         {
-            update(_settings);
-            SettingsManager<AppSettings>.Save();
+            FeatureToggle.SnapEnabled = !FeatureToggle.SnapEnabled;
+            UpdateLabels();
+        }
+
+        private void ToggleOverlay_Click(object sender, RoutedEventArgs e)
+        {
+            FeatureToggle.VisualsOverlayEnabled = !FeatureToggle.VisualsOverlayEnabled;
+            UpdateLabels();
+        }
+
+        private void ExitButton_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        private void UpdateLabels()
+        {
+            EspStatusLabel.Content = $"ESP: {(FeatureToggle.EspEnabled ? "ON" : "OFF")}";
+            AimStatusLabel.Content = $"AIM: {(FeatureToggle.AimAssistEnabled ? "ON" : "OFF")}";
+            SnapStatusLabel.Content = $"SNAP: {(FeatureToggle.SnapEnabled ? "ON" : "OFF")}";
+            OverlayStatusLabel.Content = $"VISUALS: {(FeatureToggle.VisualsOverlayEnabled ? "ON" : "OFF")}";
+        }
+
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            InputMap.HandleKeyDown(e.Key);
+            UpdateLabels();
         }
     }
 }

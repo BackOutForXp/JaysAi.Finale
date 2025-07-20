@@ -1,54 +1,90 @@
-﻿//monarch v2.1
+﻿//monarch v2.1 – Prediction Engine
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using JaysAi.Finale.AI;
-using SkiaSharp;
+using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Utility;
 
-namespace JaysAi.AI
+namespace JaysAi.Finale.AI
 {
     public class PredictionEngine
     {
-        private readonly ModelLoader modelLoader;
-        private readonly ModelBridge modelBridge;
-        private readonly AiMemory memory;
+        private readonly Dictionary<int, TargetHistory> historyMap = new();
 
-        public PredictionEngine(ModelLoader loader, ModelBridge bridge, AiMemory memory)
+        public class PredictionData
         {
-            this.modelLoader = loader;
-            this.modelBridge = bridge;
-            this.memory = memory;
+            public float PredictedX;
+            public float PredictedY;
+            public float VelocityX;
+            public float VelocityY;
+            public float AccelerationX;
+            public float AccelerationY;
         }
 
-        public void ProcessFrame(SKBitmap frame)
+        private class TargetHistory
         {
-            if (frame == null) return;
+            public List<float> X = new();
+            public List<float> Y = new();
+            public DateTime LastUpdate;
+        }
 
-            var tensor = modelBridge.ConvertFrameToTensor(frame);
-            using var results = modelLoader.RunInference(tensor);
-
-            var predictions = modelBridge.ParseModelOutput(results);
-
-            foreach (var prediction in predictions)
+        public PredictionData Predict(int targetId, float currentX, float currentY)
+        {
+            if (!historyMap.TryGetValue(targetId, out var history))
             {
-                prediction.Timestamp = DateTime.UtcNow;
-                memory.Add(prediction);
+                history = new TargetHistory();
+                historyMap[targetId] = history;
             }
+
+            var now = DateTime.Now;
+            float deltaTime = (float)(now - history.LastUpdate).TotalSeconds;
+            history.LastUpdate = now;
+
+            history.X.Add(currentX);
+            history.Y.Add(currentY);
+
+            if (history.X.Count > 5)
+            {
+                history.X.RemoveAt(0);
+                history.Y.RemoveAt(0);
+            }
+
+            float velocityX = 0, velocityY = 0, accelX = 0, accelY = 0;
+
+            if (history.X.Count >= 2)
+            {
+                velocityX = (history.X[^1] - history.X[^2]) / deltaTime;
+                velocityY = (history.Y[^1] - history.Y[^2]) / deltaTime;
+            }
+
+            if (history.X.Count >= 3)
+            {
+                float prevVelocityX = (history.X[^2] - history.X[^3]) / deltaTime;
+                float prevVelocityY = (history.Y[^2] - history.Y[^3]) / deltaTime;
+
+                accelX = (velocityX - prevVelocityX) / deltaTime;
+                accelY = (velocityY - prevVelocityY) / deltaTime;
+            }
+
+            return new PredictionData
+            {
+                PredictedX = currentX + velocityX * deltaTime + 0.5f * accelX * deltaTime * deltaTime,
+                PredictedY = currentY + velocityY * deltaTime + 0.5f * accelY * deltaTime * deltaTime,
+                VelocityX = velocityX,
+                VelocityY = velocityY,
+                AccelerationX = accelX,
+                AccelerationY = accelY
+            };
         }
 
-        public List<PredictionResult> GetLiveTargets()
+        public void ClearHistory(int targetId)
         {
-            return memory.GetRecent();
+            if (historyMap.ContainsKey(targetId))
+                historyMap.Remove(targetId);
         }
 
-        public PredictionResult? GetBestTarget()
+        public void ClearAll()
         {
-            return memory.GetClosestToCenter();
-        }
-
-        public void Reset()
-        {
-            memory.Clear();
+            historyMap.Clear();
         }
     }
 }

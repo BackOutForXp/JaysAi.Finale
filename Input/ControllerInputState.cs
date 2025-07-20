@@ -1,33 +1,38 @@
-﻿//monarch v2.1
+﻿//monarch v2.1 – Input Event Listener
+using System;
+using System.Runtime.InteropServices;
+
 namespace JaysAi.Finale.Input
 {
-    public class ControllerInputState
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ControllerInputState
     {
-        public float LeftStickX { get; set; }
-        public float LeftStickY { get; set; }
-        public float RightStickX { get; set; }
-        public float RightStickY { get; set; }
-        public float LT { get; set; }
-        public float RT { get; set; }
+        public bool A;
+        public bool B;
+        public bool X;
+        public bool Y;
+        public bool LB;
+        public bool RB;
+        public bool LT;
+        public bool RT;
+        public bool DPadUp;
+        public bool DPadDown;
+        public bool DPadLeft;
+        public bool DPadRight;
+        public bool Start;
+        public bool Back;
 
-        public bool ButtonA { get; set; }
-        public bool ButtonB { get; set; }
-        public bool ButtonX { get; set; }
-        public bool ButtonY { get; set; }
+        public float LeftStickX;
+        public float LeftStickY;
+        public float RightStickX;
+        public float RightStickY;
 
-        public bool LB { get; set; }
-        public bool RB { get; set; }
-        public bool DPadUp { get; set; }
-        public bool DPadDown { get; set; }
-        public bool DPadLeft { get; set; }
-        public bool DPadRight { get; set; }
+        public bool IsAnyButtonPressed =>
+            A || B || X || Y || LB || RB || LT || RT || DPadUp || DPadDown || DPadLeft || DPadRight || Start || Back;
 
-        public void Reset()
+        public override string ToString()
         {
-            LeftStickX = LeftStickY = RightStickX = RightStickY = 0;
-            LT = RT = 0;
-            ButtonA = ButtonB = ButtonX = ButtonY = false;
-            LB = RB = DPadUp = DPadDown = DPadLeft = DPadRight = false;
+            return $"[A:{A} B:{B} X:{X} Y:{Y} L:{LeftStickX},{LeftStickY} R:{RightStickX},{RightStickY}]";
         }
     }
 }

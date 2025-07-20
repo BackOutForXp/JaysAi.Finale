@@ -1,32 +1,50 @@
-﻿//monarch v2.1
+﻿//monarch v2.1 – Visual overlay lifecycle controller
+using JaysAi.Finale.AI;
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace JaysAi.Finale.Visuals
 {
-    public class OverlayManager
+    public static class OverlayManager
     {
-        private readonly ESPDrawer espDrawer;
-        private bool isEnabled;
-        private int drawDelayMs = 16;
+        private static CancellationTokenSource? _cts;
+        private static Task? _renderLoopTask;
+        private static bool _isRunning = false;
 
-        public OverlayManager(ESPDrawer drawer)
+        public static void Start()
         {
-            espDrawer = drawer;
+            if (_isRunning)
+                return;
+
+            _cts = new CancellationTokenSource();
+            _renderLoopTask = Task.Run(() => RenderLoop(_cts.Token));
+            _isRunning = true;
+
+            OverlaySignal.UpdateStatus("Overlay started.");
         }
 
-        public void Enable() => isEnabled = true;
-        public void Disable() => isEnabled = false;
-
-        public void Toggle() => isEnabled = !isEnabled;
-        public bool IsEnabled() => isEnabled;
-
-        public void SetDelay(int ms) => drawDelayMs = Math.Clamp(ms, 5, 1000);
-
-        public void RenderFrame()
+        public static void Stop()
         {
-            if (!isEnabled) return;
-            espDrawer.DrawAll();
-            System.Threading.Thread.Sleep(drawDelayMs);
+            if (!_isRunning)
+                return;
+
+            _cts?.Cancel();
+            _isRunning = false;
+
+            OverlaySignal.UpdateStatus("Overlay stopped.");
+        }
+
+        private static async Task RenderLoop(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                // Draw everything to console (placeholder until DX or Skia)
+                AiOverlay.Draw();
+                OverlayDrawer.DrawAll();
+
+                await Task.Delay(33, token); // ~30 FPS
+            }
         }
     }
 }

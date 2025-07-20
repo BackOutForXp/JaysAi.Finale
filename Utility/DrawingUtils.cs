@@ -1,41 +1,68 @@
-﻿// File: Utility\DrawingUtils.cs
+﻿//monarch v2.1 – Drawing Utility Toolkit for Overlay
+using SkiaSharp;
 
-using System;
-using System.Numerics;
-
-namespace JaysAi.Finale.Utility
+namespace JaysAi.Finale.Visuals
 {
-    public static class DrawingUtils
+    public static class DrawUtils
     {
-        public static float DegreesBetween(Vector2 a, Vector2 b)
+        public static void DrawBox(SKCanvas canvas, SKRect rect, SKColor color, float stroke = 2f)
         {
-            float dot = Vector2.Dot(Vector2.Normalize(a), Vector2.Normalize(b));
-            return MathF.Acos(Math.Clamp(dot, -1f, 1f)) * (180f / MathF.PI);
+            using var paint = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                Color = color,
+                StrokeWidth = stroke,
+                IsAntialias = true
+            };
+            canvas.DrawRect(rect, paint);
         }
 
-        public static float Distance2D(Vector2 a, Vector2 b)
+        public static void DrawFilledBox(SKCanvas canvas, SKRect rect, SKColor color)
         {
-            return (a - b).Length();
+            using var paint = new SKPaint
+            {
+                Style = SKPaintStyle.Fill,
+                Color = color,
+                IsAntialias = true
+            };
+            canvas.DrawRect(rect, paint);
         }
 
-        public static float Distance3D(Vector3 a, Vector3 b)
+        public static void DrawCircle(SKCanvas canvas, SKPoint center, float radius, SKColor color, float stroke = 2f)
         {
-            return (a - b).Length();
+            using var paint = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                Color = color,
+                StrokeWidth = stroke,
+                IsAntialias = true
+            };
+            canvas.DrawCircle(center, radius, paint);
         }
 
-        public static Vector2 ClampToBounds(Vector2 point, float width, float height)
+        public static void DrawSnapline(SKCanvas canvas, SKPoint from, SKPoint to, SKColor color, float stroke = 1.5f)
         {
-            float x = Math.Clamp(point.X, 0, width);
-            float y = Math.Clamp(point.Y, 0, height);
-            return new Vector2(x, y);
+            using var paint = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                Color = color,
+                StrokeWidth = stroke,
+                IsAntialias = true
+            };
+            canvas.DrawLine(from, to, paint);
         }
 
-        public static Vector3 ClampToBounds(Vector3 point, float width, float height, float depth)
+        public static void DrawText(SKCanvas canvas, string text, float x, float y, float size, SKColor color)
         {
-            float x = Math.Clamp(point.X, 0, width);
-            float y = Math.Clamp(point.Y, 0, height);
-            float z = Math.Clamp(point.Z, 0, depth);
-            return new Vector3(x, y, z);
+            using var paint = new SKPaint
+            {
+                Color = color,
+                TextSize = size,
+                IsAntialias = true,
+                IsStroke = false,
+                Typeface = SKTypeface.Default
+            };
+            canvas.DrawText(text, x, y, paint);
         }
     }
 }

@@ -1,43 +1,42 @@
-﻿//monarch v2.1
+﻿//monarch v2.1 – Visual Target Signal Bridge
 using System;
-using JaysAi.SystemLogic;
-using System.Windows.Media;
+using System.Collections.Generic;
+using JaysAi.Finale.Visuals;
+using JaysAi.Finale.Utility;
 
-namespace JaysAi.Finale.Visuals
+namespace JaysAi.Finale.AI
 {
-    public class OverlaySignal
+    public static class OverlaySignal
     {
-        private readonly IOverlayContext overlay;
-        private DateTime lastPulse = DateTime.MinValue;
-        private bool visible = true;
-        private readonly float x = 20f;
-        private readonly float y = 20f;
-        private readonly float size = 12f;
-        private readonly Color pulseColor = Colors.LimeGreen;
+        private static TrackedTarget _currentTarget = null;
+        public static TrackedTarget CurrentTarget => _currentTarget;
 
-        public OverlaySignal(IOverlayContext context)
+        /// <summary>
+        /// Sets a new tracked target from the ESP system.
+        /// </summary>
+        public static void PushTarget(TrackedTarget target)
         {
-            overlay = context;
-        }
-
-        public void DrawStatus()
-        {
-            if ((DateTime.Now - lastPulse).TotalMilliseconds >= 500)
+            if (target == null || !target.IsValid)
             {
-                visible = !visible;
-                lastPulse = DateTime.Now;
+                Logger.Log("[OverlaySignal] Ignoring invalid target push.", LogLevel.Debug);
+                return;
             }
 
-            if (visible)
-            {
-                overlay.DrawCircle(
-                    x: x,
-                    y: y,
-                    radius: size,
-                    color: pulseColor,
-                    thickness: 1.5f
-                );
-            }
+            _currentTarget = target;
+            Logger.Log($"[OverlaySignal] New target acquired: ID={target.Id} @ ({target.X:F1}, {target.Y:F1})", LogLevel.Debug);
         }
+
+        /// <summary>
+        /// Clears current visual target. Used between frames or when enemies disappear.
+        /// </summary>
+        public static void Clear()
+        {
+            _currentTarget = null;
+        }
+
+        /// <summary>
+        /// Checks if a target is active and lock-ready.
+        /// </summary>
+        public static bool HasTarget => _currentTarget != null && _currentTarget.IsValid;
     }
 }

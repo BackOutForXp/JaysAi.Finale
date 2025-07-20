@@ -1,47 +1,57 @@
-﻿//monarch v2.0
+﻿//monarch v2.1 – Progressive Memory Snapshot Engine
 using System;
 using System.Collections.Generic;
-using System.Numerics;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.AI
 {
-    public static class ProgressMemoryReader
+    public class ProgressMemoryReader
     {
-        public static void InjectProgressData(Dictionary<int, (int health, int armor)> progressMap)
-        {
-            foreach (var kvp in progressMap)
-            {
-                if (!AiMemory.Entities.ContainsKey(kvp.Key))
-                    continue;
+        private readonly IMemoryProvider _memory;
+        private readonly Dictionary<string, IntPtr> _cachedAddresses;
 
-                var entity = AiMemory.Entities[kvp.Key];
-                string label = BuildLabel(entity, kvp.Value.health, kvp.Value.armor);
-                AiMemory.UpdateEntity(entity.Id, entity.ScreenPosition, entity.IsEnemy, label);
-            }
+        public ProgressMemoryReader(IMemoryProvider memoryProvider)
+        {
+            _memory = memoryProvider ?? throw new ArgumentNullException(nameof(memoryProvider));
+            _cachedAddresses = new Dictionary<string, IntPtr>();
         }
 
-        private static string BuildLabel(EntityData entity, int health, int armor)
+        public T Read<T>(string label, IntPtr basePtr, int[] offsets) where T : struct
         {
-            if (!entity.IsEnemy) return "";
-
-            string healthText = health switch
+            if (!_cachedAddresses.TryGetValue(label, out var targetAddress))
             {
-                >= 100 => "💯",
-                >= 75 => "🔋",
-                >= 50 => "⚠️",
-                >= 25 => "🩸",
-                _ => "☠️"
-            };
+                targetAddress = ResolveAddress(basePtr, offsets);
+                _cachedAddresses[label] = targetAddress;
+            }
 
-            string armorText = armor switch
+            return _memory.Read<T>(targetAddress);
+        }
+
+        public void ForceRefresh(string label, IntPtr basePtr, int[] offsets)
+        {
+            _cachedAddresses[label] = ResolveAddress(basePtr, offsets);
+        }
+
+        private IntPtr ResolveAddress(IntPtr baseAddress, int[] offsets)
+        {
+            var currentAddress = _memory.Read<IntPtr>(baseAddress);
+
+            foreach (var offset in offsets)
             {
-                >= 100 => "🛡️",
-                >= 50 => "🔰",
-                > 0 => "🪖",
-                _ => ""
-            };
+                currentAddress = _memory.Read<IntPtr>(currentAddress + offset);
+            }
 
-            return $"{healthText} {armorText}".Trim();
+            return currentAddress;
+        }
+
+        public bool IsValid(IntPtr address)
+        {
+            return address != IntPtr.Zero && _memory.IsReadable(address);
+        }
+
+        public void ClearCache()
+        {
+            _cachedAddresses.Clear();
         }
     }
 }

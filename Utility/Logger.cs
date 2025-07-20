@@ -1,43 +1,38 @@
-﻿//monarch v1.0
+﻿//monarch v2.1 – Runtime Debug Logger
 using System;
-using System.IO;
+using System.Collections.Generic;
 
-namespace JaysAi.Utility
+namespace JaysAi.Finale.Utility
 {
     public static class Logger
     {
-        private static readonly string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", $"log_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.txt");
-
-        static Logger()
-        {
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(logFilePath));
-                File.AppendAllText(logFilePath, $"--- Logging started: {DateTime.Now} ---{Environment.NewLine}");
-            }
-            catch
-            {
-                // Safe-fail: Logging is optional
-            }
-        }
+        private static readonly List<string> LogHistory = new();
 
         public static void Log(string message)
         {
-            try
-            {
-                string logEntry = $"{DateTime.Now:HH:mm:ss} | {message}";
-                File.AppendAllText(logFilePath, logEntry + Environment.NewLine);
-                Console.WriteLine(logEntry); // Optional: Live output for debug console
-            }
-            catch
-            {
-                // Safe-fail: Log error shouldn't break anything
-            }
+            string timestamp = DateTime.Now.ToString("HH:mm:ss");
+            string formatted = $"[{timestamp}] {message}";
+            Console.WriteLine(formatted);
+            LogHistory.Add(formatted);
+
+            // Optional: Forward to GUI, file, or overlay here
+            // e.g., OverlaySignal.Push(formatted);
         }
 
-        public static void LogException(Exception ex)
+        public static void Clear()
         {
-            Log($"[ERROR] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+            LogHistory.Clear();
+            Console.Clear();
         }
+
+        public static IEnumerable<string> GetLogHistory()
+        {
+            return LogHistory.ToArray();
+        }
+
+        public static void Warn(string message) => Log($"[WARN] {message}");
+        public static void Error(string message) => Log($"[ERROR] {message}");
+        public static void Info(string message) => Log($"[INFO] {message}");
+        public static void Success(string message) => Log($"[SUCCESS] {message}");
     }
 }

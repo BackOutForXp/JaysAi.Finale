@@ -1,51 +1,44 @@
-﻿//monarch v2.0
+﻿//monarch v2.1 – YOLO ↔ ESP Target Bridge
 using System.Collections.Generic;
-using JaysAi.Finale.src.Visuals;
+using JaysAi.Finale.Visuals;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.AI
 {
-    public class YOLOBridge
+    public static class YOLOBridge
     {
-        public float ConfidenceThreshold { get; set; } = 0.65f;
-        public HashSet<int> TargetClassIds { get; set; } = new() { 0 }; // Typically: 0 = person
-
-        public List<ESPModule.DetectedTarget> ParseDetections(List<YoloResult> yoloResults)
+        public static List<TrackedTarget> ParseDetections(List<YoloBoundingBox> rawDetections)
         {
-            var validTargets = new List<ESPModule.DetectedTarget>();
+            var targets = new List<TrackedTarget>();
 
-            foreach (var result in yoloResults)
+            foreach (var box in rawDetections)
             {
-                if (result.Confidence < ConfidenceThreshold)
-                    continue;
+                if (!IsEnemyClass(box.Label)) continue;
 
-                if (!TargetClassIds.Contains(result.ClassId))
-                    continue;
-
-                float centerX = result.X + result.Width / 2f;
-                float centerY = result.Y + result.Height / 2f;
-
-                validTargets.Add(new ESPModule.DetectedTarget
+                var target = new TrackedTarget
                 {
-                    ScreenX = centerX,
-                    ScreenY = centerY,
-                    Width = result.Width,
-                    Height = result.Height,
-                    Label = result.Label
-                });
+                    Id = box.Id,
+                    X = box.X + (box.Width / 2f),
+                    Y = box.Y + (box.Height / 2f),
+                    Width = box.Width,
+                    Height = box.Height,
+                    IsVisible = true,
+                    IsEnemy = true,
+                    VelocityX = 0f, // To be filled in PredictionEngine
+                    VelocityY = 0f
+                };
+
+                targets.Add(target);
+                Logger.Log($"[YOLOBridge] Target found: {box.Label} at ({target.X}, {target.Y})", LogLevel.Debug);
             }
 
-            return validTargets;
+            return targets;
         }
-    }
 
-    public class YoloResult
-    {
-        public float X;
-        public float Y;
-        public float Width;
-        public float Height;
-        public float Confidence;
-        public int ClassId;
-        public string Label = "";
+        private static bool IsEnemyClass(string label)
+        {
+            // Can be customized per game model
+            return label.ToLower().Contains("enemy") || label.ToLower() == "person";
+        }
     }
 }

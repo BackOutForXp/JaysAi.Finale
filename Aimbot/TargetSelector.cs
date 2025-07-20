@@ -1,55 +1,41 @@
-﻿//monarch v2.1
-using System;
+﻿//monarch v2.1 – Target prioritization and visibility filter
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using JaysAi.Finale.AI;
 
 namespace JaysAi.Finale.Aimbot
 {
     public class TargetSelector
     {
-        private readonly float screenWidth;
-        private readonly float screenHeight;
-        private readonly float maxFov;
-        private readonly Func<FrameSnapshot, float> scoringFunction;
+        public float MaxTargetDistance { get; set; } = 1000f;
+        public bool RequireVisible { get; set; } = true;
+        public bool PrioritizeLowHealth { get; set; } = false;
 
-        public TargetSelector(float screenWidth, float screenHeight, float maxFov, Func<FrameSnapshot, float> scoringFunction)
+        public DetectedTarget SelectBestTarget(Vector2 screenCenter, IEnumerable<DetectedTarget> candidates)
         {
-            this.screenWidth = screenWidth;
-            this.screenHeight = screenHeight;
-            this.maxFov = maxFov;
-            this.scoringFunction = scoringFunction;
-        }
+            var filtered = candidates
+                .Where(t => !RequireVisible || t.IsVisible)
+                .Where(t => Vector2.Distance(screenCenter, t.ScreenPosition) <= MaxTargetDistance)
+                .ToList();
 
-        public FrameSnapshot? SelectTarget(List<FrameSnapshot> enemies)
-        {
-            if (enemies == null || enemies.Count == 0)
+            if (!filtered.Any())
                 return null;
 
-            float centerX = screenWidth / 2f;
-            float centerY = screenHeight / 2f;
+            if (PrioritizeLowHealth)
+                return filtered.OrderBy(t => t.Health).First();
 
-            FrameSnapshot? bestTarget = null;
-            float bestScore = float.MaxValue;
+            return filtered
+                .OrderBy(t => Vector2.Distance(screenCenter, t.ScreenPosition))
+                .First();
+        }
 
-            foreach (var enemy in enemies)
-            {
-                float dx = enemy.X - centerX;
-                float dy = enemy.Y - centerY;
-                float distanceToCenter = MathF.Sqrt(dx * dx + dy * dy);
-
-                if (distanceToCenter <= maxFov)
-                {
-                    float score = scoringFunction(enemy);
-                    if (score < bestScore)
-                    {
-                        bestScore = score;
-                        bestTarget = enemy;
-                    }
-                }
-            }
-
-            return bestTarget;
+        public List<DetectedTarget> FilterTargets(Vector2 screenCenter, IEnumerable<DetectedTarget> all)
+        {
+            return all
+                .Where(t => !RequireVisible || t.IsVisible)
+                .Where(t => Vector2.Distance(screenCenter, t.ScreenPosition) <= MaxTargetDistance)
+                .ToList();
         }
     }
 }

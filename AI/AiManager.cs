@@ -1,67 +1,48 @@
-﻿//monarch v2.0
-using System;
-using JaysAi.InputSystem;
-using JaysAi.Finale.src.Aim;
-using JaysAi.AI;
-using JaysAi.Finale.src.Visuals;
+﻿//monarch v2.1 – Central AI Execution Dispatcher
+using JaysAi.Finale.Visuals;
+using JaysAi.Finale.Aimbot;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.SystemLogic;
 
 namespace JaysAi.Finale.AI
 {
-    public class AiManager
+    public static class AiManager
     {
-        private readonly ESPModule _esp;
-        private readonly SnapAssist _snap;
-        private readonly PredictionEngine _predictor;
-        private readonly AiMemory _memory;
+        private static bool _initialized;
 
-        private readonly float _screenCenterX;
-        private readonly float _screenCenterY;
-
-        public AiManager(float screenWidth, float screenHeight)
+        public static void Initialize()
         {
-            _esp = new ESPModule();
-            _snap = new SnapAssist();
-            _predictor = new PredictionEngine();
-            _memory = new AiMemory();
-
-            _screenCenterX = screenWidth / 2f;
-            _screenCenterY = screenHeight / 2f;
+            if (_initialized) return;
+            PredictionEngine.Initialize();
+            _initialized = true;
         }
 
-        public void UpdateFrameTargets(System.Collections.Generic.List<ESPModule.DetectedTarget> targets)
+        public static void Update()
         {
-            _esp.UpdateTargets(targets);
-        }
+            if (!_initialized)
+                Initialize();
 
-        public void Execute()
-        {
-            var best = _esp.GetBestTarget(_screenCenterX, _screenCenterY);
+            // Step 1: Gather detections
+            var detectedObjects = YoloDetector.GetDetectedObjects();
 
-            if (best is not ESPModule.DetectedTarget target)
-                return;
-
-            _predictor.Record(target.ScreenX, target.ScreenY);
-            var predicted = _predictor.PredictNextPosition();
-
-            float dx = predicted.x - _screenCenterX;
-            float dy = predicted.y - _screenCenterY;
-            float errorMagnitude = MathF.Sqrt(dx * dx + dy * dy);
-            _memory.LogError(errorMagnitude);
-
-            if (_memory.IsOvercompensating(50f))
+            // Step 2: Visual overlay queue
+            foreach (var obj in detectedObjects)
             {
-                _snap.SetSnapSpeed(0.75f); // Reduce snapping force
+                if (obj.IsEnemy)
+                {
+                    AiOverlay.QueueRectangle(obj.X, obj.Y, obj.Width, obj.Height, "ENEMY", OverlayColor.Red);
+                }
             }
 
-            _snap.SnapToTarget(predicted.x, predicted.y, _screenCenterX, _screenCenterY);
-        }
+            // Step 3: Target selection and aim logic
+            var bestTarget = TargetSelector.GetBestTarget(detectedObjects);
 
-        public void Reset()
-        {
-            _memory.Clear();
-            _predictor.Reset();
-            _esp.Clear();
-            _snap.Reset();
+            if (bestTarget != null)
+            {
+                SnapAssist.LockOn(bestTarget);
+            }
+
+            // Step 4: Final rendering output is handled by OverlayDrawer
         }
     }
 }

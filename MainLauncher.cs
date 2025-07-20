@@ -1,51 +1,43 @@
-﻿// File: System/MainLauncher.cs
-using JaysAi.Finale.Core;
-using JaysAi.Finale.Security;
-using JaysAi.Finale.Settings;
+﻿//monarch v2.1 – Fully Refactored & Synced
+
+using global::System;
+using global::System.Threading.Tasks;
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Aim;
+using JaysAi.Finale.Aimbot;
+using JaysAi.Finale.Input;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.SystemLogic;
 using JaysAi.Finale.Utility;
 using JaysAi.Finale.Visuals;
-using System;
-using System.IO;
-using System.Windows.Shapes;
 
-namespace JaysAi.Finale.System
+namespace JaysAi.Finale.SystemLogic
 {
     public static class MainLauncher
     {
-        /// <summary>
-        /// Launches the loader after validating environment and initializing core systems.
-        /// </summary>
-        public static void Launch(string[] args)
+        public static async Task InitializeAsync()
         {
-            Console.Title = "JaysAi.Finale - Monarch Mode Loader";
+            try
+            {
+                LogManager.Log("⏳ Initializing JaysAi.Monarch...");
 
-            Logger.Log("[MainLauncher] Initializing...");
+                string buildInfo = BuildInfo.GetDetailedBuildInfo();
+                LogManager.Log($"🔧 Build Info: {buildInfo}");
 
-            SetupAppFolders();
-            StealthMode.Enable();
+                UsersSettings.Load();
+                LogManager.Log("⚙️ User settings loaded.");
 
-            AppSettings settings = SettingsManager<AppSettings>.Load("default") ?? new AppSettings();
-            SettingsManager<AppSettings>.Save("default", settings); // Save to ensure it's initialized
+                await ESPModule.InitializeAsync();
+                await SnapAssist.InitializeAsync();
+                await OverlaySignal.InitializeAsync();
+                InputManager.Initialize();
 
-            StartUI();
-        }
-
-        private static void SetupAppFolders()
-        {
-            string baseDir = Paths.BaseDirectory;
-            string logs = Path.Combine(baseDir, "Logs");
-            string profiles = Path.Combine(baseDir, "Profiles");
-
-            Directory.CreateDirectory(logs);
-            Directory.CreateDirectory(profiles);
-        }
-
-        private static void StartUI()
-        {
-            // Launch UI via WPF entry point
-            System.Windows.Application app = new System.Windows.Application();
-            var window = new Loader.LoaderGUI();
-            app.Run(window);
+                LogManager.Log("✅ All modules successfully initialized.");
+            }
+            catch (Exception ex)
+            {
+                LogManager.Log($"❌ Fatal error in MainLauncher: {ex.Message}", LogLevel.Error);
+            }
         }
     }
 }
