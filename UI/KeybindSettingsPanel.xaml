@@ -1,0 +1,26 @@
+﻿<!-- File: UI/KeybindSettingsPanel.xaml -->
+<UserControl x:Class="JaysAi.Finale.UI.KeybindSettingsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Height="Auto" Width="Auto">
+    <Grid Margin="10">
+        <StackPanel Orientation="Vertical" Spacing="8">
+            <TextBlock Text="Keybind Settings" FontSize="18" FontWeight="Bold" Margin="0 0 0 10"/>
+
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="Toggle Aim Assist:" Width="150"/>
+                <TextBox x:Name="AimAssistKeyBox" Width="100" Text="{Binding AimAssistToggleKey, Mode=TwoWay}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="Toggle ESP:" Width="150"/>
+                <TextBox x:Name="EspKeyBox" Width="100" Text="{Binding EspToggleKey, Mode=TwoWay}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="Toggle Stealth Mode:" Width="150"/>
+                <TextBox x:Name="StealthKeyBox" Width="100" Text="{Binding StealthModeToggleKey, Mode=TwoWay}" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>

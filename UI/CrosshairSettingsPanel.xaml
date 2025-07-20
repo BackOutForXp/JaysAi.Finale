@@ -1,0 +1,35 @@
+﻿<!-- File: UI/CrosshairSettingsPanel.xaml -->
+<UserControl x:Class="JaysAi.Finale.UI.CrosshairSettingsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:JaysAi.Finale.UI"
+             Height="Auto" Width="Auto" Background="#1E1E1E">
+    <StackPanel Margin="10" Spacing="8">
+
+        <TextBlock Text="Crosshair Settings" FontSize="18" FontWeight="Bold" Foreground="Red" Margin="0 0 0 10"/>
+
+        <CheckBox Content="Enable Crosshair"
+                  IsChecked="{Binding Path=Crosshair.Enabled, Mode=TwoWay}"
+                  FontSize="14" Foreground="White"/>
+
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock Text="Size:" Width="80" VerticalAlignment="Center" Foreground="White"/>
+            <Slider Minimum="2" Maximum="100" Width="150"
+                    Value="{Binding Path=Crosshair.Size, Mode=TwoWay}"/>
+            <TextBlock Text="{Binding Path=Crosshair.Size, StringFormat=F0}" Margin="10 0 0 0" Foreground="White"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock Text="Thickness:" Width="80" VerticalAlignment="Center" Foreground="White"/>
+            <Slider Minimum="1" Maximum="10" Width="150"
+                    Value="{Binding Path=Crosshair.Thickness, Mode=TwoWay}"/>
+            <TextBlock Text="{Binding Path=Crosshair.Thickness, StringFormat=F0}" Margin="10 0 0 0" Foreground="White"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Color:" Width="80" VerticalAlignment="Center" Foreground="White"/>
+            <Button Content="Pick Color" Width="100" Click="OnPickColorClicked"/>
+        </StackPanel>
+
+    </StackPanel>
+</UserControl>
