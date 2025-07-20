@@ -1,0 +1,45 @@
+﻿<!-- File: Loader/LoaderGUI.xaml -->
+<Window x:Class="JaysAi.Finale.Loader.LoaderGUI"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:JaysAi.Finale.UI"
+        Title="JaysAi.Finale - Monarch Loader"
+        Height="500" Width="650"
+        ResizeMode="NoResize"
+        Background="#1E1E1E"
+        Foreground="White"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid Margin="20">
+        <TabControl>
+            <!-- Crosshair Settings -->
+            <TabItem Header="Crosshair">
+                <ui:CrosshairSettingsPanel />
+            </TabItem>
+
+            <!-- AimAssist Settings -->
+            <TabItem Header="Aim Assist">
+                <ui:AimAssistSettingsPanel />
+            </TabItem>
+
+            <!-- Keybind Manager -->
+            <TabItem Header="Keybinds">
+                <ui:KeybindSettingsPanel />
+            </TabItem>
+
+            <!-- Profile Loader -->
+            <TabItem Header="Profiles">
+                <ui:ProfileManagerPanel />
+            </TabItem>
+        </TabControl>
+
+        <!-- Core toggles (optional UI overlay) -->
+        <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="10" Spacing="10">
+            <CheckBox x:Name="EspCheckbox" Content="Enable ESP" FontSize="14" />
+            <CheckBox x:Name="AimAssistCheckbox" Content="Enable Aim Assist" FontSize="14" />
+            <CheckBox x:Name="StickAssistCheckbox" Content="Enable Stick Assist" FontSize="14" />
+            <CheckBox x:Name="StealthCheckbox" Content="Enable Stealth Mode" FontSize="14" />
+            <CheckBox x:Name="BoneEspCheckbox" Content="Enable Bone ESP" FontSize="14" />
+        </StackPanel>
+    </Grid>
+</Window>
