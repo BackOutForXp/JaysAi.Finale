@@ -1,90 +1,60 @@
-﻿//monarch v2.1 – Prediction Engine
+﻿//monarch v2.1 – Predictive Target Movement Engine
+using JaysAi.Finale.Aimbot;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.Utility;
 using System;
 using System.Collections.Generic;
-using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.AI
 {
-    public class PredictionEngine
+    public static class PredictionEngine
     {
-        private readonly Dictionary<int, TargetHistory> historyMap = new();
+        private static readonly Dictionary<int, TargetHistory> _historyMap = new();
 
-        public class PredictionData
+        public static void Initialize()
         {
-            public float PredictedX;
-            public float PredictedY;
-            public float VelocityX;
-            public float VelocityY;
-            public float AccelerationX;
-            public float AccelerationY;
+            _historyMap.Clear();
+        }
+
+        public static void UpdateHistory(DetectedObject obj)
+        {
+            if (!_historyMap.TryGetValue(obj.Id, out var history))
+            {
+                history = new TargetHistory();
+                _historyMap[obj.Id] = history;
+            }
+
+            history.Update(obj.X, obj.Y);
+        }
+
+        public static (float predictedX, float predictedY) PredictPosition(DetectedObject obj, float predictionFactor = 1.0f)
+        {
+            if (_historyMap.TryGetValue(obj.Id, out var history))
+            {
+                float dx = history.VelocityX * predictionFactor;
+                float dy = history.VelocityY * predictionFactor;
+
+                return (obj.X + dx, obj.Y + dy);
+            }
+
+            return (obj.X, obj.Y); // fallback: no prediction available
         }
 
         private class TargetHistory
         {
-            public List<float> X = new();
-            public List<float> Y = new();
-            public DateTime LastUpdate;
-        }
+            private float _lastX;
+            private float _lastY;
+            public float VelocityX { get; private set; }
+            public float VelocityY { get; private set; }
 
-        public PredictionData Predict(int targetId, float currentX, float currentY)
-        {
-            if (!historyMap.TryGetValue(targetId, out var history))
+            public void Update(float currentX, float currentY)
             {
-                history = new TargetHistory();
-                historyMap[targetId] = history;
+                VelocityX = currentX - _lastX;
+                VelocityY = currentY - _lastY;
+
+                _lastX = currentX;
+                _lastY = currentY;
             }
-
-            var now = DateTime.Now;
-            float deltaTime = (float)(now - history.LastUpdate).TotalSeconds;
-            history.LastUpdate = now;
-
-            history.X.Add(currentX);
-            history.Y.Add(currentY);
-
-            if (history.X.Count > 5)
-            {
-                history.X.RemoveAt(0);
-                history.Y.RemoveAt(0);
-            }
-
-            float velocityX = 0, velocityY = 0, accelX = 0, accelY = 0;
-
-            if (history.X.Count >= 2)
-            {
-                velocityX = (history.X[^1] - history.X[^2]) / deltaTime;
-                velocityY = (history.Y[^1] - history.Y[^2]) / deltaTime;
-            }
-
-            if (history.X.Count >= 3)
-            {
-                float prevVelocityX = (history.X[^2] - history.X[^3]) / deltaTime;
-                float prevVelocityY = (history.Y[^2] - history.Y[^3]) / deltaTime;
-
-                accelX = (velocityX - prevVelocityX) / deltaTime;
-                accelY = (velocityY - prevVelocityY) / deltaTime;
-            }
-
-            return new PredictionData
-            {
-                PredictedX = currentX + velocityX * deltaTime + 0.5f * accelX * deltaTime * deltaTime,
-                PredictedY = currentY + velocityY * deltaTime + 0.5f * accelY * deltaTime * deltaTime,
-                VelocityX = velocityX,
-                VelocityY = velocityY,
-                AccelerationX = accelX,
-                AccelerationY = accelY
-            };
-        }
-
-        public void ClearHistory(int targetId)
-        {
-            if (historyMap.ContainsKey(targetId))
-                historyMap.Remove(targetId);
-        }
-
-        public void ClearAll()
-        {
-            historyMap.Clear();
         }
     }
 }

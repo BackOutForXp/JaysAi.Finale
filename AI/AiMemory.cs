@@ -1,60 +1,47 @@
-﻿//monarch v2.1 – Visual Detection & Memory Recall Engine
-using System;
+﻿//monarch v2.1 – AI Memory Snapshot
 using System.Collections.Generic;
-using System.Numerics;
 
 namespace JaysAi.Finale.AI
 {
-    public class AiMemory
+    public static class AiMemory
     {
-        private readonly Dictionary<int, Vector2> _entityPositionMemory;
-        private readonly Dictionary<int, DateTime> _lastSeenTime;
+        private static List<DetectionSnapshot> _history = new();
 
-        public AiMemory()
+        public static void AddSnapshot(List<DetectionSnapshot> snapshot)
         {
-            _entityPositionMemory = new Dictionary<int, Vector2>();
-            _lastSeenTime = new Dictionary<int, DateTime>();
+            if (_history.Count >= 100)
+                _history.RemoveAt(0);
+
+            _history.Add(new DetectionSnapshot(snapshot));
         }
 
-        public void UpdateMemory(int entityId, Vector2 position)
+        public static List<DetectionSnapshot> GetHistory()
         {
-            _entityPositionMemory[entityId] = position;
-            _lastSeenTime[entityId] = DateTime.UtcNow;
+            return new List<DetectionSnapshot>(_history);
         }
 
-        public Vector2? GetLastKnownPosition(int entityId)
+        public static void Clear()
         {
-            if (_entityPositionMemory.ContainsKey(entityId))
-                return _entityPositionMemory[entityId];
-
-            return null;
+            _history.Clear();
         }
+    }
 
-        public bool WasRecentlySeen(int entityId, double seconds = 1.5)
+    public class DetectionSnapshot
+    {
+        public List<DetectionObject> Objects { get; set; }
+
+        public DetectionSnapshot(List<DetectionObject> objects)
         {
-            if (_lastSeenTime.TryGetValue(entityId, out var seenTime))
-            {
-                return (DateTime.UtcNow - seenTime).TotalSeconds <= seconds;
-            }
-            return false;
+            Objects = new List<DetectionObject>(objects);
         }
+    }
 
-        public void ClearOldMemory(double expirationTimeInSeconds = 5.0)
-        {
-            var now = DateTime.UtcNow;
-            var toRemove = new List<int>();
-
-            foreach (var kvp in _lastSeenTime)
-            {
-                if ((now - kvp.Value).TotalSeconds > expirationTimeInSeconds)
-                    toRemove.Add(kvp.Key);
-            }
-
-            foreach (var id in toRemove)
-            {
-                _entityPositionMemory.Remove(id);
-                _lastSeenTime.Remove(id);
-            }
-        }
+    public class DetectionObject
+    {
+        public float X { get; set; }
+        public float Y { get; set; }
+        public float Width { get; set; }
+        public float Height { get; set; }
+        public bool IsEnemy { get; set; }
     }
 }

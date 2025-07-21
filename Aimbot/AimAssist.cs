@@ -1,67 +1,43 @@
-﻿//monarch v2.1 – Adaptive Aim Correction Logic
+﻿//monarch v2.1 – Aim Assist Logic Engine
 using System;
-using OpenCvSharp;
-using JaysAi.Finale.Input;
 using JaysAi.Finale.AI;
+using JaysAi.Finale.Input;
 using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.AI
 {
     public static class AimAssist
     {
-        public static bool Enabled = true;
-        public static float AimSmoothness = 0.35f;
-        public static float MaxFov = 50f;
+        private static float _aimSmoothness = 0.75f;
+        private static float _deadzone = 2.0f;
 
-        private static int currentTargetId = -1;
-
-        public static void Update(Vec2f crosshairPos, DetectedEntity[] entities)
+        public static void Apply(DetectionObject target)
         {
-            if (!Enabled || entities == null || entities.Length == 0)
+            if (target == null) return;
+
+            var screenCenterX = ScreenHelper.CenterX;
+            var screenCenterY = ScreenHelper.CenterY;
+
+            var deltaX = (target.X + target.Width / 2) - screenCenterX;
+            var deltaY = (target.Y + target.Height / 2) - screenCenterY;
+
+            if (Math.Abs(deltaX) < _deadzone && Math.Abs(deltaY) < _deadzone)
                 return;
 
-            float closestDist = float.MaxValue;
-            DetectedEntity closestTarget = null;
+            var adjustedX = deltaX * _aimSmoothness;
+            var adjustedY = deltaY * _aimSmoothness;
 
-            foreach (var entity in entities)
-            {
-                if (!entity.IsEnemy) continue;
-
-                float dist = Vec2f.Distance(crosshairPos, entity.ScreenPosition);
-                if (dist < MaxFov && dist < closestDist)
-                {
-                    closestDist = dist;
-                    closestTarget = entity;
-                }
-            }
-
-            if (closestTarget != null)
-            {
-                currentTargetId = closestTarget.ID;
-                ApplyAimAssist(crosshairPos, closestTarget.ScreenPosition);
-            }
-            else
-            {
-                currentTargetId = -1;
-            }
+            MouseMover.MoveBy(adjustedX, adjustedY);
         }
 
-        private static void ApplyAimAssist(Vec2f from, Vec2f to)
+        public static void SetSmoothness(float smoothness)
         {
-            Vec2f delta = to - from;
-            Vec2f smoothedDelta = delta * AimSmoothness;
-
-            ControllerInputState.MoveStick(smoothedDelta.X, smoothedDelta.Y);
+            _aimSmoothness = Math.Clamp(smoothness, 0.1f, 1.5f);
         }
 
-        public static void SetSmoothness(float value)
+        public static void SetDeadzone(float deadzone)
         {
-            AimSmoothness = Math.Clamp(value, 0.05f, 1.0f);
-        }
-
-        public static void SetFov(float fov)
-        {
-            MaxFov = Math.Clamp(fov, 10f, 180f);
+            _deadzone = Math.Clamp(deadzone, 0f, 10f);
         }
     }
 }

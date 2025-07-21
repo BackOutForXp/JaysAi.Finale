@@ -1,47 +1,35 @@
-﻿//monarch v2.1 – Smart Snap Aim Module
+﻿//monarch v2.1 – Dynamic Snap-to-Target Module
+using JaysAi.Finale.AI;
 using JaysAi.Finale.Input;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Visuals;
-using System;
+using JaysAi.Finale.Utility;
+using System.Windows;
 
 namespace JaysAi.Finale.Aimbot
 {
     public static class SnapAssist
     {
-        private static float snapStrength = 0.45f; // 0.0 to 1.0
-        private static float deadzone = 5.0f;
-
-        public static void LockOn(DetectedObject target)
+        public static void LockOn(DetectionObject target)
         {
-            var screenCenterX = ScreenManager.Width / 2f;
-            var screenCenterY = ScreenManager.Height / 2f;
+            if (target == null) return;
 
-            float targetCenterX = target.X + (target.Width / 2f);
-            float targetCenterY = target.Y + (target.Height / 2f);
+            var targetCenter = new Point(
+                target.X + target.Width / 2,
+                target.Y + target.Height / 2
+            );
 
-            float deltaX = targetCenterX - screenCenterX;
-            float deltaY = targetCenterY - screenCenterY;
+            var screenCenter = new Point(
+                ScreenHelper.CenterX,
+                ScreenHelper.CenterY
+            );
 
-            if (Math.Abs(deltaX) < deadzone && Math.Abs(deltaY) < deadzone)
-                return;
+            var offsetX = targetCenter.X - screenCenter.X;
+            var offsetY = targetCenter.Y - screenCenter.Y;
 
-            float moveX = deltaX * snapStrength;
-            float moveY = deltaY * snapStrength;
+            // Sensitivity-adjusted snapping
+            var moveX = (int)(offsetX * ConfigManager.SnapSensitivity);
+            var moveY = (int)(offsetY * ConfigManager.SnapSensitivity);
 
-            InputInjector.MoveMouseRelative((int)moveX, (int)moveY);
-
-            AiOverlay.QueueCircle(targetCenterX, targetCenterY, 10, "LOCK", OverlayColor.Yellow);
-        }
-
-        public static void SetSnapStrength(float strength)
-        {
-            snapStrength = Math.Clamp(strength, 0f, 1f);
-        }
-
-        public static void SetDeadzone(float zone)
-        {
-            deadzone = Math.Max(0f, zone);
+            InputInjector.MoveMouseRelative(moveX, moveY);
         }
     }
 }
