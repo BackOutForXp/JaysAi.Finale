@@ -1,57 +1,29 @@
-﻿//monarch v2.1 – Progressive Memory Snapshot Engine
+﻿//monarch v2.1 – Progress-Based Memory Reader Stub
 using System;
-using System.Collections.Generic;
-using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.AI
 {
-    public class ProgressMemoryReader
+    public static class ProgressMemoryReader
     {
-        private readonly IMemoryProvider _memory;
-        private readonly Dictionary<string, IntPtr> _cachedAddresses;
+        private static bool _initialized;
+        private static IntPtr _targetProcessHandle;
 
-        public ProgressMemoryReader(IMemoryProvider memoryProvider)
+        public static void Initialize(IntPtr processHandle)
         {
-            _memory = memoryProvider ?? throw new ArgumentNullException(nameof(memoryProvider));
-            _cachedAddresses = new Dictionary<string, IntPtr>();
+            _targetProcessHandle = processHandle;
+            _initialized = true;
         }
 
-        public T Read<T>(string label, IntPtr basePtr, int[] offsets) where T : struct
+        public static float ReadProgressValue(IntPtr address)
         {
-            if (!_cachedAddresses.TryGetValue(label, out var targetAddress))
-            {
-                targetAddress = ResolveAddress(basePtr, offsets);
-                _cachedAddresses[label] = targetAddress;
-            }
+            if (!_initialized)
+                throw new InvalidOperationException("ProgressMemoryReader not initialized.");
 
-            return _memory.Read<T>(targetAddress);
+            // Stubbed logic — will be implemented with memory reading during external injection
+            // Placeholder for future read operation
+            return 0.0f;
         }
 
-        public void ForceRefresh(string label, IntPtr basePtr, int[] offsets)
-        {
-            _cachedAddresses[label] = ResolveAddress(basePtr, offsets);
-        }
-
-        private IntPtr ResolveAddress(IntPtr baseAddress, int[] offsets)
-        {
-            var currentAddress = _memory.Read<IntPtr>(baseAddress);
-
-            foreach (var offset in offsets)
-            {
-                currentAddress = _memory.Read<IntPtr>(currentAddress + offset);
-            }
-
-            return currentAddress;
-        }
-
-        public bool IsValid(IntPtr address)
-        {
-            return address != IntPtr.Zero && _memory.IsReadable(address);
-        }
-
-        public void ClearCache()
-        {
-            _cachedAddresses.Clear();
-        }
+        public static bool IsInitialized => _initialized;
     }
 }

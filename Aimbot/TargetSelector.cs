@@ -1,41 +1,36 @@
-﻿//monarch v2.1 – Target prioritization and visibility filter
+﻿//monarch v2.1 – Target Prioritization Engine
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Utility;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
-using JaysAi.Finale.AI;
 
 namespace JaysAi.Finale.Aimbot
 {
-    public class TargetSelector
+    public static class TargetSelector
     {
-        public float MaxTargetDistance { get; set; } = 1000f;
-        public bool RequireVisible { get; set; } = true;
-        public bool PrioritizeLowHealth { get; set; } = false;
-
-        public DetectedTarget SelectBestTarget(Vector2 screenCenter, IEnumerable<DetectedTarget> candidates)
+        public static DetectionObject? GetBestTarget(IEnumerable<DetectionObject> detectedObjects)
         {
-            var filtered = candidates
-                .Where(t => !RequireVisible || t.IsVisible)
-                .Where(t => Vector2.Distance(screenCenter, t.ScreenPosition) <= MaxTargetDistance)
-                .ToList();
+            if (detectedObjects == null) return null;
 
-            if (!filtered.Any())
-                return null;
-
-            if (PrioritizeLowHealth)
-                return filtered.OrderBy(t => t.Health).First();
-
-            return filtered
-                .OrderBy(t => Vector2.Distance(screenCenter, t.ScreenPosition))
-                .First();
+            return detectedObjects
+                .Where(obj => obj.IsEnemy)
+                .OrderBy(obj => GetDistanceToCenter(obj))
+                .FirstOrDefault();
         }
 
-        public List<DetectedTarget> FilterTargets(Vector2 screenCenter, IEnumerable<DetectedTarget> all)
+        private static double GetDistanceToCenter(DetectionObject obj)
         {
-            return all
-                .Where(t => !RequireVisible || t.IsVisible)
-                .Where(t => Vector2.Distance(screenCenter, t.ScreenPosition) <= MaxTargetDistance)
-                .ToList();
+            var centerX = ScreenHelper.CenterX;
+            var centerY = ScreenHelper.CenterY;
+
+            var targetX = obj.X + obj.Width / 2;
+            var targetY = obj.Y + obj.Height / 2;
+
+            var dx = targetX - centerX;
+            var dy = targetY - centerY;
+
+            return Math.Sqrt(dx * dx + dy * dy);
         }
     }
 }

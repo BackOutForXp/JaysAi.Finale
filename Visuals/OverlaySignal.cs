@@ -1,42 +1,27 @@
-﻿//monarch v2.1 – Visual Target Signal Bridge
-using System;
-using System.Collections.Generic;
-using JaysAi.Finale.Visuals;
-using JaysAi.Finale.Utility;
+﻿//monarch v2.1 – Overlay Render Dispatcher
+using System.Collections.Concurrent;
 
-namespace JaysAi.Finale.AI
+namespace JaysAi.Finale.Visuals
 {
     public static class OverlaySignal
     {
-        private static TrackedTarget _currentTarget = null;
-        public static TrackedTarget CurrentTarget => _currentTarget;
+        private static readonly ConcurrentQueue<OverlayRectangle> _renderQueue = new();
 
-        /// <summary>
-        /// Sets a new tracked target from the ESP system.
-        /// </summary>
-        public static void PushTarget(TrackedTarget target)
+        public static void Enqueue(OverlayRectangle rectangle)
         {
-            if (target == null || !target.IsValid)
-            {
-                Logger.Log("[OverlaySignal] Ignoring invalid target push.", LogLevel.Debug);
-                return;
-            }
-
-            _currentTarget = target;
-            Logger.Log($"[OverlaySignal] New target acquired: ID={target.Id} @ ({target.X:F1}, {target.Y:F1})", LogLevel.Debug);
+            _renderQueue.Enqueue(rectangle);
         }
 
-        /// <summary>
-        /// Clears current visual target. Used between frames or when enemies disappear.
-        /// </summary>
+        public static bool TryDequeue(out OverlayRectangle rectangle)
+        {
+            return _renderQueue.TryDequeue(out rectangle);
+        }
+
         public static void Clear()
         {
-            _currentTarget = null;
+            while (_renderQueue.TryDequeue(out _)) { }
         }
 
-        /// <summary>
-        /// Checks if a target is active and lock-ready.
-        /// </summary>
-        public static bool HasTarget => _currentTarget != null && _currentTarget.IsValid;
+        public static int Count => _renderQueue.Count;
     }
 }
