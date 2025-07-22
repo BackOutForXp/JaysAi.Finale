@@ -1,43 +1,47 @@
-﻿//monarch v2.1 – Fully Refactored & Synced
-
-using global::System;
-using global::System.Threading.Tasks;
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Aim;
-using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.Input;
-using JaysAi.Finale.Modules;
+﻿//heavenly v3.0
+using JaysAi.Finale.Loader;
+using JaysAi.Finale.Security;
 using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Utility;
-using JaysAi.Finale.Visuals;
+using JaysAi.Loader;
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Windows;
 
-namespace JaysAi.Finale.SystemLogic
+namespace JaysAi.Finale
 {
     public static class MainLauncher
     {
-        public static async Task InitializeAsync()
+        [STAThread]
+        public static void Main(string[] args)
         {
-            try
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
             {
-                LogManager.Log("⏳ Initializing JaysAi.Monarch...");
+                Exception ex = e.ExceptionObject as Exception;
+                LogManager.LogCritical("Unhandled Exception", ex?.ToString() ?? "Unknown");
+            };
 
-                string buildInfo = BuildInfo.GetDetailedBuildInfo();
-                LogManager.Log($"🔧 Build Info: {buildInfo}");
-
-                UsersSettings.Load();
-                LogManager.Log("⚙️ User settings loaded.");
-
-                await ESPModule.InitializeAsync();
-                await SnapAssist.InitializeAsync();
-                await OverlaySignal.InitializeAsync();
-                InputManager.Initialize();
-
-                LogManager.Log("✅ All modules successfully initialized.");
-            }
-            catch (Exception ex)
+            if (args.Length > 0 && args[0].Equals("--stealth", StringComparison.OrdinalIgnoreCase))
             {
-                LogManager.Log($"❌ Fatal error in MainLauncher: {ex.Message}", LogLevel.Error);
+                StealthController.LaunchInStealth();
+                return;
             }
+
+            if (!ProcessHandler.IsOnlyInstance())
+            {
+                MessageBox.Show("JaysAi is already running.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            StartupManager.PerformPreLaunchChecks();
+            ModuleManager.InitializeCoreModules();
+
+            LogManager.LogInfo("JaysAi Loader is launching...");
+
+            var app = new App();
+            app.InitializeComponent();
+            app.Run();
         }
     }
 }

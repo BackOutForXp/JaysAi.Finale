@@ -1,41 +1,54 @@
-﻿// File: AI/MonarchAimAI.cs
+﻿//heavenly v3.0 – Adaptive Aim Correction Engine
 using System;
-using System.Numerics;
-using JaysAi.Finale.Settings;
-using JaysAi.Finale.Core;
+using JaysAi.Finale.Aimbot;
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.AI
 {
-    public class MonarchAimAI
+    public static class MonarchAimAI
     {
-        private readonly AppSettings _settings;
+        private static TrackedTarget _currentTarget;
+        private static DateTime _lastEngagedTime;
 
-        public MonarchAimAI(AppSettings settings)
+        public static void EvaluateAndEngage(TrackedTarget target)
         {
-            _settings = settings;
+            if (target == null || !target.IsValid) return;
+
+            _currentTarget = target;
+            _lastEngagedTime = DateTime.UtcNow;
+
+            var predicted = PredictionEngine.Predict(target);
+            if (predicted != null)
+            {
+                SnapAssist.LockOn(predicted);
+                LogManager.LogDebug($"Engaged target: {target.Id} using prediction.");
+            }
         }
 
-        public Vector2 GetSmoothedAim(Vector2 current, Vector2 target)
+        public static void Update()
         {
-            float smoothing = _settings.SmoothingAmount;
-            if (smoothing <= 0f) return target;
+            if (_currentTarget == null || !_currentTarget.IsValid)
+                return;
 
-            Vector2 delta = target - current;
-            return current + delta / smoothing;
+            var timeSinceEngage = DateTime.UtcNow - _lastEngagedTime;
+            if (timeSinceEngage.TotalMilliseconds > 750)
+            {
+                LogManager.LogInfo($"Target timeout: {_currentTarget.Id}");
+                _currentTarget = null;
+                return;
+            }
+
+            EvaluateAndEngage(_currentTarget);
         }
 
-        public bool IsWithinFov(Vector2 current, Vector2 target)
+        public static void Reset()
         {
-            float maxFov = _settings.FovLimit;
-            return Vector2.Distance(current, target) <= maxFov;
+            _currentTarget = null;
         }
 
-        public Vector2 ClampFov(Vector2 current, Vector2 target)
-        {
-            if (!IsWithinFov(current, target))
-                return current;
-
-            return target;
-        }
+        public static bool HasTarget => _currentTarget != null;
     }
 }

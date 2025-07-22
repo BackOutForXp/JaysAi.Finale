@@ -1,33 +1,68 @@
-﻿// Monarch v1.0 – ControllerSignalBus.cs
-// ✅ Monarch Fix Checklist
-// [x] Accepts analog input for movement
-// [x] Future-proofed for external device APIs
-// [x] Easy to route to Zen, Titan Two, or custom emulators
-
+﻿//heavenly v3.0 – Input Signal Broadcaster
 using System;
-using JaysAi.Finale.SystemLogic;
+using System.Collections.Generic;
 
 namespace JaysAi.Finale.Input
 {
     public static class ControllerSignalBus
     {
-        public static void SendAnalogInput(short x, short y)
+        private static readonly Dictionary<string, List<Action>> signalListeners = new();
+        private static readonly Dictionary<string, List<Action<object?>>> payloadListeners = new();
+
+        public static void Subscribe(string signal, Action listener)
         {
-            // Placeholder: send to virtual controller or external bridge
-            // Replace with actual injection logic for Cronus/TitanTwo/ViGEm/etc.
+            if (!signalListeners.ContainsKey(signal))
+                signalListeners[signal] = new List<Action>();
 
-            Logger.Log($"[SignalBus] Analog input: X={x} Y={y}");
-
-            // Example for debugging only — no real input yet
-            // Actual implementation may require HID driver or ZenScript output
+            signalListeners[signal].Add(listener);
         }
 
-        public static void SendButtonPress(string buttonName)
+        public static void Subscribe<T>(string signal, Action<T?> listener)
         {
-            // Map string buttons like "RT", "LT", "A", etc.
-            Logger.Log($"[SignalBus] Button pressed: {buttonName}");
+            if (!payloadListeners.ContainsKey(signal))
+                payloadListeners[signal] = new List<Action<object?>>();
 
-            // TODO: Send real input to driver/device
+            payloadListeners[signal].Add(payload => listener((T?)payload));
+        }
+
+        public static void Unsubscribe(string signal, Action listener)
+        {
+            if (signalListeners.ContainsKey(signal))
+                signalListeners[signal].Remove(listener);
+        }
+
+        public static void Unsubscribe<T>(string signal, Action<T?> listener)
+        {
+            if (payloadListeners.ContainsKey(signal))
+                payloadListeners[signal].RemoveAll(l => l.Equals(listener));
+        }
+
+        public static void Emit(string signal)
+        {
+            if (signalListeners.ContainsKey(signal))
+            {
+                foreach (var listener in signalListeners[signal])
+                {
+                    listener?.Invoke();
+                }
+            }
+        }
+
+        public static void Emit<T>(string signal, T payload)
+        {
+            if (payloadListeners.ContainsKey(signal))
+            {
+                foreach (var listener in payloadListeners[signal])
+                {
+                    listener?.Invoke(payload);
+                }
+            }
+        }
+
+        public static void Clear()
+        {
+            signalListeners.Clear();
+            payloadListeners.Clear();
         }
     }
 }

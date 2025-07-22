@@ -1,56 +1,50 @@
-﻿// File: Input/InputEmulator.cs
+﻿//heavenly v3.0 – InputEmulator Signal Injector
 using System;
 using System.Runtime.InteropServices;
-using System.Numerics;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.Input
 {
-    public static class InputEmulator
+    public class InputEmulator
     {
-        [StructLayout(LayoutKind.Sequential)]
-        struct INPUT
+        private int _pendingMouseX;
+        private int _pendingMouseY;
+        private bool _hasPendingMove;
+
+        public void MoveMouseRelative(int deltaX, int deltaY)
         {
-            public uint type;
-            public MOUSEINPUT mi;
+            _pendingMouseX += deltaX;
+            _pendingMouseY += deltaY;
+            _hasPendingMove = true;
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        struct MOUSEINPUT
+        public void ApplyPendingInputs()
         {
-            public int dx;
-            public int dy;
-            public uint mouseData;
-            public uint dwFlags;
-            public uint time;
-            public nint dwExtraInfo;
-        }
-
-        const uint INPUT_MOUSE = 0;
-        const uint MOUSEEVENTF_MOVE = 0x0001;
-
-        [DllImport("user32.dll", SetLastError = true)]
-        static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
-
-        public static void MoveMouse(Vector2 delta)
-        {
-            if (delta == Vector2.Zero)
-                return;
-
-            var input = new INPUT
+            if (_hasPendingMove)
             {
-                type = INPUT_MOUSE,
-                mi = new MOUSEINPUT
-                {
-                    dx = (int)Math.Round(delta.X),
-                    dy = (int)Math.Round(delta.Y),
-                    dwFlags = MOUSEEVENTF_MOVE,
-                    mouseData = 0,
-                    time = 0,
-                    dwExtraInfo = nint.Zero
-                }
-            };
+                NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_MOVE, _pendingMouseX, _pendingMouseY, 0, 0);
+                _hasPendingMove = false;
+                _pendingMouseX = 0;
+                _pendingMouseY = 0;
+            }
+        }
 
-            SendInput(1, new INPUT[] { input }, Marshal.SizeOf(typeof(INPUT)));
+        public void ClickLeftMouse()
+        {
+            NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+            NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+        }
+
+        public void ClickRightMouse()
+        {
+            NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
+            NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+        }
+
+        public void PressKey(ushort keyCode)
+        {
+            NativeMethods.keybd_event((byte)keyCode, 0, 0, 0);
+            NativeMethods.keybd_event((byte)keyCode, 0, NativeMethods.KEYEVENTF_KEYUP, 0);
         }
     }
 }

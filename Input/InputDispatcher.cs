@@ -1,22 +1,59 @@
-﻿//monarch v2.1 – Routes real-time key presses to system toggles
-
-using global::System;
+﻿//heavenly v3.0 – Input Router Hub
+using System;
+using JaysAi.Finale.Input;
+using JaysAi.Finale.Aimbot;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.Input
 {
-    public static class InputDispatcher
+    public class InputDispatcher
     {
-        public static KeyBindProfile ActiveProfile { get; set; } = new();
+        private readonly InputMonitor _inputMonitor;
+        private readonly InputEmulator _inputEmulator;
+        private readonly ControllerInputListener _controllerListener;
+        private readonly TriggerBot _triggerBot;
+        private readonly SnapAssist _snapAssist;
+        private readonly Logger _logger;
 
-        public static Action OnToggleESP;
-        public static Action OnToggleAimbot;
-        public static Action OnToggleSnap;
-
-        public static void CheckInputs()
+        public InputDispatcher(
+            InputMonitor inputMonitor,
+            InputEmulator inputEmulator,
+            ControllerInputListener controllerListener,
+            TriggerBot triggerBot,
+            SnapAssist snapAssist,
+            Logger logger)
         {
-            if (ActiveProfile.IsBindPressed("ESP")) OnToggleESP?.Invoke();
-            if (ActiveProfile.IsBindPressed("Aimbot")) OnToggleAimbot?.Invoke();
-            if (ActiveProfile.IsBindPressed("Snap")) OnToggleSnap?.Invoke();
+            _inputMonitor = inputMonitor;
+            _inputEmulator = inputEmulator;
+            _controllerListener = controllerListener;
+            _triggerBot = triggerBot;
+            _snapAssist = snapAssist;
+            _logger = logger;
+        }
+
+        public void ProcessInputs()
+        {
+            _inputMonitor.Update();
+
+            if (_inputMonitor.IsLeftMouseDown || _controllerListener.IsTriggerPressed())
+            {
+                _logger.Debug("Fire input detected");
+                _triggerBot.TryShoot();
+            }
+
+            if (_inputMonitor.IsAimKeyHeld || _controllerListener.IsADSActive())
+            {
+                _snapAssist.UpdateTargeting();
+            }
+
+            _inputEmulator.ApplyPendingInputs();
+        }
+
+        public void Clear()
+        {
+            _triggerBot?.Reset();
+            _snapAssist?.Reset();
         }
     }
 }

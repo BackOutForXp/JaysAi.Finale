@@ -1,48 +1,45 @@
-﻿//monarch v2.1
-using System;
+﻿//heavenly v3.0
 using JaysAi.Finale.AI;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.Aimbot
 {
-    public class EntityLock
+    public static class EntityLock
     {
-        public FrameSnapshot? CurrentTarget { get; private set; }
-        private int framesSinceSeen = 0;
-        private readonly int maxLostFrames;
+        private static TargetInfo _lockedTarget;
+        private static float _lockDurationSeconds = 2f;
+        private static DateTime _lastLockTime = DateTime.MinValue;
 
-        public EntityLock(int maxLostFrames = 5)
+        public static TargetInfo Current => _lockedTarget;
+
+        public static void AttemptLock(TargetInfo newTarget)
         {
-            this.maxLostFrames = maxLostFrames;
+            if (newTarget != null && newTarget.IsValid)
+            {
+                _lockedTarget = newTarget;
+                _lastLockTime = DateTime.UtcNow;
+                Logger.LogInfo($"[EntityLock] Locked onto {newTarget.Name}");
+            }
         }
 
-        public void UpdateLock(FrameSnapshot? newTarget)
+        public static void UpdateLock()
         {
-            if (newTarget == null)
-            {
-                framesSinceSeen++;
-                if (framesSinceSeen > maxLostFrames)
-                {
-                    CurrentTarget = null;
-                    framesSinceSeen = 0;
-                }
+            if (_lockedTarget == null)
                 return;
-            }
 
-            if (CurrentTarget == null || newTarget.ID != CurrentTarget.ID)
+            if (!_lockedTarget.IsValid || IsLockExpired())
             {
-                CurrentTarget = newTarget;
-                framesSinceSeen = 0;
-            }
-            else
-            {
-                CurrentTarget = newTarget;
-                framesSinceSeen = 0;
+                Logger.LogDebug($"[EntityLock] Lock expired or target lost.");
+                _lockedTarget = null;
             }
         }
 
-        public bool HasValidLock()
+        private static bool IsLockExpired()
         {
-            return CurrentTarget != null;
+            return (DateTime.UtcNow - _lastLockTime).TotalSeconds > _lockDurationSeconds;
         }
+
+        public static bool HasLock => _lockedTarget != null && _lockedTarget.IsValid;
     }
 }

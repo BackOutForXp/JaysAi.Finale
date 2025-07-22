@@ -1,48 +1,31 @@
-﻿// File: Features/Crosshair.cs
-using JaysAi.Finale.Overlay;
-using JaysAi.Finale.Settings;
-using JaysAi.Finale.Visuals;
-using SkiaSharp;
-using System.Numerics;
+﻿// heavenly v3.0 – Dynamic Crosshair Overlay Logic
+using System.Windows.Media;
+using System.Windows;
+using System.Windows.Shapes;
 
 namespace JaysAi.Finale.Features
 {
     public class Crosshair
     {
-        private readonly SettingsManager<AppSettings> _settings;
-        private readonly IOverlayRenderer _overlay;
+        private readonly double size;
+        private readonly Brush color;
+        private readonly double thickness;
 
-        public Crosshair(SettingsManager<AppSettings> settings, IOverlayRenderer overlay)
+        public Crosshair(double size = 12.0, Brush? color = null, double thickness = 2.0)
         {
-            _settings = settings;
-            _overlay = overlay;
+            this.size = size;
+            this.color = color ?? Brushes.Red;
+            this.thickness = thickness;
         }
 
-        public void Render(SKCanvas canvas, int screenWidth, int screenHeight)
+        public void Draw(DrawingContext dc, Point center)
         {
-            var crosshairEnabled = _settings.Current.Crosshair.Enabled;
-            if (!crosshairEnabled) return;
+            Pen pen = new Pen(color, thickness);
 
-            float size = _settings.Current.Crosshair.Size;
-            float thickness = _settings.Current.Crosshair.Thickness;
-            var color = _settings.Current.Crosshair.Color;
-
-            var paint = new SKPaint
-            {
-                Color = new SKColor(color.R, color.G, color.B, color.A),
-                StrokeWidth = thickness,
-                IsAntialias = true
-            };
-
-            float centerX = screenWidth / 2f;
-            float centerY = screenHeight / 2f;
-
-            float halfSize = size / 2f;
-
-            // Draw horizontal line
-            canvas.DrawLine(centerX - halfSize, centerY, centerX + halfSize, centerY, paint);
-            // Draw vertical line
-            canvas.DrawLine(centerX, centerY - halfSize, centerX, centerY + halfSize, paint);
+            // Horizontal line
+            dc.DrawLine(pen, new Point(center.X - size, center.Y), new Point(center.X + size, center.Y));
+            // Vertical line
+            dc.DrawLine(pen, new Point(center.X, center.Y - size), new Point(center.X, center.Y + size));
         }
     }
 }

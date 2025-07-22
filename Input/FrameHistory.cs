@@ -1,43 +1,48 @@
-﻿//monarch v2.1
-
-//monarch v2.1
+﻿//heavenly v3.0 – Visual Frame Buffer Cache
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
 using JaysAi.Finale.AI;
 
 namespace JaysAi.Finale.Input
 {
     public class FrameHistory
     {
-        private readonly int capacity;
-        private readonly Queue<FrameSnapshot> frames;
+        private readonly int maxFrames;
+        private readonly Queue<FrameSnapshot> snapshots;
 
-        public FrameHistory(int capacity = 60)
+        public FrameHistory(int capacity = 30)
         {
-            this.capacity = capacity;
-            frames = new Queue<FrameSnapshot>(capacity);
+            maxFrames = capacity;
+            snapshots = new Queue<FrameSnapshot>(capacity);
         }
 
-        public void Add(FrameSnapshot frame)
+        public void AddSnapshot(FrameSnapshot snapshot)
         {
-            if (frames.Count >= capacity)
-                frames.Dequeue();
-            frames.Enqueue(frame);
+            if (snapshots.Count >= maxFrames)
+                snapshots.Dequeue();
+
+            snapshots.Enqueue(snapshot);
         }
 
-        public FrameSnapshot[] GetAll()
+        public IReadOnlyList<FrameSnapshot> GetRecentSnapshots(int count)
         {
-            return frames.ToArray();
+            return snapshots.Reverse().Take(count).ToList();
         }
 
-        public FrameSnapshot GetMostRecent()
+        public FrameSnapshot? GetLastSnapshot()
         {
-            return frames.Count > 0 ? frames.Last() : null;
+            return snapshots.Count > 0 ? snapshots.Last() : null;
         }
 
         public void Clear()
         {
-            frames.Clear();
+            snapshots.Clear();
         }
 
-        public int Count => frames.Count;
+        public bool IsEmpty => snapshots.Count == 0;
+
+        public int Count => snapshots.Count;
     }
 }

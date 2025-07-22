@@ -1,53 +1,54 @@
-﻿//monarch v2.1
-using System;
+﻿//heavenly v3.0
 using JaysAi.Finale.AI;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.SystemLogic;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace JaysAi.Finale.Aimbot
 {
     public static class TargetPriority
     {
-        // Returns the enemy closest to the center of screen
-        public static Func<FrameSnapshot, float> ByCrosshair(float screenCenterX, float screenCenterY)
+        public static TrackedTarget? SelectBestTarget(List<TrackedTarget> candidates, TargetingMode mode)
         {
-            return enemy =>
+            if (candidates == null || candidates.Count == 0)
+                return null;
+
+            switch (mode)
             {
-                float dx = enemy.X - screenCenterX;
-                float dy = enemy.Y - screenCenterY;
-                return dx * dx + dy * dy;
-            };
-        }
+                case TargetingMode.Closest:
+                    return candidates.OrderBy(t => t.Distance).FirstOrDefault();
 
-        // Score based on distance (Z-depth)
-        public static Func<FrameSnapshot, float> ByDistance()
-        {
-            return enemy => enemy.Distance;
-        }
+                case TargetingMode.CenterFOV:
+                    return candidates.OrderBy(t => t.AngleFromCrosshair).FirstOrDefault();
 
-        // Score based on low health (useful for cleanup targeting)
-        public static Func<FrameSnapshot, float> ByLowHealth()
-        {
-            return enemy => enemy.Health > 0 ? 100 - enemy.Health : float.MaxValue;
-        }
+                case TargetingMode.LeastMovement:
+                    return candidates.OrderBy(t => t.Velocity.Magnitude()).FirstOrDefault();
 
-        // Score based on movement speed (avoid fast movers or favor them)
-        public static Func<FrameSnapshot, float> BySpeed()
-        {
-            return enemy => enemy.Velocity.Length;
-        }
+                case TargetingMode.MostVisible:
+                    return candidates.OrderByDescending(t => t.VisibilityScore).FirstOrDefault();
 
-        // Combine multiple strategies: FOV + Health + Distance
-        public static Func<FrameSnapshot, float> Composite(float screenCenterX, float screenCenterY)
-        {
-            return enemy =>
-            {
-                float dx = enemy.X - screenCenterX;
-                float dy = enemy.Y - screenCenterY;
-                float fovScore = dx * dx + dy * dy;
-                float healthScore = 100 - enemy.Health;
-                float distanceScore = enemy.Distance;
+                case TargetingMode.Dynamic:
+                    return candidates
+                        .OrderBy(t =>
+                            t.AngleFromCrosshair * 0.5f +
+                            t.Distance * 0.3f -
+                            t.VisibilityScore * 0.2f)
+                        .FirstOrDefault();
 
-                return fovScore + healthScore + distanceScore * 0.5f;
-            };
+                default:
+                    return candidates.OrderBy(t => t.Distance).FirstOrDefault();
+            }
         }
+    }
+
+    public enum TargetingMode
+    {
+        Closest,
+        CenterFOV,
+        LeastMovement,
+        MostVisible,
+        Dynamic
     }
 }

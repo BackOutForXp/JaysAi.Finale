@@ -1,62 +1,69 @@
-﻿//monarch v2.1 – AI Zone Intelligence Manager
-using JaysAi.Finale.AI.Models;
-using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Utility;
-using System;
+﻿//heavenly v3.0
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.Visuals;
 
 namespace JaysAi.Finale.AI
 {
-    public class ZoneManager
+    public static class ZoneManager
     {
-        private readonly List<Zone> _zones = new();
+        private static readonly List<Zone> ActiveZones = new();
 
-        public void AddZone(string name, int x, int y, int width, int height, int dangerLevel)
+        public static void UpdateZones(List<YoloBoundingBox> detectedObjects)
         {
-            _zones.Add(new Zone
+            ActiveZones.Clear();
+
+            foreach (var obj in detectedObjects)
             {
-                Name = name,
-                X = x,
-                Y = y,
-                Width = width,
-                Height = height,
-                DangerLevel = dangerLevel
-            });
+                if (obj.IsEnemy)
+                {
+                    var zone = new Zone
+                    {
+                        Type = ZoneType.Danger,
+                        Area = new Rect(obj.X - 10, obj.Y - 10, obj.Width + 20, obj.Height + 20),
+                        Label = "ENEMY ZONE"
+                    };
+
+                    ActiveZones.Add(zone);
+                }
+            }
         }
 
-        public void ClearZones() => _zones.Clear();
-
-        public Zone GetZoneForTarget(YoloTarget target)
+        public static bool IsInDangerZone(Point point)
         {
-            return _zones.FirstOrDefault(zone =>
-                target.X >= zone.X &&
-                target.X <= zone.X + zone.Width &&
-                target.Y >= zone.Y &&
-                target.Y <= zone.Y + zone.Height);
+            return ActiveZones.Any(zone =>
+                zone.Type == ZoneType.Danger && zone.Area.Contains(point));
         }
 
-        public List<Zone> GetDangerZones(int threshold = 7)
+        public static void DrawZones()
         {
-            return _zones.Where(z => z.DangerLevel >= threshold).ToList();
-        }
-
-        public void LogZones()
-        {
-            foreach (var zone in _zones)
+            foreach (var zone in ActiveZones)
             {
-                Logger.Debug($"Zone: {zone.Name} | Danger: {zone.DangerLevel}");
+                OverlayDrawer.DrawRectangle(
+                    zone.Area.X,
+                    zone.Area.Y,
+                    zone.Area.Width,
+                    zone.Area.Height,
+                    OverlayColor.Orange,
+                    label: zone.Label
+                );
             }
         }
     }
 
+    public enum ZoneType
+    {
+        Neutral,
+        Danger,
+        TargetPriority
+    }
+
     public class Zone
     {
-        public string Name { get; set; }
-        public int X { get; set; }
-        public int Y { get; set; }
-        public int Width { get; set; }
-        public int Height { get; set; }
-        public int DangerLevel { get; set; }
+        public ZoneType Type { get; set; }
+        public Rect Area { get; set; }
+        public string Label { get; set; }
     }
 }

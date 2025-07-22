@@ -1,63 +1,42 @@
-﻿//monarch v2.1 – Visual ESP Signal Dispatcher
+﻿//heavenly v3.0.0 – Dynamic ESP Module Dispatcher
 using System.Collections.Generic;
-using JaysAi.Finale.Visuals;
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Input;
-using OpenCvSharp;
+using JaysAi.Finale.Modules;
 
 namespace JaysAi.Finale.AI
 {
-    public static class ESPModule
+    public static class ESPModules
     {
-        public static bool IsEnabled = true;
-        private static readonly List<OverlaySignal> activeSignals = new();
+        private static readonly List<IEnemyProvider> _providers = new List<IEnemyProvider>();
+        private static bool _initialized;
 
-        public static void Update(List<DetectedEntity> entities)
+        public static void RegisterProvider(IEnemyProvider provider)
         {
-            if (!IsEnabled || entities == null) return;
+            if (!_providers.Contains(provider))
+                _providers.Add(provider);
+        }
 
-            activeSignals.Clear();
+        public static void Initialize()
+        {
+            if (_initialized) return;
 
-            foreach (var entity in entities)
+            // Register default enemy providers
+            RegisterProvider(new DummyEnemyProvider());
+            _initialized = true;
+        }
+
+        public static List<DetectedObject> GetAllEnemies()
+        {
+            if (!_initialized)
+                Initialize();
+
+            var allEnemies = new List<DetectedObject>();
+            foreach (var provider in _providers)
             {
-                if (entity == null || !entity.IsEnemy) continue;
-
-                var predictedPos = PredictionEngine.PredictNextPosition(entity.ID, entity.Position);
-
-                var signal = new OverlaySignal
-                {
-                    ID = entity.ID,
-                    ScreenPosition = entity.ScreenPosition,
-                    Color = entity.TeamColor,
-                    Label = entity.NameTag,
-                    PredictedPosition = predictedPos
-                };
-
-                activeSignals.Add(signal);
+                var enemies = provider.GetEnemies();
+                if (enemies != null)
+                    allEnemies.AddRange(enemies);
             }
-
-            OverlayDrawer.SetDrawQueue(activeSignals);
+            return allEnemies;
         }
-
-        public static void Toggle(bool state)
-        {
-            IsEnabled = state;
-        }
-
-        public static void Clear()
-        {
-            activeSignals.Clear();
-        }
-    }
-
-    public class DetectedEntity
-    {
-        public int ID { get; set; }
-        public string NameTag { get; set; }
-        public Vec2f Position { get; set; }
-        public Vec2f ScreenPosition { get; set; }
-        public Vec3f WorldPosition { get; set; }
-        public bool IsEnemy { get; set; }
-        public string TeamColor { get; set; }
     }
 }

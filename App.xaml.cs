@@ -1,46 +1,29 @@
-﻿//monarch v2.1 – Fully Refactored & Synced
-
-using global::System;
-using global::System.Windows;
-using global::System.Threading.Tasks;
+﻿//heavenly v3.0
+using System;
+using System.Windows;
+using JaysAi.Finale.Utility;
 using JaysAi.Finale.SystemLogic;
 
 namespace JaysAi.Finale
 {
     public partial class App : Application
     {
-        protected override async void OnStartup(StartupEventArgs e)
+        protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-
-            try
+            AppDomain.CurrentDomain.UnhandledException += (s, ex) =>
             {
-                AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
-                TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+                Logger.Log("Fatal crash", ex.ExceptionObject.ToString());
+            };
 
-                await MainLauncher.InitializeAsync();
-
-                // Optional: Launch GUI window here if you're using WPF overlay or config
-                // var window = new MainWindow();
-                // window.Show();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Startup failure: {ex.Message}", "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                Environment.Exit(1);
-            }
+            StartupManager.Initialize();
+            Logger.Log("App started successfully.");
         }
 
-        private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        protected override void OnExit(ExitEventArgs e)
         {
-            var ex = e.ExceptionObject as Exception;
-            MessageBox.Show($"Unhandled Exception: {ex?.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-
-        private void OnUnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
-        {
-            MessageBox.Show($"Unobserved Task Exception: {e.Exception?.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            e.SetObserved();
+            base.OnExit(e);
+            Logger.Log("App exited cleanly.");
         }
     }
 }

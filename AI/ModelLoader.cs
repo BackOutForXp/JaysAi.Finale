@@ -1,49 +1,68 @@
-﻿//monarch v2.1 – YOLOv8 Model Loader
+﻿//heavenly v3.0 – Model Loader & Detection Manager
 using System;
-using System.IO;
+using System.Collections.Generic;
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.SystemLogic;
 using JaysAi.Finale.Utility;
-using OpenCvSharp.Dnn;
 
 namespace JaysAi.Finale.AI
 {
-    public class ModelLoader
+    public static class ModelLoader
     {
-        private Net _net;
-        private string _weightsPath;
+        private static readonly Dictionary<string, IDetectionModel> _models = new();
+        private static IDetectionModel _activeModel;
 
-        public bool IsLoaded => _net != null && !_net.Empty();
-
-        public ModelLoader(string weightsFileName = "yolov8.onnx")
+        public static void RegisterModel(string name, IDetectionModel model)
         {
-            _weightsPath = Path.Combine(Directory.GetCurrentDirectory(), "Assets", "Models", weightsFileName);
-        }
-
-        public bool Load()
-        {
-            if (!File.Exists(_weightsPath))
+            if (!_models.ContainsKey(name))
             {
-                Logger.Log($"Model file not found: {_weightsPath}", LogLevel.Error);
-                return false;
-            }
-
-            try
-            {
-                _net = CvDnn.ReadNetFromONNX(_weightsPath);
-                _net.SetPreferableBackend(Backend.OPENCV);
-                _net.SetPreferableTarget(Target.CPU); // Optionally change to Target.CUDA if GPU is available
-                Logger.Log("YOLOv8 model successfully loaded.", LogLevel.Info);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"Failed to load model: {ex.Message}", LogLevel.Error);
-                return false;
+                _models.Add(name, model);
+                LogManager.LogInfo($"Registered AI model: {name}");
             }
         }
 
-        public Net GetNetwork()
+        public static void LoadModel(string name)
         {
-            return _net;
+            if (_models.TryGetValue(name, out var model))
+            {
+                _activeModel = model;
+                _activeModel.Load();
+                LogManager.LogInfo($"Loaded AI model: {name}");
+            }
+            else
+            {
+                LogManager.LogError($"Model not found: {name}");
+            }
         }
+
+        public static List<DetectedObject> RunDetection(FrameSnapshot frame)
+        {
+            if (_activeModel == null)
+            {
+                LogManager.LogError("No active AI model set.");
+                return new List<DetectedObject>();
+            }
+
+            return _activeModel.Detect(frame);
+        }
+
+        public static IEnumerable<string> GetAvailableModels() => _models.Keys;
+
+        public static void UnloadCurrentModel()
+        {
+            _activeModel?.Unload();
+            _activeModel = null;
+            LogManager.LogInfo("Unloaded current AI model.");
+        }
+
+        public static bool HasActiveModel => _activeModel != null;
+    }
+
+    public interface IDetectionModel
+    {
+        void Load();
+        void Unload();
+        List<DetectedObject> Detect(FrameSnapshot frame);
     }
 }

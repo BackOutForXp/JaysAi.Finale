@@ -1,36 +1,25 @@
-﻿// File: AI/DummyEnemyProvider.cs
-using JaysAi.Finale.Data;
-using SkiaSharp;
+﻿//heavenly v3.0.0 – Offline Testing Dummy Target Provider
 using System.Collections.Generic;
+using JaysAi.Finale.Modules;
 
 namespace JaysAi.Finale.AI
 {
     public class DummyEnemyProvider : IEnemyProvider
     {
-        private readonly List<Enemy> _enemies;
-
-        public DummyEnemyProvider()
+        public List<DetectedObject> GetEnemies()
         {
-            _enemies = new List<Enemy>
+            return new List<DetectedObject>
             {
-                new Enemy
+                new DetectedObject
                 {
-                    Name = "Enemy_01",
-                    IsAlive = true,
-                    ScreenBounds = new SKRect(500, 300, 560, 360)
-                },
-                new Enemy
-                {
-                    Name = "Enemy_02",
-                    IsAlive = true,
-                    ScreenBounds = new SKRect(800, 450, 860, 510)
+                    X = 400,
+                    Y = 300,
+                    Width = 50,
+                    Height = 100,
+                    IsEnemy = true,
+                    Label = "Dummy Enemy"
                 }
             };
-        }
-
-        public List<Enemy> GetVisibleEnemies()
-        {
-            return _enemies;
         }
     }
 }

@@ -1,38 +1,41 @@
-﻿//monarch v2.1
-using System.Windows.Media;
-using JaysAi.SystemLogic;
+﻿//heavenly v3.0
+using System.Collections.Generic;
+using System.Windows;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.Aim
 {
     public class CompensationGraph
     {
-        private readonly IOverlayContext overlay;
+        private readonly List<Point> _points;
+        private readonly int _maxPoints;
 
-        public CompensationGraph(IOverlayContext overlayContext)
+        public CompensationGraph(int maxPoints = 100)
         {
-            overlay = overlayContext;
+            _points = new List<Point>(maxPoints);
+            _maxPoints = maxPoints;
         }
 
-        public void DrawPattern(RecoilPattern pattern, float originX, float originY, Color dotColor)
+        public void AddPoint(double x, double y)
         {
-            if (pattern == null || pattern.Steps.Count == 0)
-                return;
+            if (_points.Count >= _maxPoints)
+                _points.RemoveAt(0);
 
-            float x = originX;
-            float y = originY;
+            _points.Add(new Point(x, y));
+        }
 
-            foreach (var (dx, dy) in pattern.Steps)
+        public IReadOnlyList<Point> GetPoints() => _points.AsReadOnly();
+
+        public void Clear() => _points.Clear();
+
+        public bool HasData => _points.Count > 0;
+
+        public void LogLatest()
+        {
+            if (HasData)
             {
-                x += dx * 5f; // Scaled for visual spacing
-                y += dy * 5f;
-
-                overlay.DrawCircle(
-                    x: x,
-                    y: y,
-                    radius: 3f,
-                    color: dotColor,
-                    thickness: 1.0f
-                );
+                var latest = _points[^1];
+                Logger.Debug($"CompensationGraph: Latest point = ({latest.X}, {latest.Y})");
             }
         }
     }

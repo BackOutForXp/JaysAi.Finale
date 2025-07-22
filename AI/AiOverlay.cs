@@ -1,15 +1,16 @@
-﻿//monarch v2.1 – AI Overlay Handler
-using System.Windows;
-using System.Windows.Media;
+﻿//heavenly v3.0 – Overlay Queue Handler
 using JaysAi.Finale.Visuals;
+using System.Collections.Generic;
 
-namespace JaysAi.Finale.Visuals
+namespace JaysAi.Finale.AI
 {
     public static class AiOverlay
     {
-        public static void QueueRectangle(double x, double y, double width, double height, string label, SolidColorBrush color)
+        private static readonly List<OverlayRectangle> _queuedOverlays = new();
+
+        public static void QueueRectangle(float x, float y, float width, float height, string label, OverlayColor color)
         {
-            var rectangle = new OverlayRectangle
+            _queuedOverlays.Add(new OverlayRectangle
             {
                 X = x,
                 Y = y,
@@ -17,19 +18,30 @@ namespace JaysAi.Finale.Visuals
                 Height = height,
                 Label = label,
                 Color = color
-            };
-
-            OverlaySignal.Enqueue(rectangle);
+            });
         }
-    }
 
-    public class OverlayRectangle
-    {
-        public double X { get; set; }
-        public double Y { get; set; }
-        public double Width { get; set; }
-        public double Height { get; set; }
-        public string Label { get; set; }
-        public SolidColorBrush Color { get; set; }
+        public static void QueueCrosshair(float x, float y, float radius, OverlayColor color)
+        {
+            _queuedOverlays.Add(new OverlayRectangle
+            {
+                X = x - radius,
+                Y = y - radius,
+                Width = radius * 2,
+                Height = radius * 2,
+                Label = "LOCK",
+                Color = color,
+                IsCrosshair = true
+            });
+        }
+
+        public static List<OverlayRectangle> GetAndFlushQueue()
+        {
+            var copy = new List<OverlayRectangle>(_queuedOverlays);
+            _queuedOverlays.Clear();
+            return copy;
+        }
+
+        public static bool HasPendingOverlays => _queuedOverlays.Count > 0;
     }
 }

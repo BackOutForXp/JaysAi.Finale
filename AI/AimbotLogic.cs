@@ -1,42 +1,62 @@
-﻿//monarch v2.1 – Core Aimbot Engine
-using System;
-using System.Collections.Generic;
-using JaysAi.Finale.Input;
+﻿//heavenly v3.0 – Aimbot Logic Core Frame Handler
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.Aimbot;
 using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Input;
+using JaysAi.Finale.AI;
 
 namespace JaysAi.Finale.AI
 {
     public static class AimbotLogic
     {
-        public static bool IsActive => FeatureToggle.AimbotEnabled;
+        private static bool _isInitialized;
 
-        public static void Run(List<TargetInfo> currentTargets, int screenWidth, int screenHeight)
+        public static void Initialize()
         {
-            if (!IsActive || currentTargets == null || currentTargets.Count == 0)
-                return;
+            if (_isInitialized) return;
 
-            var target = SnapAssist.GetBestTarget(currentTargets, screenWidth, screenHeight, FeatureToggle.SnapFOV);
-
-            if (target == null) return;
-
-            AimAtTarget(target, screenWidth, screenHeight);
+            PredictionEngine.Initialize();
+            InputDispatcher.Initialize();
+            SnapAssist.Initialize();
+            _isInitialized = true;
         }
 
-        private static void AimAtTarget(TargetInfo target, int screenWidth, int screenHeight)
+        public static void Update()
         {
-            double centerX = screenWidth / 2;
-            double centerY = screenHeight / 2;
+            if (!_isInitialized)
+                Initialize();
 
-            double deltaX = target.CenterX - centerX;
-            double deltaY = target.CenterY - centerY;
+            // Step 1: Get current input and frame data
+            var inputState = InputDispatcher.GetCurrentState();
+            var trackedTargets = TargetingSystem.GetValidTargets();
 
-            if (FeatureToggle.SmoothAim)
+            if (trackedTargets == null || trackedTargets.Count == 0)
+                return;
+
+            // Step 2: Score and select best target
+            var bestTarget = TargetSelector.GetBestTarget(trackedTargets);
+
+            if (bestTarget == null)
+                return;
+
+            // Step 3: Snap logic or predictive pathing
+            if (AppSettings.Aim.UsePrediction)
             {
-                deltaX /= FeatureToggle.Smoothness;
-                deltaY /= FeatureToggle.Smoothness;
+                var predictedPos = PredictionEngine.Predict(bestTarget);
+                if (AppSettings.Aim.SnapEnabled)
+                    SnapAssist.LockOn(predictedPos);
+            }
+            else
+            {
+                SnapAssist.LockOn(bestTarget);
             }
 
-            InputInjector.MoveMouseBy((int)deltaX, (int)deltaY);
+            // Step 4: Trigger bot support (optional)
+            if (AppSettings.Aim.AutoTrigger && bestTarget.IsInCrosshair)
+                AutoTrigger.TryFire(bestTarget);
+
+            // Step 5: Log or store behavior
+            RuntimeBehaviorLog.Log(bestTarget);
         }
     }
 }

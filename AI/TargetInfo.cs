@@ -1,36 +1,47 @@
-﻿//monarch v2.1 – Object detection data structure
+﻿//heavenly v3.0
+using OpenCvSharp;
+
 namespace JaysAi.Finale.AI
 {
-    public enum TargetType
-    {
-        Enemy,
-        Ally,
-        Neutral,
-        Object
-    }
-
     public class TargetInfo
     {
-        // Screen-space bounding box
-        public double X { get; set; }
-        public double Y { get; set; }
-        public double Width { get; set; }
-        public double Height { get; set; }
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public Rect BoundingBox { get; set; }
+        public Point2f Center => new Point2f(BoundingBox.X + BoundingBox.Width / 2f, BoundingBox.Y + BoundingBox.Height / 2f);
 
-        // Center point (can be precomputed or derived)
-        public double CenterX => X + Width / 2;
-        public double CenterY => Y + Height / 2;
+        public float Distance { get; set; } // Distance from camera/player
+        public Vector2 Velocity { get; set; } // Target motion (for prediction)
+        public bool IsVisible { get; set; }
+        public bool IsEnemy { get; set; }
+        public bool IsTracked { get; set; }
 
-        // Optional additional logic
-        public float Distance { get; set; } // from player/camera
-        public float Confidence { get; set; } // from detector model
+        public float Health { get; set; }
+        public float ThreatLevel { get; set; }
 
-        public bool IsVisible { get; set; } = true;
-        public bool IsPriority { get; set; } = false;
+        public float ScreenX { get; set; }
+        public float ScreenY { get; set; }
 
-        public TargetType Type { get; set; } = TargetType.Enemy;
+        public TargetInfo(int id, Rect bbox)
+        {
+            Id = id;
+            BoundingBox = bbox;
+            Velocity = new Vector2(0, 0);
+            IsVisible = true;
+        }
+    }
 
-        // Optional per-frame FOV radius override
-        public float FovRadius { get; set; } = 40f;
+    public struct Vector2
+    {
+        public float X;
+        public float Y;
+
+        public float Magnitude => (float)System.Math.Sqrt(X * X + Y * Y);
+
+        public Vector2(float x, float y)
+        {
+            X = x;
+            Y = y;
+        }
     }
 }

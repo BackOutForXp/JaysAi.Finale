@@ -1,70 +1,54 @@
-﻿// File: Features/ESP.cs
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Data;
-using JaysAi.Finale.Overlay;
-using JaysAi.Finale.Settings;
-using JaysAi.Finale.Visuals;
-using SkiaSharp;
+﻿// heavenly v3.0 – Visual ESP Module (Hitbox, Box, Health, Name)
 using System.Collections.Generic;
+using System.Windows;
+using System.Windows.Media;
+using JaysAi.Finale.Visuals;
 
 namespace JaysAi.Finale.Features
 {
     public class ESP
     {
-        private readonly SettingsManager<AppSettings> _settings;
-        private readonly IOverlayRenderer _overlay;
-        private readonly IEnemyProvider _enemyProvider;
+        public bool EnableBoxESP { get; set; } = true;
+        public bool EnableHealthBar { get; set; } = true;
+        public bool EnableNameTag { get; set; } = true;
 
-        public ESP(SettingsManager<AppSettings> settings, IOverlayRenderer overlay, IEnemyProvider enemyProvider)
+        public Brush BoxColor { get; set; } = Brushes.Red;
+        public Brush HealthColor { get; set; } = Brushes.Green;
+        public Brush TextColor { get; set; } = Brushes.White;
+
+        public void DrawEntities(DrawingContext dc, List<ESPObject> entities)
         {
-            _settings = settings;
-            _overlay = overlay;
-            _enemyProvider = enemyProvider;
+            foreach (var entity in entities)
+            {
+                if (EnableBoxESP)
+                    DrawBoundingBox(dc, entity);
+
+                if (EnableHealthBar)
+                    DrawHealthBar(dc, entity);
+
+                if (EnableNameTag)
+                    DrawNameTag(dc, entity);
+            }
         }
 
-        public void Render(SKCanvas canvas, int screenWidth, int screenHeight)
+        private void DrawBoundingBox(DrawingContext dc, ESPObject entity)
         {
-            if (!_settings.Current.ESP.Enabled)
-                return;
+            Pen boxPen = new Pen(BoxColor, 1.5);
+            Rect box = new Rect(entity.Position.X, entity.Position.Y, entity.Width, entity.Height);
+            dc.DrawRectangle(null, boxPen, box);
+        }
 
-            List<Enemy> enemies = _enemyProvider.GetVisibleEnemies();
-            if (enemies == null || enemies.Count == 0)
-                return;
+        private void DrawHealthBar(DrawingContext dc, ESPObject entity)
+        {
+            double healthHeight = entity.Height * (entity.Health / 100.0);
+            Rect bar = new Rect(entity.Position.X - 6, entity.Position.Y + (entity.Height - healthHeight), 4, healthHeight);
+            dc.DrawRectangle(HealthColor, null, bar);
+        }
 
-            var color = _settings.Current.ESP.EnemyColor;
-            var paint = new SKPaint
-            {
-                Color = new SKColor(color.R, color.G, color.B, color.A),
-                StrokeWidth = 2,
-                IsAntialias = true,
-                Style = SKPaintStyle.Stroke
-            };
-
-            var textPaint = new SKPaint
-            {
-                Color = new SKColor(color.R, color.G, color.B),
-                TextSize = 16,
-                IsAntialias = true
-            };
-
-            foreach (var enemy in enemies)
-            {
-                if (!enemy.IsAlive || !enemy.ScreenBounds.HasValue)
-                    continue;
-
-                var bounds = enemy.ScreenBounds.Value;
-
-                if (_settings.Current.ESP.ShowBoxes)
-                {
-                    canvas.DrawRect(bounds, paint);
-                }
-
-                if (_settings.Current.ESP.ShowNames && !string.IsNullOrEmpty(enemy.Name))
-                {
-                    var namePos = new SKPoint(bounds.MidX, bounds.Top - 5);
-                    canvas.DrawText(enemy.Name, namePos, textPaint);
-                }
-            }
+        private void DrawNameTag(DrawingContext dc, ESPObject entity)
+        {
+            FormattedText text = OverlayTextBuilder.Build(entity.Name, TextColor, 12);
+            dc.DrawText(text, new Point(entity.Position.X + entity.Width / 2 - text.Width / 2, entity.Position.Y - 16));
         }
     }
 }

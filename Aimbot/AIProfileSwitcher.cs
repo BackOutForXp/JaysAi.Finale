@@ -1,31 +1,37 @@
-﻿//monarch v2.1 – Dynamic AI-Based Weapon Profile Switching
-using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.AI;
-using System;
+﻿//heavenly v3.0
+using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Utility;
+using System.Collections.Generic;
 
 namespace JaysAi.Finale.Aimbot
 {
-    public class AIProfileSwitcher
+    public static class AIProfileSwitcher
     {
-        private readonly WeaponProfileManager _profileManager;
-        private string _lastDetectedWeapon = string.Empty;
-
-        public AIProfileSwitcher(WeaponProfileManager profileManager)
+        private static readonly Dictionary<string, string> _profileMap = new()
         {
-            _profileManager = profileManager;
-        }
+            { "Sniper", "LongRangeAI" },
+            { "SMG", "CloseCombatAI" },
+            { "AR", "BalancedAI" }
+        };
 
-        public void Update()
+        private static string _activeProfile = "BalancedAI";
+
+        public static void UpdateProfile(string weaponType)
         {
-            // Simulate weapon detection via YOLO or OCR bridge
-            string detectedWeapon = ModelLoader.CurrentDetectedWeapon;
-
-            if (!string.IsNullOrEmpty(detectedWeapon) && detectedWeapon != _lastDetectedWeapon)
+            if (_profileMap.ContainsKey(weaponType))
             {
-                Console.WriteLine($"[AI Switcher] New weapon detected: {detectedWeapon}");
-                _profileManager.SetActiveWeapon(detectedWeapon);
-                _lastDetectedWeapon = detectedWeapon;
+                _activeProfile = _profileMap[weaponType];
+                Logger.LogInfo($"[AIProfileSwitcher] Switched to profile: {_activeProfile}");
+                LoadProfile(_activeProfile);
             }
         }
+
+        private static void LoadProfile(string profileName)
+        {
+            // This would tie into ModelLoader or behavior pipelines later
+            FeatureToggleManager.EnableOnlyForProfile(profileName);
+        }
+
+        public static string GetActiveProfile() => _activeProfile;
     }
 }

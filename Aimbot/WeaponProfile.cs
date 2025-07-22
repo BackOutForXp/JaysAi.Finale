@@ -1,67 +1,39 @@
-﻿//monarch v2.1 – Weapon-Specific Profile Logic
-using System.Collections.Generic;
-using System.Numerics;
+﻿//heavenly v3.0
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Aim;
+using JaysAi.Finale.Aimbot;
+using JaysAi.Finale.Modules;
 
 namespace JaysAi.Finale.Aimbot
 {
     public class WeaponProfile
     {
         public string Name { get; set; }
-        public List<Vector2> RecoilPattern { get; set; }
-        public float RecoilScale { get; set; }
-        public float SnapStrength { get; set; }
-        public float MaxSnapDistance { get; set; }
+        public float AimSmoothing { get; set; }
+        public float AimFov { get; set; }
+        public bool UseRecoilCompensation { get; set; }
+        public RecoilPattern RecoilPattern { get; set; }
+        public float FireRate { get; set; } // Rounds per second
+        public bool AutoFire { get; set; }
+        public TriggerSettings TriggerConfig { get; set; }
+        public float PredictionFactor { get; set; }
 
         public WeaponProfile(string name)
         {
             Name = name;
-            RecoilPattern = new List<Vector2>();
-            RecoilScale = 1.0f;
-            SnapStrength = 1.0f;
-            MaxSnapDistance = 100.0f;
-        }
-    }
-
-    public class WeaponProfileManager
-    {
-        private readonly Dictionary<string, WeaponProfile> _profiles = new();
-        private WeaponProfile _currentProfile;
-
-        public void AddProfile(WeaponProfile profile)
-        {
-            if (!_profiles.ContainsKey(profile.Name))
-                _profiles[profile.Name] = profile;
+            AimSmoothing = 5.0f;
+            AimFov = 12.0f;
+            UseRecoilCompensation = true;
+            RecoilPattern = new RecoilPattern();
+            FireRate = 9.5f;
+            AutoFire = false;
+            TriggerConfig = new TriggerSettings();
+            PredictionFactor = 1.0f;
         }
 
-        public void SetActiveWeapon(string weaponName)
+        public bool IsViableFor(TrackedTarget target)
         {
-            if (_profiles.TryGetValue(weaponName, out var profile))
-            {
-                _currentProfile = profile;
-            }
-        }
-
-        public WeaponProfile GetCurrentProfile()
-        {
-            return _currentProfile;
-        }
-
-        public RecoilManager GetRecoilManager()
-        {
-            if (_currentProfile == null)
-                return new RecoilManager(new List<Vector2>());
-
-            return new RecoilManager(_currentProfile.RecoilPattern, _currentProfile.RecoilScale);
-        }
-
-        public float GetSnapStrength()
-        {
-            return _currentProfile?.SnapStrength ?? 1.0f;
-        }
-
-        public float GetMaxSnapDistance()
-        {
-            return _currentProfile?.MaxSnapDistance ?? 100.0f;
+            return target != null && target.IsAlive && target.Distance < 100f;
         }
     }
 }

@@ -1,38 +1,65 @@
-﻿//monarch v2.1
+﻿//heavenly v3.0 – Prediction History Cache System
+using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace JaysAi.Finale.AI
 {
     public class PredictionCache
     {
-        private readonly Queue<FrameSnapshot> frames = new();
-        private const int MaxFrames = 6;
+        private readonly Queue<Vector2> _positions = new();
+        private readonly int _maxSize;
 
-        public void AddSnapshot(FrameSnapshot snapshot)
+        public PredictionCache(int maxSize = 10)
         {
-            frames.Enqueue(snapshot);
-            while (frames.Count > MaxFrames)
-                frames.Dequeue();
+            _maxSize = Math.Max(1, maxSize);
         }
 
-        public (float dx, float dy)? GetVelocityEstimate(int framesAhead = 1)
+        /// <summary>
+        /// Adds a new position sample to the cache.
+        /// </summary>
+        public void AddPosition(Vector2 position)
         {
-            if (frames.Count < 2)
-                return null;
-
-            var frameArray = frames.ToArray();
-            var first = frameArray[0];
-            var last = frameArray[^1];
-
-            float dx = (last.X - first.X) / frames.Count * framesAhead;
-            float dy = (last.Y - first.Y) / frames.Count * framesAhead;
-
-            return (dx, dy);
+            _positions.Enqueue(position);
+            if (_positions.Count > _maxSize)
+                _positions.Dequeue();
         }
 
+        /// <summary>
+        /// Returns smoothed average of position history.
+        /// </summary>
+        public Vector2 GetSmoothedPosition()
+        {
+            if (_positions.Count == 0)
+                return Vector2.Zero;
+
+            Vector2 sum = Vector2.Zero;
+            foreach (var pos in _positions)
+                sum += pos;
+
+            return sum / _positions.Count;
+        }
+
+        /// <summary>
+        /// Returns velocity estimated from the last two positions.
+        /// </summary>
+        public Vector2 EstimateVelocity(float deltaTimeSeconds)
+        {
+            if (_positions.Count < 2 || deltaTimeSeconds <= 0.0001f)
+                return Vector2.Zero;
+
+            Vector2[] array = _positions.ToArray();
+            return (array[^1] - array[^2]) / deltaTimeSeconds;
+        }
+
+        /// <summary>
+        /// Clears all historical data.
+        /// </summary>
         public void Clear()
         {
-            frames.Clear();
+            _positions.Clear();
         }
+
+        public int Count => _positions.Count;
     }
 }

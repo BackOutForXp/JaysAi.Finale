@@ -1,40 +1,54 @@
-﻿using System.Runtime.InteropServices;
-using System.Windows.Input;
+﻿//heavenly v3.0 – InputMonitor
+using System;
+using System.Timers;
+using JaysAi.Finale.Input;
+using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.Input
 {
-    public static class InputMonitor
+    public class InputMonitor
     {
-        [DllImport("user32.dll")]
-        private static extern short GetAsyncKeyState(int vKey);
+        private readonly Timer _pollTimer;
+        private readonly ControllerInputPoller _controllerPoller;
+        private readonly KeyboardPresser _keyboardPresser;
+        private readonly InputStateLogger _stateLogger;
 
-        public static bool IsKeyDown(Key key)
+        public event Action<string>? OnInputDetected;
+
+        public InputMonitor()
         {
-            int vKey = KeyInterop.VirtualKeyFromKey(key);
-            return (GetAsyncKeyState(vKey) & 0x8000) != 0;
+            _controllerPoller = new ControllerInputPoller();
+            _keyboardPresser = new KeyboardPresser();
+            _stateLogger = new InputStateLogger();
+
+            _pollTimer = new Timer(10); // 100 FPS poll rate
+            _pollTimer.Elapsed += PollInputs;
+            _pollTimer.AutoReset = true;
         }
 
-        public static bool IsLeftClickHeld()
-        {
-            return (GetAsyncKeyState(0x01) & 0x8000) != 0; // VK_LBUTTON
-        }
+        public void Start() => _pollTimer.Start();
+        public void Stop() => _pollTimer.Stop();
 
-        public static bool IsRightClickHeld()
+        private void PollInputs(object? sender, ElapsedEventArgs e)
         {
-            return (GetAsyncKeyState(0x02) & 0x8000) != 0; // VK_RBUTTON
-        }
+            foreach (var binding in InputMap.KeyboardBinds)
+            {
+                if (_keyboardPresser.IsKeyPressed(binding.Value))
+                {
+                    _stateLogger.LogKey(binding.Key);
+                    OnInputDetected?.Invoke(binding.Key);
+                }
+            }
 
-        public static bool IsKeyComboDown(Key key1, Key key2)
-        {
-            return IsKeyDown(key1) && IsKeyDown(key2);
+            foreach (var binding in InputMap.ControllerBinds)
+            {
+                if (_controllerPoller.IsButtonPressed(binding.Value))
+                {
+                    _stateLogger.LogButton(binding.Key);
+                    OnInputDetected?.Invoke(binding.Key);
+                }
+            }
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Used by: AdsAssist, MovementAssist
-// - [x] Supports key down detection
-// - [x] Supports mouse left/right click hold check
-// - [ ] Consider adding shift/toggle detection for macro logic
-// - [ ] Could support controller polling in future (ViGEm/HID)
-// ===================================================================

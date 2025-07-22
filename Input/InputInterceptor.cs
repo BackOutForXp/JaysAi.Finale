@@ -1,22 +1,65 @@
-﻿//monarch v2.0
-using JaysAi.Utility;
-using System.Windows.Input;
+﻿//heavenly v3.0 – InputInterceptor
+using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace JaysAi.Finale.Input
 {
     public static class InputInterceptor
     {
-        public static Key ToggleSnapKey = Key.F3;
-        public static bool SnapEnabled = true;
+        private const int WH_KEYBOARD_LL = 13;
+        private const int WH_MOUSE_LL = 14;
 
-        public static void HandleInput()
+        private static IntPtr _keyboardHookId = IntPtr.Zero;
+        private static IntPtr _mouseHookId = IntPtr.Zero;
+
+        private static LowLevelProc _keyboardProc = KeyboardHookCallback;
+        private static LowLevelProc _mouseProc = MouseHookCallback;
+
+        public static void Enable()
         {
-            if (Keyboard.IsKeyDown(ToggleSnapKey))
-            {
-                SnapEnabled = !SnapEnabled;
-                Logger.Log("Snap Assist toggled: " + (SnapEnabled ? "ON" : "OFF"));
-                Thread.Sleep(150); // prevent key spam
-            }
+            _keyboardHookId = SetHook(_keyboardProc, WH_KEYBOARD_LL);
+            _mouseHookId = SetHook(_mouseProc, WH_MOUSE_LL);
         }
+
+        public static void Disable()
+        {
+            UnhookWindowsHookEx(_keyboardHookId);
+            UnhookWindowsHookEx(_mouseHookId);
+        }
+
+        private static IntPtr SetHook(LowLevelProc proc, int hookId)
+        {
+            using var curProcess = Process.GetCurrentProcess();
+            using var curModule = curProcess.MainModule;
+            return SetWindowsHookEx(hookId, proc,
+                GetModuleHandle(curModule?.ModuleName), 0);
+        }
+
+        private delegate IntPtr LowLevelProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+        private static IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+        {
+            // Placeholder: Intercept key input logic here
+            return CallNextHookEx(_keyboardHookId, nCode, wParam, lParam);
+        }
+
+        private static IntPtr MouseHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+        {
+            // Placeholder: Intercept mouse input logic here
+            return CallNextHookEx(_mouseHookId, nCode, wParam, lParam);
+        }
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelProc lpfn, IntPtr hMod, uint dwThreadId);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr GetModuleHandle(string lpModuleName);
     }
 }

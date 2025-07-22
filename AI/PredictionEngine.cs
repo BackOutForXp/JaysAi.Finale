@@ -1,60 +1,86 @@
-﻿//monarch v2.1 – Predictive Target Movement Engine
-using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.Utility;
+﻿//heavenly v3.0
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.AI
 {
-    public static class PredictionEngine
+    public class PredictionEngine
     {
-        private static readonly Dictionary<int, TargetHistory> _historyMap = new();
+        private readonly int frameWindow = 6;
+        private readonly Queue<FrameSnapshot> frameSnapshots = new();
+        private readonly object syncLock = new();
 
-        public static void Initialize()
+        public void AddFrame(FrameSnapshot snapshot)
         {
-            _historyMap.Clear();
-        }
-
-        public static void UpdateHistory(DetectedObject obj)
-        {
-            if (!_historyMap.TryGetValue(obj.Id, out var history))
+            lock (syncLock)
             {
-                history = new TargetHistory();
-                _historyMap[obj.Id] = history;
-            }
-
-            history.Update(obj.X, obj.Y);
-        }
-
-        public static (float predictedX, float predictedY) PredictPosition(DetectedObject obj, float predictionFactor = 1.0f)
-        {
-            if (_historyMap.TryGetValue(obj.Id, out var history))
-            {
-                float dx = history.VelocityX * predictionFactor;
-                float dy = history.VelocityY * predictionFactor;
-
-                return (obj.X + dx, obj.Y + dy);
-            }
-
-            return (obj.X, obj.Y); // fallback: no prediction available
-        }
-
-        private class TargetHistory
-        {
-            private float _lastX;
-            private float _lastY;
-            public float VelocityX { get; private set; }
-            public float VelocityY { get; private set; }
-
-            public void Update(float currentX, float currentY)
-            {
-                VelocityX = currentX - _lastX;
-                VelocityY = currentY - _lastY;
-
-                _lastX = currentX;
-                _lastY = currentY;
+                frameSnapshots.Enqueue(snapshot);
+                if (frameSnapshots.Count > frameWindow)
+                    frameSnapshots.Dequeue();
             }
         }
+
+        public Vector2? PredictDisplacement(int framesAhead = 1)
+        {
+            lock (syncLock)
+            {
+                if (frameSnapshots.Count < 2)
+                    return null;
+
+                var array = frameSnapshots.ToArray();
+                var start = array.First();
+                var end = array.Last();
+
+                float dx = (end.Position.X - start.Position.X) / (array.Length - 1) * framesAhead;
+                float dy = (end.Position.Y - start.Position.Y) / (array.Length - 1) * framesAhead;
+
+                return new Vector2(dx, dy);
+            }
+        }
+
+        public Vector2? PredictFuturePosition(Vector2 currentPosition, int framesAhead = 1)
+        {
+            var displacement = PredictDisplacement(framesAhead);
+            if (displacement == null) return null;
+
+            return currentPosition + displacement.Value;
+        }
+
+        public void Clear()
+        {
+            lock (syncLock)
+            {
+                frameSnapshots.Clear();
+            }
+        }
+    }
+
+    public class FrameSnapshot
+    {
+        public Vector2 Position { get; set; }
+        public DateTime Timestamp { get; set; }
+
+        public FrameSnapshot(Vector2 position)
+        {
+            Position = position;
+            Timestamp = DateTime.UtcNow;
+        }
+    }
+
+    public struct Vector2
+    {
+        public float X, Y;
+
+        public Vector2(float x, float y)
+        {
+            X = x;
+            Y = y;
+        }
+
+        public static Vector2 operator +(Vector2 a, Vector2 b) => new(a.X + b.X, a.Y + b.Y);
+        public static Vector2 operator -(Vector2 a, Vector2 b) => new(a.X - b.X, a.Y - b.Y);
+        public override string ToString() => $"({X:F2}, {Y:F2})";
     }
 }

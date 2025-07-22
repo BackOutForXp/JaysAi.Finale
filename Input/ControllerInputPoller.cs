@@ -1,42 +1,44 @@
-﻿//monarch v2.1 – Real-time controller input scanner
+﻿//heavenly v3.0 – Controller Poller
+using JaysAi.Integration;
 using System;
 using System.Timers;
-using JaysAi.Finale.Input;
 
 namespace JaysAi.Finale.Input
 {
-    public static class ControllerInputPoller
+    public class ControllerInputPoller
     {
-        private static ControllerInputState _state = new();
-        private static Timer _pollTimer;
+        private readonly Timer _pollTimer;
+        private readonly IControllerBridge _bridge;
+        private ControllerState _lastState;
 
-        public static ControllerInputState CurrentState => _state;
+        public event Action<ControllerState>? OnPoll;
 
-        public static void StartPolling()
+        public ControllerInputPoller(IControllerBridge bridge, double pollIntervalMs = 10)
         {
-            _pollTimer = new Timer(10); // Poll every 10ms (adjust as needed)
-            _pollTimer.Elapsed += PollInputs;
-            _pollTimer.AutoReset = true;
+            _bridge = bridge;
+            _pollTimer = new Timer(pollIntervalMs);
+            _pollTimer.Elapsed += (s, e) => Poll();
+        }
+
+        public void Start()
+        {
             _pollTimer.Start();
         }
 
-        private static void PollInputs(object sender, ElapsedEventArgs e)
+        public void Stop()
         {
-            // Example placeholder: Inject controller input detection logic here
-            // Replace these lines with real detection using SharpDX, DS4Windows, or custom driver
-
-            _state.A = false;
-            _state.B = false;
-            _state.X = false;
-            _state.Y = false;
-
-            // TODO: Plug in controller SDK to map real values
+            _pollTimer.Stop();
         }
 
-        public static void StopPolling()
+        private void Poll()
         {
-            _pollTimer?.Stop();
-            _pollTimer?.Dispose();
+            var currentState = _bridge.GetCurrentState();
+
+            if (!currentState.Equals(_lastState))
+            {
+                _lastState = currentState;
+                OnPoll?.Invoke(currentState);
+            }
         }
     }
 }

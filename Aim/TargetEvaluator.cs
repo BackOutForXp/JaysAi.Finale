@@ -1,53 +1,47 @@
-﻿//monarch v2.0
-using JaysAi.AI;
-using JaysAi.Finale.Visuals;
+﻿//heavenly v3.0
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Modules;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 
 namespace JaysAi.Finale.Aim
 {
     public static class TargetEvaluator
     {
-        public static EntityData GetBestTarget(List<EntityData> visibleEntities)
+        public static SnapTarget EvaluateBestTarget(List<TrackedTarget> targets, Vector2 crosshairPosition, float maxSnapDistance)
         {
-            if (visibleEntities == null || visibleEntities.Count == 0)
-                return null;
-
-            EntityData bestTarget = null;
+            SnapTarget best = null;
             float bestScore = float.MinValue;
 
-            foreach (var entity in visibleEntities)
+            foreach (var target in targets)
             {
-                if (SnapSettings.IgnoreTeamTargets && TeamColorDetector.IsFriendly(entity))
+                if (!target.IsAlive || !target.IsVisible)
                     continue;
 
-                if (SnapSettings.RequireLineOfSight && !LineOfSightChecker.HasClearView(entity))
+                Vector2 screenPos = target.ScreenPosition;
+                float distance = Vector2.Distance(screenPos, crosshairPosition);
+                if (distance > maxSnapDistance)
                     continue;
 
-                float score = CalculateScore(entity);
-
+                float score = CalculateTargetScore(target, distance);
                 if (score > bestScore)
                 {
                     bestScore = score;
-                    bestTarget = entity;
+                    best = new SnapTarget(target, screenPos, distance, score, target.IsVisible);
                 }
             }
 
-            return bestTarget;
+            return best;
         }
 
-        private static float CalculateScore(EntityData entity)
+        private static float CalculateTargetScore(TrackedTarget target, float distance)
         {
-            Vector2 screenCenter = ScreenUtils.GetCenter();
-            float distance = Vector2.Distance(entity.ScreenPosition, screenCenter);
-            float fov = MathF.Abs(distance);
+            float healthFactor = target.Health > 0 ? 1f : 0f;
+            float distanceWeight = 1f / (distance + 1f); // Avoid division by zero
+            float priority = target.PriorityScore;
 
-            float fovWeight = 1f;
-            float proximityWeight = 1.2f;
-
-            return 1f / (fov + 1) * fovWeight + 1f / (distance + 1) * proximityWeight;
+            return (distanceWeight * 0.6f) + (priority * 0.3f) + (healthFactor * 0.1f);
         }
     }
 }

@@ -1,42 +1,43 @@
-﻿// File: AI/TargetingSystem.cs
-using JaysAi.Finale.Data;
-using System;
+﻿//heavenly v3.0
 using System.Collections.Generic;
-using System.Numerics;
+using System.Linq;
+using OpenCvSharp;
 
 namespace JaysAi.Finale.AI
 {
     public static class TargetingSystem
     {
-        private static readonly List<Enemy> _enemies = new();
-        private static readonly Random _random = new();
+        public static TargetInfo CurrentTarget { get; private set; }
+        public static List<TargetInfo> VisibleTargets { get; private set; } = new();
 
-        public static IReadOnlyList<Enemy> GetEnemies() => _enemies;
-
-        /// <summary>
-        /// Updates enemies with mock data. Replace with memory scan or capture integration later.
-        /// </summary>
-        public static void UpdateTargets()
+        public static void UpdateTargets(IEnumerable<TargetInfo> detectedTargets)
         {
-            _enemies.Clear();
+            // Filter only visible and enemy targets
+            VisibleTargets = detectedTargets
+                .Where(t => t.IsVisible && t.IsEnemy)
+                .OrderBy(t => t.Distance)
+                .ToList();
 
-            for (int i = 0; i < 5; i++)
-            {
-                var enemy = new Enemy
-                {
-                    Name = $"Bot_{i + 1}",
-                    WorldPosition = new Vector3(
-                        _random.Next(0, 100),
-                        0,
-                        _random.Next(20, 120)),
+            CurrentTarget = SelectHighestPriorityTarget(VisibleTargets);
+        }
 
-                    ScreenPosition = new Vector2(
-                        _random.Next(400, 1400),
-                        _random.Next(200, 800)),
+        private static TargetInfo SelectHighestPriorityTarget(List<TargetInfo> targets)
+        {
+            if (targets.Count == 0) return null;
 
-                    Velocity = new Vector3(
-                        _random.Next(-2, 2),
-                        0,
-                        _random.Next(-2, 2)),
+            // Simple heuristic: closest + highest threat
+            return targets
+                .OrderByDescending(t => t.ThreatLevel)
+                .ThenBy(t => t.Distance)
+                .FirstOrDefault();
+        }
 
-                    ScreenVelocity = new Vector2(
+        public static void Reset()
+        {
+            CurrentTarget = null;
+            VisibleTargets.Clear();
+        }
+
+        public static bool HasLock => CurrentTarget != null;
+    }
+}

@@ -1,72 +1,46 @@
-﻿//monarch v2.0
-using JaysAi.Finale.AI;
+﻿//heavenly v3.0 – InputHandler Core
+using JaysAi.Finale.Aimbot;
+using JaysAi.Finale.Input;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Utility;
 using System;
 
 namespace JaysAi.Finale.Input
 {
-    /// <summary>
-    /// Central handler for user input state including keyboard, mouse, and controller.
-    /// Delegates input state to internal modules.
-    /// </summary>
     public class InputHandler
     {
-        public ControllerInputState ControllerState { get; private set; }
-        public StickXModule StickAssist { get; private set; }
-
-        public bool IsRunning { get; private set; } = true;
+        private readonly InputStateLogger _stateLogger;
+        private readonly InputDispatcher _dispatcher;
 
         public InputHandler()
         {
-            ControllerState = new ControllerInputState();
-            StickAssist = new StickXModule();
+            _stateLogger = new InputStateLogger();
+            _dispatcher = new InputDispatcher();
         }
 
-        /// <summary>
-        /// Updates input state manually.
-        /// This should be called once per frame or tick loop.
-        /// </summary>
-        public void Update()
+        public void ProcessInput(InputState currentState)
         {
-            if (!IsRunning)
+            if (currentState == null)
                 return;
 
-            // Simulated values (these would be read from real input libraries in production)
-            float lx = 0f; // Replace with real analog X input
-            float ly = 0f;
-            float rx = 0f;
-            float ry = 0f;
-            bool aiming = false; // Replace with input binding
-            bool firing = false;
+            _stateLogger.Log(currentState);
+            _dispatcher.RouteInput(currentState);
 
-            // Update internal state
-            ControllerState.Update(lx, ly, rx, ry, aiming, firing);
+            if (FeatureToggle.IsEnabled("AutoTrigger") && currentState.FirePressed)
+                SnapAssist.Instance?.TriggerFire();
 
-            // Feed input into aim assist module
-            StickAssist.UpdateAim(rx, ry);
+            if (FeatureToggle.IsEnabled("RecoilControl"))
+                RecoilManager.Instance?.ApplyRecoilCorrection(currentState);
+
+            if (FeatureToggle.IsEnabled("StickAssist"))
+                StickXModule.Instance?.AdjustStickMovement(currentState);
         }
 
-        /// <summary>
-        /// Gets the current smoothed stick aim output.
-        /// </summary>
-        public (float X, float Y) GetAimAssistDelta()
+        public void Tick()
         {
-            return StickAssist.GetStickOutput();
-        }
-
-        public void Stop()
-        {
-            IsRunning = false;
-        }
-
-        public void Start()
-        {
-            IsRunning = true;
-        }
-
-        public void Reset()
-        {
-            ControllerState.Reset();
-            StickAssist.Reset();
+            var inputState = InputPoller.Poll();
+            ProcessInput(inputState);
         }
     }
 }

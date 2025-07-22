@@ -1,7 +1,7 @@
-﻿//monarch v2.1 – Target Prioritization Engine
+﻿//heavenly v3.0
 using JaysAi.Finale.AI;
-using JaysAi.Finale.Utility;
-using System;
+using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Modules;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -9,28 +9,28 @@ namespace JaysAi.Finale.Aimbot
 {
     public static class TargetSelector
     {
-        public static DetectionObject? GetBestTarget(IEnumerable<DetectionObject> detectedObjects)
+        public static TrackedTarget? GetFinalTarget(List<TrackedTarget> allTargets, AimSettings settings)
         {
-            if (detectedObjects == null) return null;
+            if (allTargets == null || allTargets.Count == 0)
+                return null;
 
-            return detectedObjects
-                .Where(obj => obj.IsEnemy)
-                .OrderBy(obj => GetDistanceToCenter(obj))
-                .FirstOrDefault();
+            var filtered = allTargets
+                .Where(t => t.IsAlive && t.VisibilityScore > settings.MinVisibility && t.Distance < settings.MaxRange)
+                .Where(t => t.AngleFromCrosshair <= settings.MaxFOV)
+                .ToList();
+
+            if (filtered.Count == 0)
+                return null;
+
+            return TargetPriority.SelectBestTarget(filtered, settings.TargetingMode);
         }
+    }
 
-        private static double GetDistanceToCenter(DetectionObject obj)
-        {
-            var centerX = ScreenHelper.CenterX;
-            var centerY = ScreenHelper.CenterY;
-
-            var targetX = obj.X + obj.Width / 2;
-            var targetY = obj.Y + obj.Height / 2;
-
-            var dx = targetX - centerX;
-            var dy = targetY - centerY;
-
-            return Math.Sqrt(dx * dx + dy * dy);
-        }
+    public class AimSettings
+    {
+        public float MaxFOV { get; set; } = 30f;
+        public float MaxRange { get; set; } = 150f;
+        public float MinVisibility { get; set; } = 0.3f;
+        public TargetingMode TargetingMode { get; set; } = TargetingMode.Dynamic;
     }
 }

@@ -1,46 +1,77 @@
-﻿//monarch v2.0
+﻿// heavenly v3.0 – Central Module Lifecycle Handler
+using System;
 using System.Collections.Generic;
-using JaysAi.Finale.AI;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.Utility;
+using JaysAi.Finale.SystemLogic;
 
-namespace JaysAi.finale.Core    
+namespace JaysAi.Finale.Core
 {
-    public class ModelLoader
+    public static class ModuleManager
     {
-        public bool ModelReady { get; private set; }
-        private object? _modelInstance;
+        private static readonly List<IModule> _modules = new();
 
-        public ModelLoader()
+        public static void Register(IModule module)
         {
-            LoadModel();
-        }
+            if (module == null)
+                throw new ArgumentNullException(nameof(module));
 
-        private void LoadModel()
-        {
-            // Placeholder for real YOLOv8 ONNX or Python connection
-            _modelInstance = new object(); // Replace with actual model loader
-            ModelReady = _modelInstance != null;
-        }
-
-        public List<YoloResult> RunDetection(byte[] imageData)
-        {
-            var results = new List<YoloResult>();
-
-            if (!ModelReady)
-                return results;
-
-            // Example fake detection for test:
-            results.Add(new YoloResult
+            if (!_modules.Contains(module))
             {
-                X = 300,
-                Y = 220,
-                Width = 75,
-                Height = 150,
-                Confidence = 0.91f,
-                ClassId = 0,
-                Label = "person"
-            });
-
-            return results;
+                _modules.Add(module);
+                Logger.Debug($"Module registered: {module.GetType().Name}");
+            }
         }
+
+        public static void InitializeAll()
+        {
+            foreach (var module in _modules)
+            {
+                try
+                {
+                    module.Initialize();
+                    Logger.Info($"Initialized: {module.GetType().Name}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Init failed for {module.GetType().Name}: {ex.Message}");
+                }
+            }
+        }
+
+        public static void UpdateAll()
+        {
+            foreach (var module in _modules)
+            {
+                try
+                {
+                    module.Update();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"Update failed for {module.GetType().Name}: {ex.Message}");
+                }
+            }
+        }
+
+        public static void ShutdownAll()
+        {
+            foreach (var module in _modules)
+            {
+                try
+                {
+                    module.Shutdown();
+                    Logger.Info($"Shutdown: {module.GetType().Name}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Shutdown failed for {module.GetType().Name}: {ex.Message}");
+                }
+            }
+
+            _modules.Clear();
+        }
+
+        public static IReadOnlyList<IModule> GetAllModules() => _modules.AsReadOnly();
     }
 }

@@ -1,27 +1,37 @@
-﻿// Monarch v1.0 – TrackedTarget.cs
-// ✅ Monarch Fix Checklist
-// [x] Unified structure for all AI targets
-// [x] Compatible with ESP, prediction, memory, and aim logic
-// [x] Future-proof with extensibility for team ID, visibility, health, etc.
-
+﻿//heavenly v3.0
 using OpenCvSharp;
 
 namespace JaysAi.Finale.AI
 {
-    public class TrackedTarget
+    public class TrackTarget
     {
-        public int Id { get; set; }                    // Unique ID (assigned by YOLO or internal memory)
-        public string Label { get; set; }              // Class label (e.g., "enemy")
-        public float Confidence { get; set; }          // Detection confidence
-        public Point2f Center2D { get; set; }          // On-screen center position (2D)
-        public float Size { get; set; }                // Width/height or bounding box magnitude
+        public int Id { get; set; }
+        public Rect BoundingBox { get; set; }
+        public float Confidence { get; set; }
+        public bool IsEnemy { get; set; }
+        public Point2f Center => new(
+            BoundingBox.X + BoundingBox.Width / 2f,
+            BoundingBox.Y + BoundingBox.Height / 2f
+        );
 
-        public Point2f PredictedPosition { get; set; } // Filled in by PredictionEngine.cs
-        public bool IsLocked { get; set; }             // If currently selected as locked-on target
-        public bool IsVisible { get; set; } = true;    // Optional: set by future occlusion module
+        public TrackTarget(int id, Rect bbox, float confidence, bool isEnemy)
+        {
+            Id = id;
+            BoundingBox = bbox;
+            Confidence = confidence;
+            IsEnemy = isEnemy;
+        }
 
-        // Optional metadata for expansion
-        public int TeamId { get; set; } = -1;          // -1 = unknown, 0 = enemy, 1 = teammate
-        public float Health { get; set; } = 100f;      // Placeholder for injected health data
+        public float GetDistanceTo(Point2f point)
+        {
+            float dx = point.X - Center.X;
+            float dy = point.Y - Center.Y;
+            return (float)System.Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        public override string ToString()
+        {
+            return $"TrackTarget #{Id} | Pos: {Center} | Enemy: {IsEnemy} | Conf: {Confidence:F2}";
+        }
     }
 }

@@ -1,43 +1,43 @@
-﻿//monarch v2.1
+﻿//heavenly v3.0 – Aim Data Telemetry Logger
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Windows;
 using JaysAi.Finale.AI;
 
 namespace JaysAi.Finale.Input
 {
     public class AimDataRecorder
     {
-        private readonly List<FrameSnapshot> snapshots = new();
-        private readonly List<(float X, float Y)> stickMovements = new();
-        private readonly int maxFrames;
+        private readonly List<string> _dataPoints = new();
+        private readonly string _logPath;
 
-        public AimDataRecorder(int maxFrames = 1800) // ~60 seconds at 30 FPS
+        public AimDataRecorder()
         {
-            this.maxFrames = maxFrames;
+            _logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs", $"aim_data_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            Directory.CreateDirectory(Path.GetDirectoryName(_logPath)!);
+            _dataPoints.Add("Timestamp,TargetX,TargetY,CrosshairX,CrosshairY,DeltaX,DeltaY");
         }
 
-        public void RecordFrame(FrameSnapshot snapshot, float stickX, float stickY)
+        public void RecordFrame(Point target, Point crosshair)
         {
-            if (snapshots.Count >= maxFrames)
+            var deltaX = target.X - crosshair.X;
+            var deltaY = target.Y - crosshair.Y;
+            var logEntry = $"{DateTime.UtcNow:O},{target.X:F2},{target.Y:F2},{crosshair.X:F2},{crosshair.Y:F2},{deltaX:F2},{deltaY:F2}";
+            _dataPoints.Add(logEntry);
+        }
+
+        public void Save()
+        {
+            try
             {
-                snapshots.RemoveAt(0);
-                stickMovements.RemoveAt(0);
+                File.WriteAllLines(_logPath, _dataPoints, Encoding.UTF8);
             }
-
-            snapshots.Add(snapshot);
-            stickMovements.Add((stickX, stickY));
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AimDataRecorder] Failed to write aim log: {ex.Message}");
+            }
         }
-
-        public (List<FrameSnapshot> Snapshots, List<(float X, float Y)> Movements) GetRecording()
-        {
-            return (snapshots, stickMovements);
-        }
-
-        public void Clear()
-        {
-            snapshots.Clear();
-            stickMovements.Clear();
-        }
-
-        public bool HasData => snapshots.Count > 0;
     }
 }

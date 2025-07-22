@@ -1,39 +1,34 @@
-﻿// Monarch v1.0 – ControllerInputLogger.cs
-// ✅ Monarch Fix Checklist
-// [x] Tracks LT/RT trigger pressure
-// [x] Can be expanded for full button/stick logging
-// [x] Feeds into SnapAssist and AimbotLogic control checks
-
+﻿//heavenly v3.0 – Raw Input Listener
 using System;
+using JaysAi.Finale.Input;
 
 namespace JaysAi.Finale.Input
 {
-    public static class ControllerInputLogger
+    public class ControllerInputListener
     {
-        private static float leftTriggerPressure = 0f;
-        private static float rightTriggerPressure = 0f;
+        public event Action<ControllerState>? OnControllerStateChanged;
+        private ControllerInputPoller _poller;
 
-        // Simulate update loop (normally called each tick/frame)
-        public static void UpdateTriggerState(float lt, float rt)
+        public ControllerInputListener()
         {
-            leftTriggerPressure = Math.Clamp(lt, 0f, 1f);
-            rightTriggerPressure = Math.Clamp(rt, 0f, 1f);
+            _poller = new ControllerInputPoller();
+            _poller.OnInputUpdated += HandlePollerInput;
         }
 
-        public static float GetTriggerPressure()
+        private void HandlePollerInput(ControllerState state)
         {
-            // Return whichever is stronger (LT or RT) to drive SnapTrigger activation
-            return Math.Max(leftTriggerPressure, rightTriggerPressure);
+            // Forward raw input updates
+            OnControllerStateChanged?.Invoke(state);
         }
 
-        public static bool IsAiming()
+        public void Begin()
         {
-            return leftTriggerPressure > 0.4f;
+            _poller.StartPolling();
         }
 
-        public static bool IsFiring()
+        public void End()
         {
-            return rightTriggerPressure > 0.4f;
+            _poller.StopPolling();
         }
     }
 }

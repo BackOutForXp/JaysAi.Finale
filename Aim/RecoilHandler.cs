@@ -1,34 +1,47 @@
-﻿//monarch v2.1
-using System.Collections.Generic;
+﻿//heavenly v3.0
+using System;
+using JaysAi.Finale.Input;
 
 namespace JaysAi.Finale.Aim
 {
     public class RecoilHandler
     {
-        private readonly Dictionary<string, RecoilPattern> weaponPatterns = new();
-        private RecoilPattern? currentPattern;
+        private readonly RecoilPattern _pattern;
+        private int _shotCount;
+        private float _smoothingFactor;
 
-        public void LoadPattern(string weaponName, RecoilPattern pattern)
+        public RecoilHandler(RecoilPattern pattern, float smoothingFactor = 0.85f)
         {
-            weaponPatterns[weaponName] = pattern;
+            _pattern = pattern;
+            _smoothingFactor = Math.Clamp(smoothingFactor, 0.5f, 1f);
+            _shotCount = 0;
         }
 
-        public void SelectWeapon(string weaponName)
+        public void ApplyRecoil()
         {
-            weaponPatterns.TryGetValue(weaponName, out currentPattern);
+            var offset = _pattern.GetOffset(_shotCount);
+            offset = Smooth(offset);
+            InputInjector.MoveMouse(offset.X, offset.Y);
+            _shotCount++;
         }
 
-        public (float offsetX, float offsetY) GetOffset(int bulletIndex)
+        public void ResetRecoil()
         {
-            if (currentPattern == null || bulletIndex >= currentPattern.Steps.Count)
-                return (0f, 0f);
-
-            return currentPattern.Steps[bulletIndex];
+            _shotCount = 0;
         }
 
-        public void Reset()
+        private Offset Smooth(Offset raw)
         {
-            currentPattern = null;
+            return new Offset(
+                raw.X * _smoothingFactor,
+                raw.Y * _smoothingFactor
+            );
         }
+    }
+
+    public struct Offset
+    {
+        public float X, Y;
+        public Offset(float x, float y) => (X, Y) = (x, y);
     }
 }

@@ -1,38 +1,44 @@
-﻿//monarch v2.1 – Input Event Listener
+﻿//heavenly v3.0 – Controller Poller
+using JaysAi.Integration;
 using System;
-using System.Runtime.InteropServices;
+using System.Timers;
 
 namespace JaysAi.Finale.Input
 {
-    [StructLayout(LayoutKind.Sequential)]
-    public struct ControllerInputState
+    public class ControllerInputPoller
     {
-        public bool A;
-        public bool B;
-        public bool X;
-        public bool Y;
-        public bool LB;
-        public bool RB;
-        public bool LT;
-        public bool RT;
-        public bool DPadUp;
-        public bool DPadDown;
-        public bool DPadLeft;
-        public bool DPadRight;
-        public bool Start;
-        public bool Back;
+        private readonly Timer _pollTimer;
+        private readonly IControllerBridge _bridge;
+        private ControllerState _lastState;
 
-        public float LeftStickX;
-        public float LeftStickY;
-        public float RightStickX;
-        public float RightStickY;
+        public event Action<ControllerState>? OnPoll;
 
-        public bool IsAnyButtonPressed =>
-            A || B || X || Y || LB || RB || LT || RT || DPadUp || DPadDown || DPadLeft || DPadRight || Start || Back;
-
-        public override string ToString()
+        public ControllerInputPoller(IControllerBridge bridge, double pollIntervalMs = 10)
         {
-            return $"[A:{A} B:{B} X:{X} Y:{Y} L:{LeftStickX},{LeftStickY} R:{RightStickX},{RightStickY}]";
+            _bridge = bridge;
+            _pollTimer = new Timer(pollIntervalMs);
+            _pollTimer.Elapsed += (s, e) => Poll();
+        }
+
+        public void Start()
+        {
+            _pollTimer.Start();
+        }
+
+        public void Stop()
+        {
+            _pollTimer.Stop();
+        }
+
+        private void Poll()
+        {
+            var currentState = _bridge.GetCurrentState();
+
+            if (!currentState.Equals(_lastState))
+            {
+                _lastState = currentState;
+                OnPoll?.Invoke(currentState);
+            }
         }
     }
 }

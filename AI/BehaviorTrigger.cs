@@ -1,53 +1,40 @@
-﻿//monarch v2.1 – In-Game Behavior Decision Logic
+﻿//heavenly v3.0.0 – Adaptive Behavior Trigger Logic
+using JaysAi.Finale.Modules;
 using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.Input;
-using JaysAi.Finale.Visuals;
-using JaysAi.Finale.AI;
+using JaysAi.Finale.SystemLogic;
 using System;
 
 namespace JaysAi.Finale.AI
 {
-    public class BehaviorTrigger
+    public static class BehaviorTrigger
     {
-        private readonly AIProfileSwitcher _profileSwitcher;
-        private readonly ControllerInputState _controller;
-        private readonly SnapAssist _snapAssist;
-        private readonly ESPModule _esp;
-        private readonly AimAssist _aimAssist;
-
-        public BehaviorTrigger(
-            AIProfileSwitcher profileSwitcher,
-            ControllerInputState controller,
-            SnapAssist snapAssist,
-            ESPModule esp,
-            AimAssist aimAssist)
+        public static bool ShouldActivateSnap(DetectedObject obj)
         {
-            _profileSwitcher = profileSwitcher;
-            _controller = controller;
-            _snapAssist = snapAssist;
-            _esp = esp;
-            _aimAssist = aimAssist;
+            return obj.IsEnemy && obj.Distance < 750f && obj.VisibilityScore > 0.7f;
         }
 
-        public void Update()
+        public static bool ShouldEnableSilentAim(TargetInfo info)
         {
-            _profileSwitcher.Update();
+            return info.IsMoving && info.Speed > 1.2f && info.IsInsideFov;
+        }
 
-            if (_controller.IsADS && _controller.FireHeld)
-            {
-                _snapAssist.UpdateSnap();
-                _aimAssist.ApplyAssist();
-            }
+        public static bool ShouldFire(TargetInfo info)
+        {
+            return info.IsEnemy && info.IsVisible && info.TimeSinceSpotted < 0.25f;
+        }
 
-            if (_controller.ToggleESP)
-            {
-                _esp.ToggleVisibility();
-            }
+        public static bool IsThreatLevelHigh(TargetInfo info)
+        {
+            return info.IsEnemy && info.Aggression > 0.8f && info.Distance < 500f;
+        }
 
-            if (_controller.InputChanged)
-            {
-                Console.WriteLine("[Trigger] Input updated.");
-            }
+        public static string GetReactionLabel(TargetInfo info)
+        {
+            if (IsThreatLevelHigh(info))
+                return "HIGH THREAT";
+            if (info.IsMoving)
+                return "TRACKING";
+            return "PASSIVE";
         }
     }
 }

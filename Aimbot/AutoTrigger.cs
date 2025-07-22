@@ -1,47 +1,45 @@
-﻿//monarch v2.1
+﻿//heavenly v3.0
 using JaysAi.Finale.AI;
 using JaysAi.Finale.Input;
-using JaysAi.Finale.Settings; 
-using JaysAi.Finale.Aimbot;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Utility;
+using System;
 
 namespace JaysAi.Finale.Aimbot
 {
-    public class AutoTrigger
+    public static class AutoTrigger
     {
-        private readonly TriggerSettings settings;
-        private float lastShotTime;
-        private int burstShotsRemaining;
+        private static bool _isEnabled = true;
+        private static DateTime _lastTriggerTime = DateTime.MinValue;
+        private static readonly int _triggerDelayMs = 50;
 
-        public AutoTrigger(TriggerSettings settings)
-        {
-            this.settings = settings;
-            ResetBurst();
-        }
+        public static void SetEnabled(bool enabled) => _isEnabled = enabled;
 
-        public void TryFire(FrameSnapshot? currentTarget, float currentTime)
+        public static void Update(TargetInfo target)
         {
-            if (currentTarget == null || !currentTarget.IsVisible)
+            if (!_isEnabled || target == null || !target.IsValid)
                 return;
 
-            if (settings.BurstEnabled)
-            {
-                if (burstShotsRemaining > 0 && currentTime - lastShotTime >= settings.BurstDelay)
-                {
-                    InputInjector.Fire();
-                    lastShotTime = currentTime;
-                    burstShotsRemaining--;
-                }
-            }
-            else if (currentTime - lastShotTime >= settings.FireDelay)
-            {
-                InputInjector.Fire();
-                lastShotTime = currentTime;
-            }
+            if (!IsCrosshairAligned(target))
+                return;
+
+            var now = DateTime.UtcNow;
+            if ((now - _lastTriggerTime).TotalMilliseconds < _triggerDelayMs)
+                return;
+
+            InputInjector.PressFire();
+            _lastTriggerTime = now;
+
+            Logger.LogInfo($"[AutoTrigger] Fired at target: {target.Name}");
         }
 
-        public void ResetBurst()
+        private static bool IsCrosshairAligned(TargetInfo target)
         {
-            burstShotsRemaining = settings.BurstSize;
+            // Simple 2D check, refine with dot product if needed later
+            var screenCenter = ScreenUtils.GetCenter();
+            return Math.Abs(target.ScreenX - screenCenter.X) < 5 &&
+                   Math.Abs(target.ScreenY - screenCenter.Y) < 5;
         }
     }
 }

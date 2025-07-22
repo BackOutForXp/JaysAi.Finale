@@ -1,60 +1,60 @@
-﻿// Monarch v1.0 – MainLoop.cs
-// ✅ Monarch Fix Checklist
-// [x] Modular async game loop
-// [x] Safe cancellation
-// [x] Load-tick cycle ready for feature hooks
-// [x] Ready for controller + ESP threading
-
+﻿//heavenly v3.0
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.Security;
+using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale
 {
-    public class MainLoop
+    public static class MainLoop
     {
-        private CancellationTokenSource _cts;
-        private Task _loopTask;
+        private static CancellationTokenSource _cancellationSource;
+        private static Task _mainLoopTask;
 
-        public bool IsRunning => _loopTask is { IsCompleted: false };
-
-        public void Start()
+        public static void Start()
         {
-            if (IsRunning) return;
-
-            _cts = new CancellationTokenSource();
-            _loopTask = Task.Run(() => Loop(_cts.Token), _cts.Token);
-            Logger.Info("Main loop started.");
+            _cancellationSource = new CancellationTokenSource();
+            _mainLoopTask = Task.Factory.StartNew(() => Run(_cancellationSource.Token),
+                _cancellationSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
-        public void Stop()
+        public static void Stop()
         {
-            if (!IsRunning) return;
-
-            _cts.Cancel();
-            Logger.Info("Main loop stopping...");
+            _cancellationSource?.Cancel();
         }
 
-        private async Task Loop(CancellationToken token)
+        private static void Run(CancellationToken token)
         {
+            Logger.Log("MainLoop started.");
+
             while (!token.IsCancellationRequested)
             {
                 try
                 {
-                    // TODO: Plug in real update logic (ESP, AimAssist, etc.)
-                    Logger.Debug("Tick...");
+                    Thread.Sleep(16); // ~60 FPS tick
 
-                    // Simulate update cycle
-                    await Task.Delay(16, token); // ~60 FPS
+                    FeatureToggleManager.ApplyPendingToggles();
+
+                    ModuleManager.TickAllModules();
+
+                    StealthScanner.PerformStealthSweep();
+
+                    UpdateChecker.CheckForScheduledUpdates();
+
+                    PerformanceTracker.RecordSystemUsage();
                 }
-                catch (TaskCanceledException) { }
                 catch (Exception ex)
                 {
-                    Logger.Error($"MainLoop error: {ex.Message}");
+                    Logger.LogError("MainLoop exception: " + ex.Message);
+                    LogManager.LogCritical("MainLoop Crash", ex.ToString());
                 }
             }
 
-            Logger.Info("Main loop stopped.");
+            Logger.Log("MainLoop terminated.");
         }
     }
 }

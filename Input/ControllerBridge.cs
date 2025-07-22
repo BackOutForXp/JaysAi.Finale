@@ -1,29 +1,47 @@
-﻿//monarch v2.1 – Gamepad Input Bridge (Xbox/PS support)
-
-using SharpDX.XInput;
+﻿//heavenly v3.0 – Controller Event Dispatcher
+using System;
+using JaysAi.Finale.Input;
+using JaysAi.Finale.Aimbot;
 
 namespace JaysAi.Finale.Input
 {
-    public static class ControllerBridge
+    public class ControllerBridge
     {
-        private static Controller controller = new Controller(UserIndex.One);
+        public event Action<ControllerState>? OnStateChanged;
+        public ControllerState CurrentState { get; private set; } = new();
 
-        public static bool IsConnected => controller.IsConnected;
+        private readonly ControllerInputPoller _poller;
 
-        public static Gamepad GetState()
+        public ControllerBridge()
         {
-            if (!controller.IsConnected)
-                return default;
-
-            return controller.GetState().Gamepad;
+            _poller = new ControllerInputPoller();
+            _poller.OnInputUpdated += HandleInputUpdate;
         }
 
-        public static bool IsButtonPressed(GamepadButtonFlags button)
+        private void HandleInputUpdate(ControllerState newState)
         {
-            if (!controller.IsConnected)
-                return false;
+            if (!newState.Equals(CurrentState))
+            {
+                CurrentState = newState;
+                OnStateChanged?.Invoke(CurrentState);
+            }
+        }
 
-            return (controller.GetState().Gamepad.Buttons & button) != 0;
+        public void StartListening()
+        {
+            _poller.StartPolling();
+        }
+
+        public void StopListening()
+        {
+            _poller.StopPolling();
+        }
+
+        public void InjectVirtualInput(ControllerState simulatedState)
+        {
+            // Optional: inject a simulated state (e.g. AI-controlled logic)
+            CurrentState = simulatedState;
+            OnStateChanged?.Invoke(CurrentState);
         }
     }
 }

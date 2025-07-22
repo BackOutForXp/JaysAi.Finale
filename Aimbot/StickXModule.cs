@@ -1,63 +1,36 @@
-﻿//monarch v2.1 – StickXModule
-using System;
+﻿//heavenly v3.0
+using JaysAi.Finale.Input;
+using JaysAi.Finale.Modules;
 using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.AI;
 
-namespace JaysAi.Finale.Input
+namespace JaysAi.Finale.Aimbot
 {
-    public class StickXModule
+    public static class StickXModule
     {
-        private const float SmoothingFactor = 0.1f;
-        private const float Deadzone = 0.03f;
-        private const float MaxStickValue = 1.0f;
+        private static float _smoothingFactor = 0.15f;
+        private static float _lastX = 0f;
+        private static float _lastY = 0f;
 
-        private float lastX;
-        private float lastY;
-
-        public float OutputX { get; private set; }
-        public float OutputY { get; private set; }
-
-        public void ApplyInput(float deltaX, float deltaY)
+        public static void Reset()
         {
-            float smoothedX = SmoothInput(deltaX);
-            float smoothedY = SmoothInput(deltaY);
-
-            OutputX = ClampStick(smoothedX);
-            OutputY = ClampStick(smoothedY);
-
-            lastX = OutputX;
-            lastY = OutputY;
+            _lastX = 0f;
+            _lastY = 0f;
         }
 
-        private float SmoothInput(float input)
+        public static void ApplyStickAim(float targetX, float targetY)
         {
-            return input * SmoothingFactor;
+            float smoothX = Lerp(_lastX, targetX, _smoothingFactor);
+            float smoothY = Lerp(_lastY, targetY, _smoothingFactor);
+
+            ControllerInputState.SetRightStick(smoothX, smoothY);
+
+            _lastX = smoothX;
+            _lastY = smoothY;
         }
 
-        private float ClampStick(float value)
+        private static float Lerp(float a, float b, float t)
         {
-            if (Math.Abs(value) < Deadzone)
-                return 0;
-
-            return Math.Clamp(value, -MaxStickValue, MaxStickValue);
-        }
-
-        public void Reset()
-        {
-            OutputX = 0;
-            OutputY = 0;
-            lastX = 0;
-            lastY = 0;
-        }
-
-        public void ApplyPrediction(PredictionEngine.PredictionData prediction)
-        {
-            ApplyInput(prediction.VelocityX * 0.65f, prediction.VelocityY * 0.65f);
-        }
-
-        public (float X, float Y) GetStickOutput()
-        {
-            return (OutputX, OutputY);
+            return a + (b - a) * t;
         }
     }
 }

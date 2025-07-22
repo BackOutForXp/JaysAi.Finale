@@ -1,65 +1,42 @@
-﻿//monarch v2.0
-using JaysAi.AI;
+﻿// heavenly v3.0 – Unified AI Orchestration Logic
 using JaysAi.Finale.AI;
+using JaysAi.Finale.Aimbot;
 using JaysAi.Finale.Input;
-using JaysAi.Finale.Visuals;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.SystemLogic;
 
-namespace JaysAi.finale.Core
+namespace JaysAi.Finale.Core
 {
-    public class AiOrchestrator
+    public static class AiOrchestrator
     {
-        private readonly ModelLoader _modelLoader;
-        private readonly YOLOBridge _yoloBridge;
-        private readonly ESPModule _espModule;
-        private readonly PredictionEngine _predictionEngine;
-        private readonly InputInjector _inputInjector;
-        private readonly ControllerInputState _inputState;
-        private readonly OverlayDrawer _overlayDrawer;
+        private static bool _isRunning;
 
-        public AiOrchestrator(
-            ModelLoader modelLoader,
-            YOLOBridge yoloBridge,
-            ESPModule espModule,
-            PredictionEngine predictionEngine,
-            InputInjector inputInjector,
-            ControllerInputState inputState,
-            OverlayDrawer overlayDrawer)
+        public static void Start()
         {
-            _modelLoader = modelLoader;
-            _yoloBridge = yoloBridge;
-            _espModule = espModule;
-            _predictionEngine = predictionEngine;
-            _inputInjector = inputInjector;
-            _inputState = inputState;
-            _overlayDrawer = overlayDrawer;
+            if (_isRunning) return;
+
+            AiManager.Initialize();
+            ModuleManager.Initialize();
+            BehaviorTrigger.Initialize();
+            RuntimeBehaviorLog.Initialize();
+
+            _isRunning = true;
         }
 
-        public void Tick(byte[] screenFrame)
+        public static void Execute()
         {
-            if (!_modelLoader.ModelReady)
-                return;
+            if (!_isRunning)
+                Start();
 
-            var rawDetections = _modelLoader.RunDetection(screenFrame);
-            var parsedTargets = _yoloBridge.ParseDetections(rawDetections);
+            GameMemory.Refresh(); // Sync latest game memory data
+            AiManager.Update();   // Main detection and targeting
+            ModuleManager.Tick(); // Run all active modules
+            InputDispatcher.Tick(); // Inject inputs based on decisions
+        }
 
-            _espModule.UpdateTargets(parsedTargets);
-            var bestTarget = _predictionEngine.GetBestTarget(_espModule.GetTargets());
-
-            _overlayDrawer.Clear();
-            foreach (var target in parsedTargets)
-            {
-                _overlayDrawer.AddBox(target.ScreenX, target.ScreenY, target.Width, target.Height, target.Label);
-            }
-
-            if (bestTarget != null && _inputState.IsADS)
-            {
-                var predicted = _predictionEngine.PredictAim(bestTarget);
-                _inputInjector.InjectOffset(predicted.X, predicted.Y);
-            }
-            else
-            {
-                _inputInjector.Reset();
-            }
+        public static void Stop()
+        {
+            _isRunning = false;
         }
     }
 }

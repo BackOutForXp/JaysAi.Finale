@@ -1,29 +1,58 @@
-﻿//monarch v2.0
+﻿//heavenly v3.0
 using System;
-using System.Numerics;
-using JaysAi.AI;
+using JaysAi.Finale.AI;
 
 namespace JaysAi.Finale.Aim
 {
     public static class PredictionAid
     {
-        public static float PredictionFactor = 1.35f; // Tunable multiplier
-        public static float FrameDelayCompensation = 0.016f; // ~1 frame @ 60FPS
+        private const float FrameDuration = 1f / 60f; // Assuming 60 FPS target
 
-        public static Vector2 GetPredictedPosition(EntityData entity)
+        public static Vector2 Predict2D(Vector2 currentPos, Vector2 velocity, float latencyMs)
         {
-            if (entity == null || entity.ScreenPosition == Vector2.Zero)
-                return Vector2.Zero;
-
-            Vector2 predictedOffset = EstimateVelocity(entity) * PredictionFactor * FrameDelayCompensation;
-            return entity.ScreenPosition + predictedOffset;
+            float predictionTime = (latencyMs / 1000f) + FrameDuration;
+            return currentPos + (velocity * predictionTime);
         }
 
-        private static Vector2 EstimateVelocity(EntityData entity)
+        public static Vector3 Predict3D(Vector3 currentPos, Vector3 velocity, float latencyMs)
         {
-            // Placeholder for future velocity estimation logic
-            // This could be extended using frame-by-frame tracking or memory injection
-            return new Vector2(2.5f, -1.75f); // Simulated constant velocity
+            float predictionTime = (latencyMs / 1000f) + FrameDuration;
+            return currentPos + (velocity * predictionTime);
         }
+
+        public static float EstimatePingCompensation(float rawPing)
+        {
+            // Clamp to a safe range and add a buffer for inconsistent pings
+            return Math.Clamp(rawPing + 10f, 20f, 100f);
+        }
+
+        public static float GetPredictionTime(float latencyMs)
+        {
+            return (latencyMs / 1000f) + FrameDuration;
+        }
+    }
+
+    public struct Vector2
+    {
+        public float X, Y;
+        public Vector2(float x, float y) { X = x; Y = y; }
+
+        public static Vector2 operator +(Vector2 a, Vector2 b) =>
+            new Vector2(a.X + b.X, a.Y + b.Y);
+
+        public static Vector2 operator *(Vector2 a, float scalar) =>
+            new Vector2(a.X * scalar, a.Y * scalar);
+    }
+
+    public struct Vector3
+    {
+        public float X, Y, Z;
+        public Vector3(float x, float y, float z) { X = x; Y = y; Z = z; }
+
+        public static Vector3 operator +(Vector3 a, Vector3 b) =>
+            new Vector3(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
+
+        public static Vector3 operator *(Vector3 a, float scalar) =>
+            new Vector3(a.X * scalar, a.Y * scalar, a.Z * scalar);
     }
 }

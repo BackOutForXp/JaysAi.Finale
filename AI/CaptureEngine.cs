@@ -1,29 +1,30 @@
-﻿// Monarch v1.0 – CaptureEngine.cs
-// ✅ Monarch Fix Checklist
-// [x] Implements IFrameSource
-// [x] Captures screen to OpenCV Mat
-// [x] Uses OpenCvSharp + BitBlt screen capture
-
-using OpenCvSharp;
-using OpenCvSharp.Extensions;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
+﻿//heavenly v3.0.0 – Frame Source Router for Capture & Processing
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Modules;
 
 namespace JaysAi.Finale.AI
 {
-    public class CaptureEngine : IFrameSource
+    public static class CaptureEngine
     {
-        private const int CaptureWidth = 1920;
-        private const int CaptureHeight = 1080;
+        private static IFrameSource _frameSource;
+        public static bool Initialized => _frameSource != null;
 
-        public Mat GetFrame()
+        public static void Initialize(IFrameSource source)
         {
-            using Bitmap bitmap = new(CaptureWidth, CaptureHeight, PixelFormat.Format24bppRgb);
-            using Graphics g = Graphics.FromImage(bitmap);
+            _frameSource = source;
+        }
 
-            g.CopyFromScreen(0, 0, 0, 0, new System.Drawing.Size(CaptureWidth, CaptureHeight));
-            return bitmap.ToMat();
+        public static FrameSnapshot CaptureFrame()
+        {
+            if (!Initialized)
+                throw new InvalidOperationException("CaptureEngine not initialized with a frame source.");
+
+            return _frameSource.GetCurrentFrame();
+        }
+
+        public static void Shutdown()
+        {
+            _frameSource = null;
         }
     }
 }

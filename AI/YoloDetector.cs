@@ -1,61 +1,55 @@
-﻿//monarch v2.1 – YOLO Detection Analyzer
-using JaysAi.Finale.AI.Models;
-using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Utility;
-using JaysAi.Finale.Visuals;
-using System;
+﻿//heavenly v3.0
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.Visuals;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.AI
 {
-    public class YoloDetector
+    public static class YoloDetector
     {
-        private readonly YOLOBridge _bridge;
-        private readonly float _minConfidence;
-        private readonly string _enemyLabel;
-        private readonly int _maxTargets;
+        private static IModelBridge _modelBridge;
 
-        public List<YoloTarget> LastDetections { get; private set; }
-
-        public YoloDetector(YOLOBridge bridge, float minConfidence = 0.55f, string enemyLabel = "enemy", int maxTargets = 5)
+        public static void Initialize(IModelBridge modelBridge)
         {
-            _bridge = bridge;
-            _minConfidence = minConfidence;
-            _enemyLabel = enemyLabel;
-            _maxTargets = maxTargets;
+            _modelBridge = modelBridge;
+            Logger.Log("YoloDetector initialized with model bridge.");
         }
 
-        public async Task<List<YoloTarget>> GetTargetsAsync(string imagePath)
+        public static List<YoloBoundingBox> GetDetectedObjects()
         {
-            var detections = await _bridge.AnalyzeAsync(imagePath);
-            LastDetections = FilterTargets(detections);
-            return LastDetections;
+            if (_modelBridge == null || !_modelBridge.IsReady)
+            {
+                Logger.Warn("YoloDetector called before model bridge is ready.");
+                return new List<YoloBoundingBox>();
+            }
+
+            var rawDetections = _modelBridge.Predict();
+            var boundingBoxes = new List<YoloBoundingBox>();
+
+            foreach (var detection in rawDetections)
+            {
+                if (IsValidDetection(detection))
+                {
+                    boundingBoxes.Add(new YoloBoundingBox
+                    {
+                        X = detection.X,
+                        Y = detection.Y,
+                        Width = detection.Width,
+                        Height = detection.Height,
+                        Confidence = detection.Confidence,
+                        Label = detection.Label,
+                        IsEnemy = detection.Label.ToLower() == "enemy"
+                    });
+                }
+            }
+
+            return boundingBoxes;
         }
 
-        private List<YoloTarget> FilterTargets(List<YoloTarget> detections)
+        private static bool IsValidDetection(YoloBoundingBox box)
         {
-            if (detections == null || detections.Count == 0)
-                return new List<YoloTarget>();
-
-            var filtered = detections
-                .Where(d => d.Label.Equals(_enemyLabel, StringComparison.OrdinalIgnoreCase) && d.Confidence >= _minConfidence)
-                .OrderByDescending(d => d.Confidence)
-                .Take(_maxTargets)
-                .ToList();
-
-            Logger.Debug($"YOLO: {filtered.Count} targets passed filtering.");
-            return filtered;
-        }
-
-        public void DrawDebugOverlay()
-        {
-            if (LastDetections == null || LastDetections.Count == 0)
-                return;
-
-            foreach (var target in LastDetections)
-                OverlaySignal.SendBox(target.X, target.Y, target.Width, target.Height, label: "Target");
+            return box.Confidence > 0.5f && box.Width > 5 && box.Height > 5;
         }
     }
 }

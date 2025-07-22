@@ -1,11 +1,10 @@
-﻿// File: AI/IEnemyProvider.cs
-using JaysAi.Finale.Data;
+﻿//heavenly v3.0.0 – Interface for Enemy Provider Abstraction
 using System.Collections.Generic;
 
 namespace JaysAi.Finale.AI
 {
     public interface IEnemyProvider
     {
-        List<Enemy> GetVisibleEnemies();
+        List<TrackedTarget> GetEnemies();
     }
 }

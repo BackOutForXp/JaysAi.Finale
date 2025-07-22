@@ -1,47 +1,32 @@
-﻿//monarch v2.1
+﻿//heavenly v3.0
 using JaysAi.Finale.AI;
-using JaysAi.Finale.Input;
-using JaysAi.Finale.Settings;
+using JaysAi.Finale.SystemLogic;
 
 namespace JaysAi.Finale.Aimbot
 {
-    public class AutoTrigger
+    public class TriggerSettings
     {
-        private readonly TriggerSettings settings;
-        private float lastShotTime;
-        private int burstShotsRemaining;
+        public bool EnableTriggerbot { get; set; } = true;
+        public float FireDistanceThreshold { get; set; } = 2.0f; // meters
+        public float MinVisibilityRequired { get; set; } = 0.75f;
+        public bool RequirePredictionLock { get; set; } = true;
+        public int FireDelayMs { get; set; } = 30;
 
-        public AutoTrigger(TriggerSettings settings)
+        public bool ShouldFire(TrackedTarget target)
         {
-            this.settings = settings;
-            ResetBurst();
-        }
+            if (!EnableTriggerbot || target == null || !target.IsAlive)
+                return false;
 
-        public void TryFire(FrameSnapshot? currentTarget, float currentTime)
-        {
-            if (currentTarget == null || !currentTarget.IsVisible)
-                return;
+            if (RequirePredictionLock && !target.IsPredictedHit)
+                return false;
 
-            if (settings.BurstEnabled)
-            {
-                if (burstShotsRemaining > 0 && currentTime - lastShotTime >= settings.BurstDelay)
-                {
-                    InputInjector.Fire();
-                    lastShotTime = currentTime;
-                    burstShotsRemaining--;
-                }
-            }
-            else if (currentTime - lastShotTime >= settings.FireDelay)
-            {
-                InputInjector.Fire();
-                lastShotTime = currentTime;
-            }
-        }
+            if (target.VisibilityScore < MinVisibilityRequired)
+                return false;
 
-        public void ResetBurst()
-        {
-            burstShotsRemaining = settings.BurstSize;
+            if (target.Distance > FireDistanceThreshold)
+                return false;
+
+            return true;
         }
     }
 }
-

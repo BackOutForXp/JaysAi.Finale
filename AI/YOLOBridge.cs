@@ -1,44 +1,64 @@
-﻿//monarch v2.1 – YOLO ↔ ESP Target Bridge
+﻿//heavenly v3.0
+using System;
 using System.Collections.Generic;
+using OpenCvSharp;
+using JaysAi.Finale.Modules;
 using JaysAi.Finale.Visuals;
-using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.AI
 {
     public static class YOLOBridge
     {
-        public static List<TrackedTarget> ParseDetections(List<YoloBoundingBox> rawDetections)
+        private static YOLODetector _detector;
+
+        public static void Initialize(string modelPath)
         {
-            var targets = new List<TrackedTarget>();
-
-            foreach (var box in rawDetections)
+            if (_detector == null)
             {
-                if (!IsEnemyClass(box.Label)) continue;
-
-                var target = new TrackedTarget
-                {
-                    Id = box.Id,
-                    X = box.X + (box.Width / 2f),
-                    Y = box.Y + (box.Height / 2f),
-                    Width = box.Width,
-                    Height = box.Height,
-                    IsVisible = true,
-                    IsEnemy = true,
-                    VelocityX = 0f, // To be filled in PredictionEngine
-                    VelocityY = 0f
-                };
-
-                targets.Add(target);
-                Logger.Log($"[YOLOBridge] Target found: {box.Label} at ({target.X}, {target.Y})", LogLevel.Debug);
+                _detector = new YOLODetector(modelPath);
             }
-
-            return targets;
         }
 
-        private static bool IsEnemyClass(string label)
+        public static List<YoloBoundingBox> DetectEnemies(Mat frame)
         {
-            // Can be customized per game model
-            return label.ToLower().Contains("enemy") || label.ToLower() == "person";
+            var results = _detector.Detect(frame);
+            var boxes = new List<YoloBoundingBox>();
+            int idCounter = 0;
+
+            foreach (var result in results)
+            {
+                var box = new YoloBoundingBox(idCounter++, result.BoundingBox, result.Label, result.Confidence);
+
+                // Classification rules (can be upgraded with user config)
+                box.Classify(
+                    label => label.ToLower().Contains("enemy"),
+                    label => label.ToLower().Contains("teammate") || label.ToLower().Contains("ally")
+                );
+
+                boxes.Add(box);
+            }
+
+            return boxes;
+        }
+
+        public static void DebugOverlay(Mat frame)
+        {
+            var detections = DetectEnemies(frame);
+
+            foreach (var box in detections)
+            {
+                if (box.IsEnemy)
+                {
+                    AiOverlay.QueueRectangle(
+                        box.BoundingBox.X,
+                        box.BoundingBox.Y,
+                        box.BoundingBox.Width,
+                        box.BoundingBox.Height,
+                        box.Label,
+                        OverlayColor.Red
+                    );
+                }
+            }
         }
     }
 }

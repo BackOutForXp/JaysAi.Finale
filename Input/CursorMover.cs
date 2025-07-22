@@ -1,12 +1,17 @@
-﻿// File: Input/CursorMover.cs
-using System;
-using System.Numerics;
+﻿//heavenly v3.0 – Mouse Movement Bridge
 using System.Runtime.InteropServices;
+using System.Windows;
 
 namespace JaysAi.Finale.Input
 {
     public static class CursorMover
     {
+        [DllImport("user32.dll")]
+        private static extern bool SetCursorPos(int x, int y);
+
+        [DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out POINT lpPoint);
+
         [StructLayout(LayoutKind.Sequential)]
         private struct POINT
         {
@@ -14,48 +19,28 @@ namespace JaysAi.Finale.Input
             public int Y;
         }
 
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool GetCursorPos(out POINT point);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SetCursorPos(int x, int y);
-
-        public static Vector2 GetCursorPosition()
+        public static Point GetCurrentCursorPosition()
         {
-            if (GetCursorPos(out POINT p))
-                return new Vector2(p.X, p.Y);
-
-            return Vector2.Zero;
+            GetCursorPos(out var point);
+            return new Point(point.X, point.Y);
         }
 
-        public static void MoveCursorTo(Vector2 target)
+        public static void MoveCursorBy(double deltaX, double deltaY)
         {
-            SetCursorPos((int)target.X, (int)target.Y);
+            var current = GetCurrentCursorPosition();
+            int targetX = (int)(current.X + deltaX);
+            int targetY = (int)(current.Y + deltaY);
+            SetCursorPos(targetX, targetY);
         }
 
-        public static void MoveCursorSmooth(Vector2 current, Vector2 target, float smoothing)
+        public static void SetCursorPosition(int x, int y)
         {
-            if (smoothing <= 0)
-            {
-                MoveCursorTo(target);
-                return;
-            }
-
-            Vector2 next = current + (target - current) / smoothing;
-            MoveCursorTo(next);
+            SetCursorPos(x, y);
         }
 
-        public static void MoveRelative(Vector2 delta)
+        public static void SetCursorPosition(Point point)
         {
-            Vector2 current = GetCursorPosition();
-            MoveCursorTo(current + delta);
+            SetCursorPos((int)point.X, (int)point.Y);
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ No System.Drawing or Windows.Forms
-// ✅ Uses Vector2 for precision compatibility
-// ✅ Can be used with input emulators, aim modules
-// TODO: Add acceleration/curve profile (optional advanced input)
-// ===================================================================

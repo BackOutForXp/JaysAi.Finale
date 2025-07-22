@@ -1,24 +1,68 @@
-﻿//monarch v2.1 – Centralized Input Manager
-
-using global::System.Windows.Input;
+﻿//heavenly v3.0 – InputManager
+using System;
+using JaysAi.Finale.Input;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.Input
 {
-    public static class InputManager
+    public class InputManager
     {
-        public static bool IsKeyPressed(Key key)
+        private readonly InputDispatcher _dispatcher;
+        private readonly InputMonitor _monitor;
+        private readonly ControllerInputListener _controllerListener;
+        private readonly KeyboardPresser _keyboardPresser;
+        private readonly MouseEmulator _mouseEmulator;
+        private readonly StickAssist _stickAssist;
+
+        public bool IsInitialized { get; private set; }
+
+        public InputManager()
         {
-            return Keyboard.IsKeyDown(key);
+            _dispatcher = new InputDispatcher();
+            _monitor = new InputMonitor();
+            _controllerListener = new ControllerInputListener();
+            _keyboardPresser = new KeyboardPresser();
+            _mouseEmulator = new MouseEmulator();
+            _stickAssist = new StickAssist();
         }
 
-        public static bool IsLeftMousePressed()
+        public void Initialize()
         {
-            return Mouse.LeftButton == MouseButtonState.Pressed;
+            if (IsInitialized) return;
+
+            _monitor.Start();
+            _controllerListener.StartListening();
+            _dispatcher.BindKeyEvents();
+            _dispatcher.BindControllerEvents();
+            _stickAssist.LoadProfile("Default");
+
+            Logger.Log("InputManager initialized.");
+            IsInitialized = true;
         }
 
-        public static bool IsRightMousePressed()
+        public void Update()
         {
-            return Mouse.RightButton == MouseButtonState.Pressed;
+            _controllerListener.Update();
+            _stickAssist.Update();
+            _monitor.CheckHotkeys();
+        }
+
+        public void SimulateKeyPress(ConsoleKey key)
+        {
+            _keyboardPresser.PressKey(key);
+        }
+
+        public void MoveMouseTo(int x, int y)
+        {
+            _mouseEmulator.MoveTo(x, y);
+        }
+
+        public void Shutdown()
+        {
+            _monitor.Stop();
+            _controllerListener.StopListening();
+            Logger.Log("InputManager shutdown.");
+            IsInitialized = false;
         }
     }
 }

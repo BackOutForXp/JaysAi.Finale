@@ -1,43 +1,40 @@
-﻿//monarch v2.1 – Aim Assist Logic Engine
-using System;
+﻿//heavenly v3.0
 using JaysAi.Finale.AI;
+using JaysAi.Finale.Aim;
 using JaysAi.Finale.Input;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.SystemLogic;
 using JaysAi.Finale.Utility;
+using System;
 
-namespace JaysAi.Finale.AI
+namespace JaysAi.Finale.Aimbot
 {
     public static class AimAssist
     {
-        private static float _aimSmoothness = 0.75f;
-        private static float _deadzone = 2.0f;
+        private static SnapTarget _currentTarget;
+        private static float _smoothingFactor = 0.15f;
 
-        public static void Apply(DetectionObject target)
+        public static void Update(Vector2 crosshairPosition)
         {
-            if (target == null) return;
-
-            var screenCenterX = ScreenHelper.CenterX;
-            var screenCenterY = ScreenHelper.CenterY;
-
-            var deltaX = (target.X + target.Width / 2) - screenCenterX;
-            var deltaY = (target.Y + target.Height / 2) - screenCenterY;
-
-            if (Math.Abs(deltaX) < _deadzone && Math.Abs(deltaY) < _deadzone)
+            if (!FeatureToggleManager.IsEnabled("AimAssist"))
                 return;
 
-            var adjustedX = deltaX * _aimSmoothness;
-            var adjustedY = deltaY * _aimSmoothness;
+            var potentialTargets = TargetingSystem.GetVisibleTargets();
+            _currentTarget = TargetEvaluator.EvaluateBestTarget(potentialTargets, crosshairPosition, maxSnapDistance: 250f);
 
-            MouseMover.MoveBy(adjustedX, adjustedY);
+            if (_currentTarget != null)
+            {
+                Vector2 direction = _currentTarget.ScreenPosition - crosshairPosition;
+                Vector2 movement = direction * _smoothingFactor;
+
+                InputDispatcher.MoveMouseBy(movement.X, movement.Y);
+                Logger.LogDebug($"[AimAssist] Adjusted by {movement}");
+            }
         }
 
-        public static void SetSmoothness(float smoothness)
+        public static void SetSmoothing(float factor)
         {
-            _aimSmoothness = Math.Clamp(smoothness, 0.1f, 1.5f);
-        }
-
-        public static void SetDeadzone(float deadzone)
-        {
-            _deadzone = Math.Clamp(deadzone, 0f, 10f);
+            _smoothingFactor = Math.Clamp(factor, 0.01f, 1f);
         }
     }
 }

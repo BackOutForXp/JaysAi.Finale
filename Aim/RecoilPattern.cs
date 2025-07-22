@@ -1,27 +1,44 @@
-﻿//monarch v2.1
+﻿//heavenly v3.0
 using System.Collections.Generic;
 
 namespace JaysAi.Finale.Aim
 {
     public class RecoilPattern
     {
-        public List<(float offsetX, float offsetY)> Steps { get; set; }
+        private readonly List<Offset> _pattern;
+        private readonly bool _loop;
 
-        public RecoilPattern()
+        public RecoilPattern(IEnumerable<Offset> pattern, bool loop = true)
         {
-            Steps = new List<(float offsetX, float offsetY)>();
+            _pattern = new List<Offset>(pattern);
+            _loop = loop;
+        }
+
+        public Offset GetOffset(int shotIndex)
+        {
+            if (_pattern.Count == 0)
+                return new Offset(0, 0);
+
+            if (shotIndex < _pattern.Count)
+                return _pattern[shotIndex];
+
+            return _loop ? _pattern[shotIndex % _pattern.Count] : new Offset(0, 0);
         }
 
         public void AddStep(float x, float y)
         {
-            Steps.Add((x, y));
+            _pattern.Add(new Offset(x, y));
         }
 
         public void Clear()
         {
-            Steps.Clear();
+            _pattern.Clear();
         }
+    }
 
-        public int Count => Steps.Count;
+    public struct Offset
+    {
+        public float X, Y;
+        public Offset(float x, float y) => (X, Y) = (x, y);
     }
 }

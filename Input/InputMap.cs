@@ -1,43 +1,71 @@
-﻿//monarch v2.1 – Keyboard hotkey controller for toggling features
+﻿//heavenly v3.0 – InputMap
+using System.Collections.Generic;
 using System.Windows.Input;
-using JaysAi.Finale.SystemLogic;
 
 namespace JaysAi.Finale.Input
 {
     public static class InputMap
     {
-        public static void HandleKeyDown(Key key)
+        public static Dictionary<string, Key> KeyboardBinds { get; private set; }
+        public static Dictionary<string, ControllerButton> ControllerBinds { get; private set; }
+
+        static InputMap()
         {
-            switch (key)
-            {
-                case Key.F1:
-                    FeatureToggle.EspEnabled = !FeatureToggle.EspEnabled;
-                    break;
-
-                case Key.F2:
-                    FeatureToggle.AimAssistEnabled = !FeatureToggle.AimAssistEnabled;
-                    break;
-
-                case Key.F3:
-                    FeatureToggle.SnapEnabled = !FeatureToggle.SnapEnabled;
-                    break;
-
-                case Key.F4:
-                    FeatureToggle.VisualsOverlayEnabled = !FeatureToggle.VisualsOverlayEnabled;
-                    break;
-
-                case Key.F5:
-                    FeatureToggle.RecoilCompensationEnabled = !FeatureToggle.RecoilCompensationEnabled;
-                    break;
-
-                case Key.F6:
-                    FeatureToggle.TriggerBotEnabled = !FeatureToggle.TriggerBotEnabled;
-                    break;
-
-                case Key.F12:
-                    FeatureToggle.DisableAll();
-                    break;
-            }
+            LoadDefaults();
         }
+
+        public static void LoadDefaults()
+        {
+            KeyboardBinds = new Dictionary<string, Key>
+            {
+                { "ToggleESP", Key.F1 },
+                { "ToggleAimAssist", Key.F2 },
+                { "ToggleStickAssist", Key.F3 },
+                { "ToggleRecoil", Key.F4 },
+                { "ActivateTriggerBot", Key.LeftCtrl },
+                { "OverrideAim", Key.LeftShift }
+            };
+
+            ControllerBinds = new Dictionary<string, ControllerButton>
+            {
+                { "ToggleESP", ControllerButton.DPadUp },
+                { "ToggleAimAssist", ControllerButton.DPadRight },
+                { "ToggleStickAssist", ControllerButton.DPadDown },
+                { "ActivateTriggerBot", ControllerButton.RightTrigger },
+                { "OverrideAim", ControllerButton.LeftTrigger }
+            };
+        }
+
+        public static void RemapKey(string action, Key newKey)
+        {
+            if (KeyboardBinds.ContainsKey(action))
+                KeyboardBinds[action] = newKey;
+        }
+
+        public static void RemapControllerButton(string action, ControllerButton newButton)
+        {
+            if (ControllerBinds.ContainsKey(action))
+                ControllerBinds[action] = newButton;
+        }
+    }
+
+    public enum ControllerButton
+    {
+        A,
+        B,
+        X,
+        Y,
+        LeftBumper,
+        RightBumper,
+        LeftTrigger,
+        RightTrigger,
+        DPadUp,
+        DPadDown,
+        DPadLeft,
+        DPadRight,
+        Start,
+        Select,
+        LeftStick,
+        RightStick
     }
 }

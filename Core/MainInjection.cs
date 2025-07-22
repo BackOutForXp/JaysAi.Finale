@@ -1,54 +1,34 @@
-﻿//monarch v2.1 – MainInjection.cs
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Input;
-using JaysAi.Finale.Modules;
+﻿// heavenly v3.0 – EntryPoint Injection and Init Sequence
+using JaysAi.Finale.Security;
 using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Core;
 using JaysAi.Finale.Utility;
-using JaysAi.Finale.Visuals;
-using System;
 
 namespace JaysAi.Finale.Core
 {
     public static class MainInjection
     {
-        private static bool initialized = false;
-        private static ESPModule esp;
-        private static AimbotLogic aimbot;
-        private static StickXModule stickX;
-        private static PredictionEngine prediction;
+        private static bool _hasInjected = false;
 
         public static void Initialize()
         {
-            if (initialized)
-                return;
+            if (_hasInjected) return;
 
-            esp = new ESPModule();
-            aimbot = new AimbotLogic();
-            stickX = new StickXModule();
-            prediction = new PredictionEngine();
+            LogManager.Initialize("JaysAi.Finale");
+            CrashLogger.AttachGlobalHandler();
 
-            OverlaySignal.OnDraw += () =>
-            {
-                esp.DrawEnemies();
-                esp.DrawSnapLines();
-            };
+            StealthScanner.ScanForThreats();
+            AntiDebug.ApplyPatches();
+            HardwareScanner.VerifySystem();
 
-            Logger.Log("MainInjection initialized.");
-            initialized = true;
-        }
+            GameProcessHelper.LocateTargetGame();
+            AiOrchestrator.Start();
 
-        public static void Update()
-        {
-            if (!initialized)
-                return;
+            FeatureToggleManager.ApplyFeatureToggles();
+            LicenseValidator.Validate();
 
-            var enemyData = esp.GetVisibleEnemies();
-            if (enemyData != null)
-            {
-                var predictionData = prediction.Predict(enemyData);
-                stickX.ApplyPrediction(predictionData);
-                aimbot.ApplyCorrection(stickX.GetStickOutput());
-            }
+            Logger.Info("MainInjection complete. System is now active.");
+            _hasInjected = true;
         }
     }
 }

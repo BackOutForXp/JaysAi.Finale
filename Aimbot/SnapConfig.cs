@@ -1,24 +1,23 @@
-﻿//monarch v2.1 – Snap tuning config for aimbot behavior
-namespace JaysAi.Finale.Config
+﻿//heavenly v3.0
+namespace JaysAi.Finale.Aimbot
 {
-    public class SnapConfig
+    public static class SnapConfig
     {
-        public bool SnapEnabled { get; set; } = true;
-        public float SnapRange { get; set; } = 100f;
-        public float SnapSpeed { get; set; } = 1.0f;
-        public float MinLockDistance { get; set; } = 45f;
-        public int SnapCooldownMs { get; set; } = 85;
+        public static bool Enabled { get; set; } = true;
 
-        public bool HumanizerEnabled { get; set; } = true;
-        public float RandomnessFactor { get; set; } = 0.04f;
-        public float CurveModifier { get; set; } = 0.12f;
+        // Max pixel distance from crosshair to target before snap triggers
+        public static float SnapRadius { get; set; } = 80.0f;
 
-        public bool PrioritizeLowHealth { get; set; } = true;
-        public bool RequireVisibility { get; set; } = true;
+        // Multiplier for how fast aim is pulled toward target (0.0f - 1.0f)
+        public static float SnapStrength { get; set; } = 0.85f;
 
-        public static SnapConfig LoadDefault()
-        {
-            return new SnapConfig();
-        }
+        // Delay between valid snaps (in ms)
+        public static int SnapCooldownMs { get; set; } = 100;
+
+        // Option to prevent snapping through walls (line of sight check)
+        public static bool RequireVisibility { get; set; } = true;
+
+        // Dynamic adjustment when tracking moving targets
+        public static bool PredictMovement { get; set; } = true;
     }
 }

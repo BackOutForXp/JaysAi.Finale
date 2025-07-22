@@ -1,28 +1,39 @@
-﻿// File: Helpers/SnapScore.cs
-using System.Numerics;
+﻿//heavenly v3.0
+using JaysAi.Finale.Modules;
+using System;
 
 namespace JaysAi.Finale.AI
 {
     public static class SnapScore
     {
-        /// <summary>
-        /// Scores a potential target based on distance and velocity alignment.
-        /// Higher score = more ideal target.
-        /// </summary>
-        /// <param name="playerPos">Player's current position (world)</param>
-        /// <param name="enemyPos">Enemy's position (world)</param>
-        /// <param name="enemyVelocity">Enemy's current velocity vector</param>
-        /// <returns>Score: higher is better</returns>
-        public static float Calculate(Vector3 playerPos, Vector3 enemyPos, Vector3 enemyVelocity)
+        public static float Calculate(TargetInfo target, AimContext context)
         {
-            Vector3 toTarget = enemyPos - playerPos;
-            float distance = toTarget.Length();
-            if (distance < 1f) distance = 1f; // avoid div by zero
+            if (target == null || context == null) return 0f;
 
-            float velocityAlignment = Vector3.Dot(enemyVelocity, Vector3.Normalize(toTarget));
-            float score = 1f / distance + velocityAlignment * 0.1f;
+            float distanceScore = 1f - Math.Clamp(target.Distance / context.MaxRange, 0f, 1f);
+            float visibilityScore = target.IsVisible ? 1f : 0.2f;
+            float movementScore = 1f - Math.Clamp(target.Velocity.Magnitude / context.MaxTargetSpeed, 0f, 1f);
+
+            float centerOffset = Math.Abs(target.ScreenX - context.CrosshairX) + Math.Abs(target.ScreenY - context.CrosshairY);
+            float centeringScore = 1f - Math.Clamp(centerOffset / context.MaxOffsetTolerance, 0f, 1f);
+
+            // Weighted sum
+            float score = (distanceScore * 0.4f) +
+                          (visibilityScore * 0.2f) +
+                          (movementScore * 0.2f) +
+                          (centeringScore * 0.2f);
 
             return score;
         }
+    }
+
+    public class AimContext
+    {
+        public float MaxRange { get; set; } = 100f;
+        public float MaxTargetSpeed { get; set; } = 20f;
+        public float MaxOffsetTolerance { get; set; } = 200f;
+
+        public float CrosshairX { get; set; }
+        public float CrosshairY { get; set; }
     }
 }

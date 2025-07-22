@@ -1,33 +1,44 @@
-﻿//monarch v2.1
+﻿//heavenly v3.0 – Calibration Interface for Model Alignment
+using System;
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Utility;
+
 namespace JaysAi.Finale.AI
 {
-    public class ModelCalibration
+    public static class ModelCalibration
     {
-        public int InputWidth { get; set; }
-        public int InputHeight { get; set; }
-        public int ScreenWidth { get; set; }
-        public int ScreenHeight { get; set; }
+        public static CalibrationSettings Current { get; private set; } = new CalibrationSettings();
 
-        public ModelCalibration(int inputW, int inputH, int screenW, int screenH)
+        public static void LoadCalibration()
         {
-            InputWidth = inputW;
-            InputHeight = inputH;
-            ScreenWidth = screenW;
-            ScreenHeight = screenH;
+            string path = FilePathHelper.GetConfigPath("model_calibration.json");
+            if (FileHelper.Exists(path))
+            {
+                Current = FileHelper.ReadJson<CalibrationSettings>(path);
+            }
         }
 
-        public (float X, float Y) Calibrate(float x, float y)
+        public static void SaveCalibration()
         {
-            float calibratedX = x * ScreenWidth / InputWidth;
-            float calibratedY = y * ScreenHeight / InputHeight;
-            return (calibratedX, calibratedY);
+            string path = FilePathHelper.GetConfigPath("model_calibration.json");
+            FileHelper.WriteJson(path, Current);
         }
 
-        public (float Width, float Height) CalibrateSize(float width, float height)
+        public static void ApplyCalibration(ref float x, ref float y, float width, float height)
         {
-            float calibratedWidth = width * ScreenWidth / InputWidth;
-            float calibratedHeight = height * ScreenHeight / InputHeight;
-            return (calibratedWidth, calibratedHeight);
+            x += Current.XOffset;
+            y += Current.YOffset;
+
+            x *= Current.XScale;
+            y *= Current.YScale;
         }
+    }
+
+    public class CalibrationSettings
+    {
+        public float XOffset { get; set; } = 0f;
+        public float YOffset { get; set; } = 0f;
+        public float XScale { get; set; } = 1f;
+        public float YScale { get; set; } = 1f;
     }
 }

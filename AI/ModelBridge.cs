@@ -1,76 +1,30 @@
-﻿//monarch v2.1
-using Microsoft.ML.OnnxRuntime;
-using Microsoft.ML.OnnxRuntime.Tensors;
-using SkiaSharp;
-using System;
+﻿//heavenly v3.0.0 – Model Inference Routing Layer
 using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
+using JaysAi.Finale.Modules;
 
 namespace JaysAi.Finale.AI
 {
-    public class ModelBridge
+    public static class ModelBridge
     {
-        private readonly int inputWidth;
-        private readonly int inputHeight;
-
-        public ModelBridge(int width = 320, int height = 320)
+        /// <summary>
+        /// Passes a video frame to the current detection model (YOLO or future variants).
+        /// </summary>
+        /// <param name="frameData">Raw pixel or preprocessed image data.</param>
+        /// <returns>A list of DetectedObject entities.</returns>
+        public static List<DetectedObject> ProcessFrame(byte[] frameData)
         {
-            inputWidth = width;
-            inputHeight = height;
+            // Currently using YOLO only, but extendable for multiple backends
+            return YoloDetector.ProcessFrame(frameData);
         }
 
-        public DenseTensor<float> ConvertFrameToTensor(SKBitmap frame)
+        /// <summary>
+        /// Switch to a different model backend (not yet implemented).
+        /// </summary>
+        /// <param name="modelName">New model identifier.</param>
+        public static void SwitchModel(string modelName)
         {
-            var tensor = new DenseTensor<float>(new[] { 1, 3, inputHeight, inputWidth });
-
-            for (int y = 0; y < inputHeight; y++)
-            {
-                for (int x = 0; x < inputWidth; x++)
-                {
-                    var color = frame.GetPixel(x, y);
-
-                    tensor[0, 0, y, x] = color.Red / 255f;
-                    tensor[0, 1, y, x] = color.Green / 255f;
-                    tensor[0, 2, y, x] = color.Blue / 255f;
-                }
-            }
-
-            return tensor;
-        }
-
-        public List<PredictionResult> ParseModelOutput(IEnumerable<NamedOnnxValue> results)
-        {
-            var output = results.First().AsEnumerable<float>().ToArray();
-            var predictions = new List<PredictionResult>();
-
-            int stride = 6; // [x1, y1, x2, y2, conf, class]
-            for (int i = 0; i < output.Length; i += stride)
-            {
-                var x1 = output[i];
-                var y1 = output[i + 1];
-                var x2 = output[i + 2];
-                var y2 = output[i + 3];
-                var conf = output[i + 4];
-                var classId = (int)output[i + 5];
-
-                if (conf < 0.5f)
-                    continue;
-
-                var center = new Vector2((x1 + x2) / 2, (y1 + y2) / 2);
-
-                predictions.Add(new PredictionResult
-                {
-                    BoundingBox = new SKRect(x1, y1, x2, y2),
-                    Confidence = conf,
-                    Label = $"Class {classId}",
-                    Id = Guid.NewGuid().ToString(),
-                    IsOnScreen = true,
-                    ScreenPosition = center
-                });
-            }
-
-            return predictions;
+            // Placeholder for switching between models like YOLOv8, SAM, or custom CNNs
+            // Will tie into the ModelLoader and PredictionEngine
         }
     }
 }

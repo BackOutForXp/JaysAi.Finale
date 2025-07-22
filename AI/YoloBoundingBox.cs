@@ -1,24 +1,44 @@
-﻿//monarch v2.1 – YOLO Model Output Container
+﻿//heavenly v3.0
+using System;
+using OpenCvSharp;
+
 namespace JaysAi.Finale.AI
 {
     public class YoloBoundingBox
     {
-        public int Id { get; set; }                // Unique ID for tracking across frames
-        public string Label { get; set; }          // Object class name
-        public float Confidence { get; set; }      // Detection confidence score (0.0 – 1.0)
+        public Rect BoundingBox { get; set; }
+        public string Label { get; set; }
+        public float Confidence { get; set; }
+        public bool IsEnemy { get; set; }
+        public bool IsFriendly { get; set; }
+        public int Id { get; set; }
 
-        public float X { get; set; }               // Top-left X
-        public float Y { get; set; }               // Top-left Y
-        public float Width { get; set; }
-        public float Height { get; set; }
+        public Point Center => new(
+            BoundingBox.X + BoundingBox.Width / 2,
+            BoundingBox.Y + BoundingBox.Height / 2
+        );
 
-        public float Right => X + Width;
-        public float Bottom => Y + Height;
+        public int Area => BoundingBox.Width * BoundingBox.Height;
 
-        public bool IsValid =>
-            !string.IsNullOrEmpty(Label) &&
-            Confidence >= 0.4f &&
-            Width > 0 &&
-            Height > 0;
+        public YoloBoundingBox(int id, Rect box, string label, float confidence)
+        {
+            Id = id;
+            BoundingBox = box;
+            Label = label;
+            Confidence = confidence;
+            IsEnemy = false;
+            IsFriendly = false;
+        }
+
+        public void Classify(Func<string, bool> isEnemyLabel, Func<string, bool> isFriendlyLabel)
+        {
+            IsEnemy = isEnemyLabel(Label);
+            IsFriendly = isFriendlyLabel(Label);
+        }
+
+        public override string ToString()
+        {
+            return $"[ID:{Id}] {Label} ({Confidence:P1}) Enemy: {IsEnemy}, Friendly: {IsFriendly}";
+        }
     }
 }

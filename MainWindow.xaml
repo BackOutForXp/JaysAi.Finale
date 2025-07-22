@@ -1,31 +1,50 @@
-﻿<!-- File: MainWindow.xaml -->
+﻿<!-- heavenly v3.0 -->
 <Window x:Class="JaysAi.Finale.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JaysAi.Finale - Monarch Loader"
-        Height="400" Width="600"
-        ResizeMode="NoResize"
+        xmlns:local="clr-namespace:JaysAi.Finale"
+        Title="JaysAi.Finale" Height="600" Width="900"
         WindowStartupLocation="CenterScreen"
-        Background="#1E1E1E"
-        Foreground="White">
+        ResizeMode="NoResize"
+        Background="#FF1A1A1A"
+        Icon="Resources/appicon.ico"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        BorderBrush="#FF444444"
+        BorderThickness="1"
+        >
 
-    <Grid Margin="20">
-        <StackPanel Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Center" Width="300">
+    <Border Background="#FF1A1A1A" BorderBrush="#FF444444" BorderThickness="1" CornerRadius="10">
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <TextBlock Text="JaysAi.Finale Loader" 
-                       FontSize="24" 
-                       FontWeight="Bold" 
-                       Foreground="Red" 
-                       TextAlignment="Center" 
-                       Margin="0 0 0 20"/>
+            <!-- Header -->
+            <TextBlock Text="JaysAi.Finale – Loader Interface"
+                       Foreground="White"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"
+                       Margin="0,10,0,20"/>
 
-            <CheckBox x:Name="EspCheckbox"         Content="Enable ESP"         FontSize="16" Margin="0 5"/>
-            <CheckBox x:Name="AimAssistCheckbox"   Content="Enable Aim Assist"  FontSize="16" Margin="0 5"/>
-            <CheckBox x:Name="StickAssistCheckbox" Content="Enable Stick Assist" FontSize="16" Margin="0 5"/>
-            <CheckBox x:Name="StealthCheckbox"     Content="Enable Stealth Mode" FontSize="16" Margin="0 5"/>
-            <CheckBox x:Name="BoneEspCheckbox"     Content="Enable Bone ESP"    FontSize="16" Margin="0 5"/>
+            <!-- Main Panel Area -->
+            <Grid Grid.Row="1" Name="MainContentGrid">
+                <!-- Content dynamically filled by MainControlBridge -->
+                <TextBlock Text="Initializing loader..." 
+                           Foreground="#FFAAAAAA" 
+                           FontSize="16" 
+                           HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"/>
+            </Grid>
 
-            <Button Content="Launch Overlay" Height="40" Margin="0 20 0 0"/>
-        </StackPanel>
-    </Grid>
+            <!-- Footer / Status -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                <TextBlock Text="Status: " Foreground="White" FontWeight="Bold"/>
+                <TextBlock Name="StatusLabel" Text="Idle" Foreground="Lime"/>
+            </StackPanel>
+        </Grid>
+    </Border>
 </Window>

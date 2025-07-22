@@ -1,48 +1,34 @@
-﻿//monarch v2.1 – Real-time input poller
+﻿//heavenly v3.0 – Raw Input Listener
 using System;
-using System.Timers;
-using Timer = System.Timers.Timer;
+using JaysAi.Finale.Input;
 
 namespace JaysAi.Finale.Input
 {
-    public static class ControllerInputListener
+    public class ControllerInputListener
     {
-        private static System.Timers.Timer _pollTimer;
-        public static ControllerState CurrentState { get; private set; } = new();
+        public event Action<ControllerState>? OnControllerStateChanged;
+        private ControllerInputPoller _poller;
 
-        public static event Action<ControllerState> OnStateUpdated;
-
-        public static void StartListening()
+        public ControllerInputListener()
         {
-            _pollTimer = new Timer(10); // 100Hz
-            _pollTimer.Elapsed += PollInputs;
-            _pollTimer.Start();
+            _poller = new ControllerInputPoller();
+            _poller.OnInputUpdated += HandlePollerInput;
         }
 
-        private static void PollInputs(object sender, ElapsedEventArgs e)
+        private void HandlePollerInput(ControllerState state)
         {
-            // TEMP: Fake state for now — replace with real polling from SharpDX/Gamepad API
-            var newState = new ControllerState
-            {
-                A = false,
-                B = false,
-                X = false,
-                Y = false,
-                LeftStickX = 0f,
-                LeftStickY = 0f,
-                RightStickX = 0f,
-                RightStickY = 0f,
-                IsConnected = true
-            };
-
-            CurrentState = newState;
-            OnStateUpdated?.Invoke(CurrentState);
+            // Forward raw input updates
+            OnControllerStateChanged?.Invoke(state);
         }
 
-        public static void StopListening()
+        public void Begin()
         {
-            _pollTimer?.Stop();
-            _pollTimer?.Dispose();
+            _poller.StartPolling();
+        }
+
+        public void End()
+        {
+            _poller.StopPolling();
         }
     }
 }

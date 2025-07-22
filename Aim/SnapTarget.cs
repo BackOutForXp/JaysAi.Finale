@@ -1,38 +1,30 @@
-﻿//monarch v2.0
-using JaysAi.AI;
+﻿//heavenly v3.0
+using JaysAi.Finale.AI;
 using JaysAi.Finale.Modules;
-using JaysAi.SystemLogic;
-using System;
-using System.Collections.Generic;
 using System.Numerics;
 
 namespace JaysAi.Finale.Aim
 {
-    public static class SnapTarget
+    public class SnapTarget
     {
-        public static EntityData? GetBestTarget(List<EntityData> enemies)
+        public TrackedTarget Target { get; set; }
+        public Vector2 ScreenPosition { get; set; }
+        public float DistanceToCrosshair { get; set; }
+        public float Score { get; set; }
+        public bool IsVisible { get; set; }
+
+        public SnapTarget(TrackedTarget target, Vector2 screenPos, float distance, float score, bool visible)
         {
-            EntityData? best = null;
-            float bestScore = float.MaxValue;
-            Vector2 screenCenter = ScreenUtils.GetCenter();
+            Target = target;
+            ScreenPosition = screenPos;
+            DistanceToCrosshair = distance;
+            Score = score;
+            IsVisible = visible;
+        }
 
-            foreach (var enemy in enemies)
-            {
-                if (enemy.ScreenPosition == Vector2.Zero)
-                    continue;
-
-                float distance = Vector2.Distance(screenCenter, enemy.ScreenPosition);
-                if (distance > SnapSettings.MaxSnapRange)
-                    continue;
-
-                if (distance < bestScore)
-                {
-                    bestScore = distance;
-                    best = enemy;
-                }
-            }
-
-            return best;
+        public bool IsValid(float maxDistance)
+        {
+            return IsVisible && DistanceToCrosshair <= maxDistance;
         }
     }
 }
