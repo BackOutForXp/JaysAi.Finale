@@ -1,4 +1,4 @@
-﻿//monarch v2.1.11 – Central AI Execution Dispatcher
+﻿//monarch v2.1.11 – Central AI Execution Dispatcher 
 using JaysAi.Finale.Visuals;
 using JaysAi.Finale.Aimbot;
 using JaysAi.Finale.Modules;
