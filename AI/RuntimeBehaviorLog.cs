@@ -1,8 +1,9 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — RuntimeBehaviorLog.cs
+using JaysAi.Finale.Data;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using JaysAi.Finale.Data;
+using System.Numerics;
 
 namespace JaysAi.Finale.AI
 {
@@ -31,6 +32,19 @@ namespace JaysAi.Finale.AI
             });
         }
 
+        public void LogUpdate(List<TrackedTarget> targets, Dictionary<int, Vector3> predictions)
+        {
+            foreach (var target in targets)
+            {
+                if (predictions.TryGetValue(target.ID, out var predicted))
+                {
+                    Log("Prediction", $"Predicted Position={predicted}", target.Enemy);
+                }
+
+                Log("Tracking", $"Visible={target.IsVisible} Smoothed={target.SmoothedPosition}", target.Enemy);
+            }
+        }
+
         public IEnumerable<BehaviorEntry> GetRecentEntries(int limit = 50)
         {
             var list = new List<BehaviorEntry>(_logQueue);
@@ -49,5 +63,8 @@ namespace JaysAi.Finale.AI
             public string Details { get; init; } = string.Empty;
             public int TargetId { get; init; }
         }
+
+        public void StartSession() => Log("Session", "AI Runtime session started");
+        public void EndSession() => Log("Session", "AI Runtime session ended");
     }
 }

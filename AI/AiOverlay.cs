@@ -1,8 +1,9 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — AiOverlay.cs
 using JaysAi.Finale.AI;
-using JaysAi.Finale.Visuals;
 using JaysAi.Finale.Data;
+using JaysAi.Finale.Overlay;
 using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Visuals;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -18,9 +19,28 @@ namespace JaysAi.Finale.AI
         public bool ShowTargetInfo { get; set; } = true;
         public bool ShowVelocityVector { get; set; } = false;
 
-        public AiOverlay(OverlaySignal overlaySignal)
+        public AiOverlay()
         {
-            _overlaySignal = overlaySignal;
+            _overlaySignal = new OverlaySignal(); // Singleton or injected later
+        }
+
+        public void BindToAI(AiManager ai)
+        {
+            // Optional: Link back if needed
+        }
+
+        public void UpdateOverlayData(List<TrackedTarget> targets)
+        {
+            foreach (var target in targets)
+            {
+                DrawTrackedTargetInfo(target);
+
+                if (target.PredictedScreenPosition.HasValue)
+                    DrawPredictionPath(target, target.PredictedScreenPosition.Value);
+
+                if (target.Velocity.Length() > 0.01f)
+                    DrawVelocity(target, target.Velocity);
+            }
         }
 
         public void DrawTrackedTargetInfo(TrackedTarget target)
@@ -43,15 +63,13 @@ namespace JaysAi.Finale.AI
         {
             if (!ShowVelocityVector) return;
 
-            Vector2 endPoint = target.ScreenPosition + velocity * 10f;
-            _overlaySignal.DrawArrow(target.ScreenPosition, endPoint, OverlayColor.Red);
+            Vector2 endPoint = target.ScreenPosition + velocity * 0.5f;
+            _overlaySignal.DrawLine(target.ScreenPosition, endPoint, OverlayColor.Yellow);
         }
 
-        public void Clear()
+        public void Unbind()
         {
             _drawnPaths.Clear();
         }
-
-        public IReadOnlyList<Vector2> GetDrawnPaths() => _drawnPaths.AsReadOnly();
     }
 }

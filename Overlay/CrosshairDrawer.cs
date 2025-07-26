@@ -1,6 +1,5 @@
-﻿// Neural v3.0 — CrosshairDrawer.cs
+﻿// Neural v3.1 — CrosshairDrawer.cs
 using SkiaSharp;
-using SkiaSharp.Views.Desktop;
 using System;
 
 namespace JaysAi.Finale.Overlay
@@ -43,26 +42,22 @@ namespace JaysAi.Finale.Overlay
                     canvas.DrawCircle(centerX, centerY, Thickness, paint);
                     break;
 
-                case CrosshairStyle.T:
-                    DrawTCrosshair(canvas, paint, centerX, centerY);
-                    break;
-
-                default:
-                    DrawPlusCrosshair(canvas, paint, centerX, centerY);
+                case CrosshairStyle.X:
+                    DrawXCrosshair(canvas, paint, centerX, centerY);
                     break;
             }
         }
 
         private void DrawPlusCrosshair(SKCanvas canvas, SKPaint paint, float x, float y)
         {
-            canvas.DrawLine(x - Size, y, x + Size, y, paint); // Horizontal
-            canvas.DrawLine(x, y - Size, x, y + Size, paint); // Vertical
+            canvas.DrawLine(x - Size, y, x + Size, y, paint);
+            canvas.DrawLine(x, y - Size, x, y + Size, paint);
         }
 
-        private void DrawTCrosshair(SKCanvas canvas, SKPaint paint, float x, float y)
+        private void DrawXCrosshair(SKCanvas canvas, SKPaint paint, float x, float y)
         {
-            canvas.DrawLine(x - Size, y, x + Size, y, paint); // Horizontal
-            canvas.DrawLine(x, y, x, y + Size, paint);         // Only downward vertical
+            canvas.DrawLine(x - Size, y - Size, x + Size, y + Size, paint);
+            canvas.DrawLine(x - Size, y + Size, x + Size, y - Size, paint);
         }
     }
 
@@ -71,6 +66,6 @@ namespace JaysAi.Finale.Overlay
         Plus,
         Circle,
         Dot,
-        T
+        X
     }
 }

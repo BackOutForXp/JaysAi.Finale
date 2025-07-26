@@ -1,12 +1,10 @@
-﻿// neural v3.0
+﻿// neural v3.1
 using JaysAi.Finale.AI;
 using JaysAi.Finale.Aimbot;
 using JaysAi.Finale.Data;
-using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Utility;
-using JaysAi.Finale.Helpers;
 using JaysAi.Finale.Features;
 using JaysAi.Finale.Input;
+using JaysAi.Finale.SystemLogic;
 using System;
 using System.Collections.Generic;
 
@@ -42,18 +40,22 @@ namespace JaysAi.Finale.AI
             _behaviorTrigger.RegisterTriggers();
             _runtimeLog.StartSession();
             _aiOverlay.BindToAI(this);
+
             LogManager.Log("AiManager initialized successfully.");
         }
 
         public void Update()
         {
             _tracker.UpdateTracking();
-            _predictionEngine.UpdatePredictions(_tracker.GetTargets());
+
+            var targets = _tracker.GetTargets() ?? new List<TrackedTarget>();
+
+            _predictionEngine.UpdatePredictions(targets);
             _motionTracker.ProcessMovementData();
-            _targetingSystem.EvaluateTargets(_tracker.GetTargets());
-            _behaviorTrigger.Evaluate(_tracker.GetTargets());
-            _runtimeLog.LogUpdate(_tracker.GetTargets(), _predictionEngine.LatestPredictions);
-            _aiOverlay.UpdateOverlayData(_tracker.GetTargets());
+            _targetingSystem.EvaluateTargets(targets);
+            _behaviorTrigger.Evaluate(targets);
+            _runtimeLog.LogUpdate(targets, _predictionEngine.LatestPredictions);
+            _aiOverlay.UpdateOverlayData(targets);
         }
 
         public void Shutdown()
@@ -63,14 +65,8 @@ namespace JaysAi.Finale.AI
             LogManager.Log("AiManager shut down.");
         }
 
-        public List<TrackedTarget> GetCurrentTargets()
-        {
-            return _tracker.GetTargets();
-        }
+        public List<TrackedTarget> GetCurrentTargets() => _tracker.GetTargets();
 
-        public TrackedTarget GetPrimaryTarget()
-        {
-            return _targetingSystem.GetPrimaryTarget();
-        }
+        public TrackedTarget GetPrimaryTarget() => _targetingSystem.GetPrimaryTarget();
     }
 }

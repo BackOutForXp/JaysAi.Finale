@@ -1,4 +1,4 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — TimeUtils.cs
 using System;
 using System.Diagnostics;
 
@@ -9,33 +9,33 @@ namespace JaysAi.Finale.SystemLogic
         private static readonly Stopwatch _globalStopwatch = Stopwatch.StartNew();
 
         /// <summary>
-        /// Returns total time in milliseconds since application started.
+        /// Total time in milliseconds since app launch.
         /// </summary>
         public static long TimeSinceStartupMs => _globalStopwatch.ElapsedMilliseconds;
 
         /// <summary>
-        /// Returns total time in seconds since application started.
+        /// Total time in seconds since app launch.
         /// </summary>
         public static double TimeSinceStartupSec => _globalStopwatch.Elapsed.TotalSeconds;
 
         /// <summary>
-        /// Gets the current UTC timestamp.
+        /// Current UTC time.
         /// </summary>
         public static DateTime UtcNow => DateTime.UtcNow;
 
         /// <summary>
-        /// Gets the current local time timestamp.
+        /// Current local time.
         /// </summary>
         public static DateTime LocalNow => DateTime.Now;
 
         /// <summary>
-        /// Returns a formatted timestamp for logging or filename generation.
+        /// Returns a formatted UTC timestamp (good for logs/files).
         /// </summary>
         public static string GetFormattedTimestamp(string format = "yyyy-MM-dd_HH-mm-ss") =>
             DateTime.UtcNow.ToString(format);
 
         /// <summary>
-        /// Returns a high-resolution timestamp in ticks.
+        /// High-resolution timestamp in Stopwatch ticks.
         /// </summary>
         public static long HighResTimestamp => Stopwatch.GetTimestamp();
 
@@ -43,12 +43,18 @@ namespace JaysAi.Finale.SystemLogic
         /// Converts Stopwatch ticks to milliseconds.
         /// </summary>
         public static double TicksToMilliseconds(long ticks) =>
-            ticks * 1000.0 / Stopwatch.Frequency;
+            ticks * (1000.0 / Stopwatch.Frequency);
 
         /// <summary>
         /// Converts Stopwatch ticks to seconds.
         /// </summary>
         public static double TicksToSeconds(long ticks) =>
-            ticks * 1.0 / Stopwatch.Frequency;
+            ticks / (double)Stopwatch.Frequency;
+
+        /// <summary>
+        /// Returns time in seconds from now to a given DateTime.
+        /// </summary>
+        public static double SecondsSince(DateTime timestamp) =>
+            (DateTime.UtcNow - timestamp).TotalSeconds;
     }
 }

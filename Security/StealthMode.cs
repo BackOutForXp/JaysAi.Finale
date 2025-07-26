@@ -95,7 +95,7 @@ namespace JaysAi.Finale.Security
 
         private static void StartWindowScan()
         {
-            _windowScanTimer = new Timer(_ =>
+            _windowScanTimer = new System.Timers.Timer(_ =>
             {
                 // Future enhancement: scan for suspicious windows or analysis tools
                 // Currently placeholder for stealth monitoring routine

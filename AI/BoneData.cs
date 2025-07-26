@@ -1,4 +1,4 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — BoneData.cs
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -35,7 +35,7 @@ namespace JaysAi.Finale.AI
             ScreenPosition = screenPos;
         }
 
-        public bool IsCritical => Type is BoneType.Head or BoneType.Chest;
+        public bool IsCritical => Type == BoneType.Head || Type == BoneType.Chest;
     }
 
     public static class BoneMap
@@ -52,16 +52,16 @@ namespace JaysAi.Finale.AI
             { BoneType.LeftArm, 16 },
             { BoneType.RightArm, 17 },
             { BoneType.LeftLeg, 18 },
-            { BoneType.RightLeg, 19 },
+            { BoneType.RightLeg, 19 }
         };
 
         public static BoneType GetBoneTypeByID(int id)
         {
             foreach (var pair in DefaultBoneIDs)
             {
-                if (pair.Value == id) return pair.Key;
+                if (pair.Value == id)
+                    return pair.Key;
             }
-
             return BoneType.Unknown;
         }
     }

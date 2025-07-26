@@ -1,4 +1,4 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — FrameSnapshot.cs
 using System;
 using System.Collections.Generic;
 using System.Numerics;

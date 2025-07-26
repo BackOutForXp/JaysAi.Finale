@@ -1,8 +1,7 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — InputEmulator.cs
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
-using JaysAi.Finale.Helpers;
 
 namespace JaysAi.Finale.Input
 {

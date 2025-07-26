@@ -1,4 +1,4 @@
-﻿// Neural v3.0 — FovOverlayRenderer.cs
+﻿// Neural v3.1 — FovOverlayRenderer.cs
 using SkiaSharp;
 using System;
 
@@ -44,13 +44,5 @@ namespace JaysAi.Finale.Overlay
 
             canvas.DrawCircle(centerX, centerY, Radius, borderPaint);
         }
-
-        public void SetRadius(float radius) => Radius = radius;
-
-        public void SetColor(SKColor color) => Color = color;
-
-        public void SetThickness(float thickness) => Thickness = thickness;
-
-        public void EnableFill(bool enabled) => FillEnabled = enabled;
     }
 }

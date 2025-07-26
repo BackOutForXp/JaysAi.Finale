@@ -10,26 +10,26 @@ namespace JaysAi.Finale.Features
         public bool Enabled { get; set; } = true;
         public double Thickness { get; set; } = 1.5;
         public double Length { get; set; } = 10;
-        public Color LineColor { get; set; } = Colors.Red;
+        public System.Windows.Media.Color LineColor { get; set; } = Colors.Red;
         public bool DynamicCentering { get; set; } = true;
-        public Point? TargetPoint { get; set; }
+        public System.Windows.Point? TargetPoint { get; set; }
 
         public void Draw(DrawingContext context, double centerX, double centerY)
         {
             if (!Enabled || context == null) return;
 
-            Point position = TargetPoint ?? new Point(centerX, centerY);
-            Pen pen = new(new SolidColorBrush(LineColor), Thickness);
+            System.Windows.Point position = TargetPoint ?? new Point(centerX, centerY);
+            System.Windows.Media.Pen pen = new(new SolidColorBrush(LineColor), Thickness);
 
             // Horizontal line
             context.DrawLine(pen,
-                new Point(position.X - Length, position.Y),
-                new Point(position.X + Length, position.Y));
+                new System.Windows.Point(position.X - Length, position.Y),
+                new System.Windows.Point(position.X + Length, position.Y));
 
             // Vertical line
             context.DrawLine(pen,
-                new Point(position.X, position.Y - Length),
-                new Point(position.X, position.Y + Length));
+                new System.Windows.Point(position.X, position.Y - Length),
+                new System.Windows.Point(position.X, position.Y + Length));
         }
     }
 }

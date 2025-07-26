@@ -1,9 +1,12 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — SnapScore.cs
 using System;
 using JaysAi.Finale.Data;
 
 namespace JaysAi.Finale.AI
 {
+    /// <summary>
+    /// Scoring breakdown of an enemy used in target selection.
+    /// </summary>
     public class SnapScore
     {
         public Enemy Target { get; }
@@ -11,6 +14,7 @@ namespace JaysAi.Finale.AI
         public float MovementScore { get; }
         public float VisibilityScore { get; }
         public float AlignmentScore { get; }
+
         public float TotalScore => DistanceScore * 0.25f +
                                    MovementScore * 0.25f +
                                    VisibilityScore * 0.25f +
@@ -27,7 +31,8 @@ namespace JaysAi.Finale.AI
 
         public override string ToString()
         {
-            return $"[SnapScore] ID: {Target.ID}, Total: {TotalScore:F2}, D:{DistanceScore:F2}, M:{MovementScore:F2}, V:{VisibilityScore:F2}, A:{AlignmentScore:F2}";
+            return $"[SnapScore] ID: {Target.Id}, Total: {TotalScore:F2}, " +
+                   $"D:{DistanceScore:F2}, M:{MovementScore:F2}, V:{VisibilityScore:F2}, A:{AlignmentScore:F2}";
         }
     }
 }

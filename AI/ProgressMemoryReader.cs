@@ -1,8 +1,4 @@
-﻿using JaysAi.Finale.Data;
-
-using JaysAi.Finale.SystemLogic;
-
-=// neural v3.0
+﻿// neural v3.0
 using System;
 using System.Collections.Generic;
 using System.Numerics;

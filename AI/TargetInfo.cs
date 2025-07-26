@@ -1,4 +1,4 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — TargetInfo.cs
 using System;
 using System.Numerics;
 using JaysAi.Finale.Data;
@@ -11,6 +11,7 @@ namespace JaysAi.Finale.AI
         public Vector3 Position { get; set; }
         public Vector3 Velocity { get; set; }
         public Vector3 LastKnownDirection { get; set; }
+
         public float Distance { get; set; }
         public bool IsVisible { get; set; }
         public bool IsAlive { get; set; }
@@ -34,6 +35,7 @@ namespace JaysAi.Finale.AI
             IsVisible = false;
             IsAlive = true;
             LastSeen = DateTime.UtcNow;
+
             AimWeightScore = 0f;
             VisibilityScore = 0f;
             PredictedPosition = Vector3.Zero;

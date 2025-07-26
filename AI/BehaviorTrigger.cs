@@ -1,4 +1,4 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — BehaviorTrigger.cs
 using JaysAi.Finale.Data;
 using JaysAi.Finale.Aimbot;
 using JaysAi.Finale.Modules;

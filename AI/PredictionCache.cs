@@ -1,4 +1,4 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — PredictionCache.cs
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -48,16 +48,18 @@ namespace JaysAi.Finale.AI
             }
 
             foreach (var key in expiredKeys)
+            {
                 _cache.Remove(key);
+            }
         }
 
-        public void ClearAll() => _cache.Clear();
+        public void Clear() => _cache.Clear();
+    }
 
-        private class CachedPrediction
-        {
-            public int EntityId;
-            public Vector3 PredictedPosition;
-            public float Timestamp;
-        }
+    public class CachedPrediction
+    {
+        public int EntityId { get; set; }
+        public Vector3 PredictedPosition { get; set; }
+        public float Timestamp { get; set; }
     }
 }

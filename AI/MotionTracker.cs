@@ -1,4 +1,4 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — MotionTracker.cs
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -28,57 +28,51 @@ namespace JaysAi.Finale.AI
 
         public MotionStats GetMotionStats(int targetId)
         {
-            if (!_targetHistory.ContainsKey(targetId)) return new MotionStats();
-
-            var history = _targetHistory[targetId];
-            if (history.Count < 2) return new MotionStats();
+            if (!_targetHistory.TryGetValue(targetId, out var history) || history.Count < 2)
+                return new MotionStats();
 
             var first = history[0];
             var last = history[^1];
-
             var deltaTime = (float)(last.Time - first.Time).TotalSeconds;
-            if (deltaTime <= 0) return new MotionStats();
+            if (deltaTime <= 0f) return new MotionStats();
 
             var deltaPos = last.Position - first.Position;
             var velocity = deltaPos / deltaTime;
 
-            var acceleration = Vector2.Zero;
+            Vector2 acceleration = Vector2.Zero;
             if (history.Count >= 3)
             {
-                var mid = history[^2];
-                var dtMid = (float)(last.Time - mid.Time).TotalSeconds;
-                var vMid = (last.Position - mid.Position) / dtMid;
-
-                acceleration = (velocity - vMid) / dtMid;
+                var mid = history[history.Count / 2];
+                var deltaMidTime = (float)(last.Time - mid.Time).TotalSeconds;
+                if (deltaMidTime > 0f)
+                {
+                    var deltaMidPos = last.Position - mid.Position;
+                    var midVelocity = deltaMidPos / deltaMidTime;
+                    acceleration = (midVelocity - velocity) / deltaMidTime;
+                }
             }
 
             return new MotionStats
             {
                 Velocity = velocity,
                 Acceleration = acceleration,
-                DirectionAngle = MathF.Atan2(velocity.Y, velocity.X) * (180f / MathF.PI),
                 SampleCount = history.Count
             };
         }
 
-        public void Reset(int targetId)
+        public void Clear()
         {
-            if (_targetHistory.ContainsKey(targetId))
-                _targetHistory[targetId].Clear();
+            _targetHistory.Clear();
         }
 
-        private class MotionSample
+        public void Initialize()
         {
-            public DateTime Time { get; set; }
-            public Vector2 Position { get; set; }
+            Clear();
         }
-    }
 
-    public class MotionStats
-    {
-        public Vector2 Velocity { get; set; } = Vector2.Zero;
-        public Vector2 Acceleration { get; set; } = Vector2.Zero;
-        public float DirectionAngle { get; set; } = 0f;
-        public int SampleCount { get; set; } = 0;
+        public void ProcessMovementData()
+        {
+            // Optional: Add logic to prune stale targets or average group motion
+        }
     }
 }

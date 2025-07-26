@@ -1,13 +1,13 @@
-﻿// Neural v3.1 — ESPModuleManager.cs
+﻿// neural v3.1
+using System;
+using System.Collections.Generic;
+using System.Timers;
 using JaysAi.Finale.Data;
 using JaysAi.Finale.Modules;
 using JaysAi.Finale.Overlay;
 using JaysAi.Finale.Settings;
 using JaysAi.Finale.Utility;
 using JaysAi.Finale.Visuals;
-using System;
-using System.Collections.Generic;
-using System.Timers;
 
 namespace JaysAi.Finale.Features
 {
@@ -16,13 +16,12 @@ namespace JaysAi.Finale.Features
         private bool _isEnabled;
         private int _toggleCount;
         private DateTime _lastToggle;
-        private readonly System.Timers.Timer _optimizationTimer;
+        private readonly Timer _optimizationTimer;
 
         public string Name => "ESP";
-
         public bool IsEnabled => _isEnabled;
+        public bool Active => _isEnabled;
 
-        // Events for UI binding or advanced AI logic
         public event Action<bool> OnStateChanged;
         public event Action<string, bool> OnAutoOptimized;
 
@@ -31,7 +30,7 @@ namespace JaysAi.Finale.Features
             _toggleCount = 0;
             _lastToggle = DateTime.Now;
 
-            _optimizationTimer = new System.Timers.Timer(5000); // Check every 5 seconds
+            _optimizationTimer = new Timer(5000);
             _optimizationTimer.Elapsed += (_, _) => AnalyzeUsage();
             _optimizationTimer.AutoReset = true;
         }
@@ -58,7 +57,7 @@ namespace JaysAi.Finale.Features
             if (_isEnabled)
             {
                 SetEnabled(false);
-                ESP.Clear(); // Clear tracked ESP objects
+                ESP.Clear();
                 _optimizationTimer.Stop();
             }
         }
@@ -108,7 +107,5 @@ namespace JaysAi.Finale.Features
             SetEnabled(false);
             ESP.Clear();
         }
-
-        public bool Active => _isEnabled;
     }
 }

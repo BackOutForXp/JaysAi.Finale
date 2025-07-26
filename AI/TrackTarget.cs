@@ -1,10 +1,14 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — TrackTarget.cs
 using System;
+using System.Numerics;
 using JaysAi.Finale.Data;
-using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.AI
 {
+    /// <summary>
+    /// Manages the locked-on tracked target. 
+    /// Sits between AimAssist and the AI’s real-time tracking loop.
+    /// </summary>
     public class TrackTarget
     {
         public TrackedTarget Tracked { get; private set; }
@@ -35,16 +39,12 @@ namespace JaysAi.Finale.AI
                 return;
             }
 
-            // Maintain smoothing update
-            Tracked.Update(Tracked.Enemy.Position, Tracked.Enemy.IsVisible);
+            Tracked.Update(Tracked.Enemy.HeadPosition, Tracked.Enemy.IsVisible);
         }
 
         public Vector3 GetTargetPosition()
         {
-            if (Tracked == null)
-                return Vector3.Zero;
-
-            return Tracked.PredictNextPosition();
+            return Tracked?.PredictNextPosition() ?? Vector3.Zero;
         }
 
         public bool HasValidTarget()

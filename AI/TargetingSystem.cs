@@ -1,10 +1,10 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — TargetingSystem.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using JaysAi.Finale.Data;
 using JaysAi.Finale.AI;
-using JaysAi.Finale.Aim;
 
 namespace JaysAi.Finale.AI
 {
@@ -15,49 +15,69 @@ namespace JaysAi.Finale.AI
         private readonly float _visibilityBonus = 1.5f;
         private readonly float _priorityDecay = 0.98f;
 
-        public void UpdateTargets(List<Enemy> enemies, Vector3 playerPosition)
+        public void Initialize()
+        {
+            _targets.Clear();
+        }
+
+        public void EvaluateTargets(List<TrackedTarget> trackedTargets)
         {
             _targets.Clear();
 
-            foreach (var enemy in enemies)
+            foreach (var tracked in trackedTargets)
             {
-                if (!enemy.IsAlive) continue;
+                var enemy = tracked.Enemy;
+                if (enemy == null || !enemy.IsVisible || !enemy.IsTracked)
+                    continue;
 
-                var distance = Vector3.Distance(enemy.Position, playerPosition);
-                if (distance > _maxDistance) continue;
+                float distance = enemy.Distance;
+                float movement = CalculateMovementScore(tracked);
+                float alignment = CalculateAlignmentScore(tracked);
 
-                var targetInfo = new TargetInfo(enemy, enemy.Position)
+                var info = new TargetInfo(enemy, enemy.HeadPosition)
                 {
                     Distance = distance,
                     IsVisible = enemy.IsVisible,
-                    IsAlive = enemy.IsAlive,
-                    AimWeightScore = CalculateScore(enemy, distance, enemy.IsVisible)
+                    AimWeightScore = CalculateScore(distance, movement, alignment),
+                    VisibilityScore = enemy.IsVisible ? 1.0f : 0.0f
                 };
 
-                _targets.Add(targetInfo);
+                _targets.Add(info);
             }
         }
 
-        private float CalculateScore(Enemy enemy, float distance, bool isVisible)
+        public TargetInfo GetPrimaryTarget()
         {
-            float score = 100f - distance;
-            if (isVisible) score *= _visibilityBonus;
+            return _targets.OrderByDescending(t => t.AimWeightScore).FirstOrDefault();
+        }
 
+        private float CalculateScore(float distance, float movement, float alignment)
+        {
+            float distScore = Math.Clamp(100f - distance, 0, 100);
+            float moveScore = Math.Clamp(100f - movement, 0, 100);
+            float alignScore = Math.Clamp(alignment, 0, 100);
+
+            float score = (distScore + moveScore + alignScore) / 3f;
             score *= _priorityDecay;
-            return Math.Clamp(score, 0f, 100f);
+            return score;
         }
 
-        public TargetInfo GetBestTarget()
+        private float CalculateMovementScore(TrackedTarget tracked)
         {
-            if (_targets.Count == 0)
-                return null;
+            if (tracked.PositionHistory.Count < 2)
+                return 0f;
 
-            return _targets
-                .OrderByDescending(t => t.AimWeightScore)
-                .ThenBy(t => t.Distance)
-                .FirstOrDefault();
+            var history = tracked.PositionHistory.ToArray();
+            return Vector3.Distance(history[^1], history[^2]);
         }
 
-        public List<TargetInfo> GetAllTargets() => _targets;
+        private float CalculateAlignmentScore(TrackedTarget tracked)
+        {
+            // Placeholder for crosshair alignment logic
+            // Will use dot product of aim vector vs. enemy vector in final overlay phase
+            return 50f; // temp static
+        }
+
+        public List<TargetInfo> GetAllScoredTargets() => _targets;
     }
 }

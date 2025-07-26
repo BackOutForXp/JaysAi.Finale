@@ -1,52 +1,53 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — AimAssist.cs
 using System;
 using JaysAi.Finale.AI;
 using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.Aim;
 using JaysAi.Finale.Input;
-using JaysAi.Finale.SystemLogic;
 using JaysAi.Finale.Data;
+using JaysAi.Finale.Settings;
+using System.Numerics;
 
-namespace JaysAi.Finale.Aimbot
+namespace JaysAi.Finale.Aim
 {
     public class AimAssist
     {
-        private readonly PredictionEngine predictionEngine;
-        private readonly PIDController aimSmoother;
-        private readonly TargetSelector targetSelector;
-        private readonly InputInjector inputInjector;
-        private SnapTarget? currentTarget;
-        private bool isActive;
+        private readonly PredictionEngine _predictionEngine;
+        private readonly TargetSelector _targetSelector;
+        private readonly InputEmulator _inputEmulator;
+        private readonly PIDController _aimSmoother;
+        private readonly AppSettings _settings;
 
-        public AimAssist(PredictionEngine predictionEngine, TargetSelector targetSelector, InputInjector injector)
+        private SnapTarget? _currentTarget;
+        private bool _isActive;
+
+        public AimAssist(PredictionEngine predictionEngine, TargetSelector targetSelector, InputEmulator inputEmulator, AppSettings settings)
         {
-            this.predictionEngine = predictionEngine;
-            this.targetSelector = targetSelector;
-            this.inputInjector = injector;
-            this.aimSmoother = new PIDController(0.6f, 0.01f, 0.05f);
-            this.isActive = true;
+            _predictionEngine = predictionEngine;
+            _targetSelector = targetSelector;
+            _inputEmulator = inputEmulator;
+            _settings = settings;
+
+            _aimSmoother = new PIDController(0.6f, 0.01f, 0.05f);
+            _isActive = true;
         }
 
-        public void Toggle(bool state)
-        {
-            isActive = state;
-        }
+        public void Toggle(bool state) => _isActive = state;
 
         public void Update()
         {
-            if (!isActive)
+            if (!_isActive || !_settings.AimAssistEnabled)
                 return;
 
-            currentTarget = targetSelector.GetBestTarget();
+            _currentTarget = _targetSelector.GetBestTarget();
 
-            if (currentTarget == null || !currentTarget.Value.IsValid())
+            if (_currentTarget == null || !_currentTarget.Value.IsValid())
                 return;
 
-            Vector2 predictedPosition = predictionEngine.PredictTargetPosition(currentTarget.Value);
-            Vector2 aimOffset = predictionEngine.CalculateAimOffset(predictedPosition);
+            Vector2 predictedPosition = _predictionEngine.PredictTargetPosition(_currentTarget.Value);
+            Vector2 aimOffset = _predictionEngine.CalculateAimOffset(predictedPosition);
 
-            Vector2 smoothOffset = aimSmoother.Smooth(aimOffset);
-            inputInjector.MoveCursor(smoothOffset);
+            Vector2 smoothedOffset = _aimSmoother.ApplySmoothing(Vector2.Zero, aimOffset);
+            _inputEmulator.MoveMouseBy(smoothedOffset);
         }
     }
 }

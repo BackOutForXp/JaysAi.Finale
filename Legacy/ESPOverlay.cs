@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Windows.Controls;
 using System.Windows.Forms;
 
-namespace JaysAi.Finale.Overlay
+namespace JaysAi.Finale.Legacy
 {
     public class EspOverlay : IDisposable
     {

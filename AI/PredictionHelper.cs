@@ -1,4 +1,4 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — PredictionHelper.cs
 using System;
 using System.Numerics;
 
@@ -44,32 +44,7 @@ namespace JaysAi.Finale.AI
         /// </summary>
         public static bool IsNearlyStatic(Vector3 velocity, float threshold = 0.1f)
         {
-            return velocity.LengthSquared() < threshold * threshold;
-        }
-
-        /// <summary>
-        /// Clamps a float value within a specified min and max range.
-        /// </summary>
-        public static float Clamp(float value, float min, float max)
-        {
-            return MathF.Max(min, MathF.Min(max, value));
-        }
-
-        /// <summary>
-        /// Predicts time to reach a target based on distance and projectile speed.
-        /// </summary>
-        public static float CalculateFlightTime(float distance, float projectileSpeed)
-        {
-            return projectileSpeed > 0f ? distance / projectileSpeed : 0f;
-        }
-
-        /// <summary>
-        /// Predicts target position with bullet travel time and movement velocity.
-        /// </summary>
-        public static Vector3 PredictBulletLead(Vector3 targetPos, Vector3 targetVelocity, float distance, float projectileSpeed)
-        {
-            float flightTime = CalculateFlightTime(distance, projectileSpeed);
-            return PredictFuturePosition(targetPos, targetVelocity, flightTime);
+            return velocity.Length() < threshold;
         }
     }
 }
