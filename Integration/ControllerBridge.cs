@@ -1,45 +1,50 @@
-﻿//monarch v2.1
+﻿//neural v3.0
 using System;
+using System.Collections.Concurrent;
+using System.Reactive.Subjects;
 using JaysAi.Finale.Input;
+using JaysAi.Finale.Models;
 
-namespace JaysAi.Integration
+namespace JaysAi.Finale.Integration
 {
-    public class ControllerBridge
+    public sealed class ControllerBridge : IDisposable
     {
-        private readonly StickAssist stickAssist;
-        private readonly ControllerState controllerState;
+        private static readonly Lazy<ControllerBridge> _instance = new(() => new ControllerBridge());
+        public static ControllerBridge Instance => _instance.Value;
 
-        public ControllerBridge(StickAssist assist, ControllerState state)
+        private readonly ConcurrentDictionary<int, ControllerState> _controllerStates = new();
+        private readonly Subject<ControllerEventArgs> _controllerStateChanges = new();
+
+        public IObservable<ControllerEventArgs> ControllerStateChanges => _controllerStateChanges;
+
+        private ControllerBridge() { }
+
+        public void UpdateControllerState(int controllerId, ControllerInputState newInput)
         {
-            stickAssist = assist;
-            controllerState = state;
+            var newState = new ControllerState();
+            newState.Update(newInput);
+
+            _controllerStates.AddOrUpdate(controllerId, newState, (_, __) => newState);
+            _controllerStateChanges.OnNext(new ControllerEventArgs(controllerId, newState));
         }
 
-        public void UpdateStickAim(float deltaX, float deltaY)
+        public ControllerState? GetControllerState(int controllerId)
         {
-            var output = stickAssist.Calculate(deltaX, deltaY);
-            SendAnalogOutput(output.X, output.Y);
+            _controllerStates.TryGetValue(controllerId, out var state);
+            return state;
         }
 
-        public void SyncInputs()
+        public void SetDeadzone(float threshold)
         {
-            if (controllerState.A) Press("A");
-            if (controllerState.B) Press("B");
-            if (controllerState.X) Press("X");
-            if (controllerState.Y) Press("Y");
-            // Add more if needed...
+            foreach (var state in _controllerStates.Values)
+                state.DeadzoneThreshold = threshold;
         }
 
-        private void Press(string button)
+        public void Dispose()
         {
-            // Placeholder for ZenStudio/TitanTwo signal send
-            Console.WriteLine($"[Bridge] Simulated press: {button}");
-        }
-
-        private void SendAnalogOutput(float x, float y)
-        {
-            // Placeholder for analog stick command injection
-            Console.WriteLine($"[Bridge] Analog Output -> X: {x:F2}, Y: {y:F2}");
+            _controllerStateChanges?.OnCompleted();
+            _controllerStateChanges?.Dispose();
+            _controllerStates.Clear();
         }
     }
 }

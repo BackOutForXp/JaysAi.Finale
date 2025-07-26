@@ -1,35 +1,43 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
+using JaysAi.Finale.Data;
+using JaysAi.Finale.SystemLogic;
 using System;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.AI;
+using static Unity.Storage.RegistrationSet;
 
 namespace JaysAi.Finale.Aim
 {
-    public static class LineOfSightChecker
+    public class LineOfSightChecker
     {
-        public static bool IsTargetVisible(TargetInfo target)
+        private readonly float maxScanDistance;
+        private readonly Func<Entity, bool> visibilityFilter;
+
+        public LineOfSightChecker(float maxDistance = 250f, Func<Entity, bool>? customFilter = null)
         {
-            if (target == null || target.Position == null)
+            maxScanDistance = maxDistance;
+            visibilityFilter = customFilter ?? DefaultVisibilityFilter;
+        }
+
+        private bool DefaultVisibilityFilter(Entity entity)
+        {
+            return entity.Health > 0 && entity.IsEnemy && entity.IsVisible;
+        }
+
+        public bool HasLineOfSight(Entity localPlayer, Entity target)
+        {
+            if (localPlayer == null || target == null)
                 return false;
 
-            // Raycast or bounding box visibility logic (placeholder)
-            return !target.IsObstructed; // This field should be updated by ESP module or vision model
+            if (!visibilityFilter(target))
+                return false;
+
+            float distance = VectorMathHelper.Distance(localPlayer.Position, target.Position);
+            return distance <= maxScanDistance;
         }
 
-        public static bool IsLineOfSightClear(TargetInfo from, TargetInfo to)
+        public bool IsBlockedByCover(Entity target)
         {
-            if (from == null || to == null) return false;
-
-            // Placeholder for line trace, should be connected to prediction model or overlay logic
-            return !from.IsObstructed && !to.IsObstructed;
-        }
-
-        public static bool IsTargetBehindCover(TargetInfo target)
-        {
-            if (target == null) return false;
-
-            return target.IsBehindCover; // Should be dynamically updated by ESPScanner or camera logic
+            // Placeholder: In future, raycast or occlusion logic can be applied
+            return !target.IsVisible;
         }
     }
 }

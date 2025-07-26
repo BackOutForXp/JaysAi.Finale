@@ -1,77 +1,52 @@
-﻿// File: Input/MouseInputEmulator.cs
+﻿// neural v3.0
 using System;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace JaysAi.Finale.Input
 {
-    public static class MouseInputEmulator
+    public static class MouseEmulator
     {
-        [DllImport("user32.dll")]
-        private static extern bool SetCursorPos(int X, int Y);
-
-        [DllImport("user32.dll")]
-        private static extern bool GetCursorPos(out POINT lpPoint);
-
-        [DllImport("user32.dll")]
-        private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, nuint dwExtraInfo);
-
-        private const uint MOUSEEVENTF_MOVE = 0x0001;
-        private const uint MOUSEEVENTF_ABSOLUTE = 0x8000;
-        private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
-        private const uint MOUSEEVENTF_LEFTUP = 0x0004;
-        private const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
-        private const uint MOUSEEVENTF_RIGHTUP = 0x0010;
-
-        private struct POINT
+        [Flags]
+        private enum MouseEventFlags : uint
         {
-            public int X;
-            public int Y;
+            MOVE = 0x0001,
+            LEFTDOWN = 0x0002,
+            LEFTUP = 0x0004,
+            RIGHTDOWN = 0x0008,
+            RIGHTUP = 0x0010,
+            MIDDLEDOWN = 0x0020,
+            MIDDLEUP = 0x0040,
+            ABSOLUTE = 0x8000
         }
 
-        public static Vector2 GetCursorPosition()
-        {
-            GetCursorPos(out POINT point);
-            return new Vector2(point.X, point.Y);
-        }
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern void mouse_event(MouseEventFlags flags, int dx, int dy, uint data, UIntPtr extraInfo);
 
-        public static void MoveTo(Vector2 screenPos)
+        public static void Move(int deltaX, int deltaY)
         {
-            SetCursorPos((int)screenPos.X, (int)screenPos.Y);
-        }
-
-        public static void MoveBy(Vector2 delta)
-        {
-            Vector2 current = GetCursorPosition();
-            MoveTo(current + delta);
+            mouse_event(MouseEventFlags.MOVE, deltaX, deltaY, 0, UIntPtr.Zero);
         }
 
         public static void LeftClick()
         {
-            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, nuint.Zero);
+            mouse_event(MouseEventFlags.LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
             Thread.Sleep(10);
-            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, nuint.Zero);
+            mouse_event(MouseEventFlags.LEFTUP, 0, 0, 0, UIntPtr.Zero);
         }
 
         public static void RightClick()
         {
-            mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, nuint.Zero);
+            mouse_event(MouseEventFlags.RIGHTDOWN, 0, 0, 0, UIntPtr.Zero);
             Thread.Sleep(10);
-            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, nuint.Zero);
+            mouse_event(MouseEventFlags.RIGHTUP, 0, 0, 0, UIntPtr.Zero);
         }
 
-        public static void SmoothMove(Vector2 from, Vector2 to, float smoothing = 8f)
+        public static void MiddleClick()
         {
-            Vector2 delta = (to - from) / smoothing;
-            MoveBy(delta);
+            mouse_event(MouseEventFlags.MIDDLEDOWN, 0, 0, 0, UIntPtr.Zero);
+            Thread.Sleep(10);
+            mouse_event(MouseEventFlags.MIDDLEUP, 0, 0, 0, UIntPtr.Zero);
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Pure Win32 calls with no legacy libraries
-// ✅ Includes cursor read, move, click, and smooth aim
-// ✅ Used by AimAssist, RecoilCompensator, TriggerBot
-// TODO: Add custom acceleration curves or AI-based snapping
-// ===================================================================

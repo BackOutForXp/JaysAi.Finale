@@ -1,38 +1,42 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
 using System;
-using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.Aim
 {
-    public static class DeadZoneManager
+    public class DeadZoneManager
     {
-        private static double _deadZoneRadius = 0.05; // Default: 5%
-        private static bool _enabled = true;
+        private float deadZoneRadius;
 
-        public static void SetDeadZone(double radius)
+        public DeadZoneManager(float radius = 0.05f)
         {
-            _deadZoneRadius = Math.Clamp(radius, 0.0, 1.0);
-            Logger.Debug($"DeadZone radius set to {_deadZoneRadius}");
+            SetDeadZone(radius);
         }
 
-        public static void Enable(bool state)
+        public void SetDeadZone(float radius)
         {
-            _enabled = state;
-            Logger.Debug($"DeadZone enabled: {_enabled}");
+            deadZoneRadius = Math.Clamp(radius, 0f, 1f);
         }
 
-        public static bool IsWithinDeadZone(double x, double y)
+        public bool IsInDeadZone(float x, float y)
         {
-            if (!_enabled) return false;
-            return Math.Sqrt(x * x + y * y) < _deadZoneRadius;
+            float magnitude = MathF.Sqrt(x * x + y * y);
+            return magnitude < deadZoneRadius;
         }
 
-        public static bool IsWithinDeadZone(Vector2 input)
-        {
-            return IsWithinDeadZone(input.X, input.Y);
-        }
+        public bool IsInDeadZone(Vector2 aimInput) => IsInDeadZone(aimInput.X, aimInput.Y);
 
-        public static double GetRadius() => _deadZoneRadius;
-        public static bool IsEnabled() => _enabled;
+        public float GetDeadZoneRadius() => deadZoneRadius;
+    }
+
+    public struct Vector2
+    {
+        public float X;
+        public float Y;
+
+        public Vector2(float x, float y)
+        {
+            X = x;
+            Y = y;
+        }
     }
 }

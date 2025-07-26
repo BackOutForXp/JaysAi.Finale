@@ -1,68 +1,56 @@
-﻿//heavenly v3.0 – Model Loader & Detection Manager
-using System;
-using System.Collections.Generic;
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Modules;
+﻿// neural v3.0
 using JaysAi.Finale.SystemLogic;
 using JaysAi.Finale.Utility;
+using System;
+using System.Collections.Generic;
 
 namespace JaysAi.Finale.AI
 {
-    public static class ModelLoader
+    public interface IModelLoader
     {
-        private static readonly Dictionary<string, IDetectionModel> _models = new();
-        private static IDetectionModel _activeModel;
-
-        public static void RegisterModel(string name, IDetectionModel model)
-        {
-            if (!_models.ContainsKey(name))
-            {
-                _models.Add(name, model);
-                LogManager.LogInfo($"Registered AI model: {name}");
-            }
-        }
-
-        public static void LoadModel(string name)
-        {
-            if (_models.TryGetValue(name, out var model))
-            {
-                _activeModel = model;
-                _activeModel.Load();
-                LogManager.LogInfo($"Loaded AI model: {name}");
-            }
-            else
-            {
-                LogManager.LogError($"Model not found: {name}");
-            }
-        }
-
-        public static List<DetectedObject> RunDetection(FrameSnapshot frame)
-        {
-            if (_activeModel == null)
-            {
-                LogManager.LogError("No active AI model set.");
-                return new List<DetectedObject>();
-            }
-
-            return _activeModel.Detect(frame);
-        }
-
-        public static IEnumerable<string> GetAvailableModels() => _models.Keys;
-
-        public static void UnloadCurrentModel()
-        {
-            _activeModel?.Unload();
-            _activeModel = null;
-            LogManager.LogInfo("Unloaded current AI model.");
-        }
-
-        public static bool HasActiveModel => _activeModel != null;
+        bool LoadModel(string modelPath);
+        float[] Infer(byte[] inputImage, int width, int height);
+        void UnloadModel();
     }
 
-    public interface IDetectionModel
+    public class OnnxModelLoader : IModelLoader
     {
-        void Load();
-        void Unload();
-        List<DetectedObject> Detect(FrameSnapshot frame);
+        private dynamic _session;
+        private string _loadedModelPath;
+
+        public bool LoadModel(string modelPath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(modelPath)) return false;
+                if (_loadedModelPath == modelPath) return true;
+
+                _session = OnnxHelper.LoadSession(modelPath);
+                _loadedModelPath = modelPath;
+                Logger.Info($"Model loaded: {modelPath}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Model load failed: " + ex.Message);
+                return false;
+            }
+        }
+
+        public float[] Infer(byte[] inputImage, int width, int height)
+        {
+            if (_session == null)
+                throw new InvalidOperationException("Model not loaded.");
+
+            return OnnxHelper.RunInference(_session, inputImage, width, height);
+        }
+
+        public void UnloadModel()
+        {
+            _session?.Dispose();
+            _session = null;
+            _loadedModelPath = null;
+            Logger.Info("Model unloaded.");
+        }
     }
 }

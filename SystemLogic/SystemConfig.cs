@@ -1,37 +1,78 @@
-﻿namespace JaysAi.Finale.SystemLogic
+﻿// neural v3.0
+using System;
+using System.IO;
+using System.Text.Json;
+using JaysAi.Finale.Logging;
+
+namespace JaysAi.Finale.SystemLogic
 {
     public static class SystemConfig
     {
-        // 🧠 Session-only flags (not saved permanently)
-        public static bool SimulateFakeEnemies = false;
-        public static bool DebugMode = true;
-        public static bool DeveloperToolsEnabled = false;
+        private const string ConfigFileName = "system_config.json";
+        private static readonly object _lock = new();
 
-        // 🎮 Control overrides
-        public static bool IsControllerConnected = false;
-        public static bool IsGameWindowFocused = true;
+        public static string LoaderVersion { get; private set; } = "1.0.0";
+        public static bool DebugMode { get; private set; } = false;
+        public static bool EnableSafeBoot { get; private set; } = true;
+        public static string EnvironmentTag { get; private set; } = "production";
 
-        // 🔐 Runtime license status
-        public static string LastLicenseKey = string.Empty;
+        public static void Load()
+        {
+            lock (_lock)
+            {
+                try
+                {
+                    if (!File.Exists(ConfigFileName))
+                    {
+                        Log.Warn($"System config not found. Generating default at {ConfigFileName}");
+                        Save(); // Write defaults
+                        return;
+                    }
 
-        // 🎯 Live aim config used during session
-        public static float FovLimit = 150f;
-        public static float SmoothingAmount = 5f;
-        public static float RecoilCompensation = 1.2f;
+                    string json = File.ReadAllText(ConfigFileName);
+                    var config = JsonSerializer.Deserialize<SystemConfigModel>(json);
+                    if (config == null)
+                        throw new Exception("Deserialized config is null");
 
-        // 🔁 Internal use flags
-        public static bool ConfigLoadedSuccessfully = false;
-        public static bool IsEliteMode = false;
+                    LoaderVersion = config.LoaderVersion;
+                    DebugMode = config.DebugMode;
+                    EnableSafeBoot = config.EnableSafeBoot;
+                    EnvironmentTag = config.EnvironmentTag;
 
-        // 🔍 Runtime path info
-        public static string LoaderDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                    Log.Info("System configuration loaded.");
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"Failed to load system configuration: {ex.Message}");
+                    Save(); // Recreate with defaults
+                }
+            }
+        }
+
+        public static void Save()
+        {
+            lock (_lock)
+            {
+                var config = new SystemConfigModel
+                {
+                    LoaderVersion = LoaderVersion,
+                    DebugMode = DebugMode,
+                    EnableSafeBoot = EnableSafeBoot,
+                    EnvironmentTag = EnvironmentTag
+                };
+
+                string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(ConfigFileName, json);
+                Log.Info("System configuration saved.");
+            }
+        }
+
+        private class SystemConfigModel
+        {
+            public string LoaderVersion { get; set; } = "1.0.0";
+            public bool DebugMode { get; set; } = false;
+            public bool EnableSafeBoot { get; set; } = true;
+            public string EnvironmentTag { get; set; } = "production";
+        }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Central hub for global session flags and overrides
-// ✅ Tied into every module for conditional logic
-// ✅ Avoids needing dozens of config lookups
-// - [ ] Add game title detection (e.g., "BO2", "MW3")
-// - [ ] Track runtime FPS / usage stats here for overlay
-// ===================================================================

@@ -1,4 +1,4 @@
-﻿//heavenly v3.0 – Prediction History Cache System
+﻿// neural v3.0
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -7,59 +7,57 @@ namespace JaysAi.Finale.AI
 {
     public class PredictionCache
     {
-        private readonly Queue<Vector2> _positions = new();
-        private readonly int _maxSize;
+        private readonly Dictionary<int, CachedPrediction> _cache = new();
 
-        public PredictionCache(int maxSize = 10)
+        public void Store(int entityId, Vector3 predictedPosition, float timestamp)
         {
-            _maxSize = Math.Max(1, maxSize);
+            if (_cache.TryGetValue(entityId, out var existing))
+            {
+                existing.PredictedPosition = predictedPosition;
+                existing.Timestamp = timestamp;
+            }
+            else
+            {
+                _cache[entityId] = new CachedPrediction
+                {
+                    EntityId = entityId,
+                    PredictedPosition = predictedPosition,
+                    Timestamp = timestamp
+                };
+            }
         }
 
-        /// <summary>
-        /// Adds a new position sample to the cache.
-        /// </summary>
-        public void AddPosition(Vector2 position)
+        public Vector3? Get(int entityId, float currentTime, float maxAge = 0.2f)
         {
-            _positions.Enqueue(position);
-            if (_positions.Count > _maxSize)
-                _positions.Dequeue();
+            if (_cache.TryGetValue(entityId, out var cached))
+            {
+                if ((currentTime - cached.Timestamp) <= maxAge)
+                    return cached.PredictedPosition;
+            }
+            return null;
         }
 
-        /// <summary>
-        /// Returns smoothed average of position history.
-        /// </summary>
-        public Vector2 GetSmoothedPosition()
+        public void ClearOld(float currentTime, float maxAge = 0.5f)
         {
-            if (_positions.Count == 0)
-                return Vector2.Zero;
+            List<int> expiredKeys = new();
 
-            Vector2 sum = Vector2.Zero;
-            foreach (var pos in _positions)
-                sum += pos;
+            foreach (var kvp in _cache)
+            {
+                if ((currentTime - kvp.Value.Timestamp) > maxAge)
+                    expiredKeys.Add(kvp.Key);
+            }
 
-            return sum / _positions.Count;
+            foreach (var key in expiredKeys)
+                _cache.Remove(key);
         }
 
-        /// <summary>
-        /// Returns velocity estimated from the last two positions.
-        /// </summary>
-        public Vector2 EstimateVelocity(float deltaTimeSeconds)
+        public void ClearAll() => _cache.Clear();
+
+        private class CachedPrediction
         {
-            if (_positions.Count < 2 || deltaTimeSeconds <= 0.0001f)
-                return Vector2.Zero;
-
-            Vector2[] array = _positions.ToArray();
-            return (array[^1] - array[^2]) / deltaTimeSeconds;
+            public int EntityId;
+            public Vector3 PredictedPosition;
+            public float Timestamp;
         }
-
-        /// <summary>
-        /// Clears all historical data.
-        /// </summary>
-        public void Clear()
-        {
-            _positions.Clear();
-        }
-
-        public int Count => _positions.Count;
     }
 }

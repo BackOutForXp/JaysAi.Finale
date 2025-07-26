@@ -1,58 +1,52 @@
-﻿//monarch v2.1
-using System.Collections.Generic;
-using SkiaSharp;
-using JaysAi.AI;
+﻿// Neural v3.0 — VisualDebugger.cs
+using System;
+using System.Collections.Concurrent;
+using System.Text;
 
 namespace JaysAi.Finale.Visuals
 {
     public static class VisualDebugger
     {
-        public static bool EnableBoxes { get; set; } = true;
-        public static bool EnableFOV { get; set; } = true;
-        public static float FovRadius { get; set; } = 150f;
-        public static SKColor BoxColor { get; set; } = SKColors.Cyan;
-        public static SKColor FovColor { get; set; } = new SKColor(255, 255, 0, 128); // semi-transparent yellow
+        private static readonly ConcurrentQueue<string> _logQueue = new();
+        private static readonly StringBuilder _buffer = new();
 
-        public static void Draw(SKCanvas canvas, List<PredictionResult> entities, SKPoint screenCenter)
+        public static bool Enabled { get; set; } = true;
+        public static int MaxLines { get; set; } = 100;
+
+        /// <summary>
+        /// Appends a timestamped debug log message to the visual queue.
+        /// </summary>
+        public static void Log(string message)
         {
-            if (canvas == null || entities == null) return;
+            if (!Enabled || string.IsNullOrWhiteSpace(message)) return;
 
-            if (EnableFOV)
-            {
-                using var fovPaint = new SKPaint
-                {
-                    Color = FovColor,
-                    Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 2,
-                    IsAntialias = true
-                };
+            string timestamp = $"[{DateTime.Now:HH:mm:ss}] {message}";
+            _logQueue.Enqueue(timestamp);
 
-                canvas.DrawCircle(screenCenter, FovRadius, fovPaint);
-            }
+            // Trim overflow
+            while (_logQueue.Count > MaxLines)
+                _logQueue.TryDequeue(out _);
+        }
 
-            if (!EnableBoxes) return;
+        /// <summary>
+        /// Returns the current visible debug text as a single string.
+        /// </summary>
+        public static string GetLogText()
+        {
+            _buffer.Clear();
 
-            using var boxPaint = new SKPaint
-            {
-                Color = BoxColor,
-                Style = SKPaintStyle.Stroke,
-                StrokeWidth = 2,
-                IsAntialias = true
-            };
+            foreach (var line in _logQueue)
+                _buffer.AppendLine(line);
 
-            foreach (var entity in entities)
-            {
-                if (entity == null || !entity.IsOnScreen) continue;
+            return _buffer.ToString();
+        }
 
-                var rect = new SKRect(
-                    entity.BoundingBox.Left,
-                    entity.BoundingBox.Top,
-                    entity.BoundingBox.Right,
-                    entity.BoundingBox.Bottom
-                );
-
-                canvas.DrawRect(rect, boxPaint);
-            }
+        /// <summary>
+        /// Clears the log buffer.
+        /// </summary>
+        public static void Clear()
+        {
+            while (_logQueue.TryDequeue(out _)) { }
         }
     }
 }

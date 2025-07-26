@@ -1,30 +1,37 @@
-﻿//heavenly v3.0.0 – Frame Source Router for Capture & Processing
+﻿// neural v3.0
 using JaysAi.Finale.AI;
-using JaysAi.Finale.Modules;
+using JaysAi.Finale.Data;
+using JaysAi.Finale.SystemLogic;
+using System;
+using System.Collections.Generic;
 
 namespace JaysAi.Finale.AI
 {
-    public static class CaptureEngine
+    public class CaptureEngine
     {
-        private static IFrameSource _frameSource;
-        public static bool Initialized => _frameSource != null;
+        public event Action<FrameSnapshot> OnFrameCaptured;
+        private readonly IEnemyProvider _enemyProvider;
+        private readonly IFrameSource _frameSource;
 
-        public static void Initialize(IFrameSource source)
+        public CaptureEngine(IEnemyProvider enemyProvider, IFrameSource frameSource)
         {
-            _frameSource = source;
+            _enemyProvider = enemyProvider;
+            _frameSource = frameSource;
         }
 
-        public static FrameSnapshot CaptureFrame()
+        public void CaptureNextFrame()
         {
-            if (!Initialized)
-                throw new InvalidOperationException("CaptureEngine not initialized with a frame source.");
+            var snapshot = new FrameSnapshot
+            {
+                Timestamp = DateTime.UtcNow,
+                Enemies = _enemyProvider.GetVisibleEnemies(),
+                PlayerPosition = GameMemory.GetLocalPlayerPosition(),
+                PlayerViewAngles = GameMemory.GetViewAngles(),
+                CameraFOV = GameMemory.GetFieldOfView(),
+                FrameData = _frameSource.CaptureFrame()
+            };
 
-            return _frameSource.GetCurrentFrame();
-        }
-
-        public static void Shutdown()
-        {
-            _frameSource = null;
+            OnFrameCaptured?.Invoke(snapshot);
         }
     }
 }

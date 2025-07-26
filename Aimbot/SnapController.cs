@@ -1,43 +1,59 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
 using JaysAi.Finale.AI;
-using JaysAi.Finale.Aim;
+using JaysAi.Finale.Aimbot;
 using JaysAi.Finale.Input;
-using JaysAi.Finale.Modules;
 using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Utility;
+using System;
 
 namespace JaysAi.Finale.Aimbot
 {
-    public static class SnapController
+    public class SnapController
     {
-        private static DateTime _lastSnapTime = DateTime.MinValue;
+        private readonly SnapConfig config;
+        private readonly InputInjector injector;
+        private readonly TargetSelector selector;
+        private DateTime lastSnapTime;
 
-        public static void ExecuteSnap(TargetInfo target)
+        public SnapController(SnapConfig config, InputInjector injector, TargetSelector selector)
         {
-            if (!SnapConfig.Enabled || target == null || !target.IsVisible)
+            this.config = config;
+            this.injector = injector;
+            this.selector = selector;
+            this.lastSnapTime = DateTime.MinValue;
+        }
+
+        public void Update()
+        {
+            if (!config.IsEnabled || selector == null)
                 return;
 
-            // Respect cooldown
-            if ((DateTime.Now - _lastSnapTime).TotalMilliseconds < SnapConfig.SnapCooldownMs)
+            var target = selector.GetBestTarget(config.SnapFOV, config.HeadOnly, config.PrioritizeVisibleTargets);
+            if (target == null || !CanSnapNow())
                 return;
 
-            var screenCenter = ScreenManager.GetScreenCenter();
-            var targetPoint = new System.Windows.Point(target.ScreenX, target.ScreenY);
-
-            double distance = DistanceHelper.Calculate(screenCenter, targetPoint);
-            if (distance > SnapConfig.SnapRadius)
+            var screenPosition = ViewpointTranslator.WorldToScreen(target.Position);
+            if (!screenPosition.IsValid)
                 return;
 
-            if (SnapConfig.RequireVisibility && !LineOfSightChecker.HasLineOfSight(screenCenter, targetPoint))
-                return;
+            Vector2 delta = CalculateDelta(screenPosition);
+            if (config.SmoothingFactor > 0)
+                delta = VectorMathHelper.Smooth(delta, config.SmoothingFactor);
 
-            // Apply prediction if enabled
-            if (SnapConfig.PredictMovement)
-                targetPoint = PredictionAid.AdjustForVelocity(target);
+            injector.MoveMouse(delta);
+            lastSnapTime = DateTime.UtcNow;
+        }
 
-            // Smooth aim toward target
-            CursorMover.MoveToward(targetPoint, SnapConfig.SnapStrength);
+        private Vector2 CalculateDelta(Vector2 screenPos)
+        {
+            var center = ScreenUtils.GetScreenCenter();
+            return new Vector2(screenPos.X - center.X, screenPos.Y - center.Y) * config.Sensitivity;
+        }
 
-            _lastSnapTime = DateTime.Now;
+        private bool CanSnapNow()
+        {
+            var elapsed = DateTime.UtcNow - lastSnapTime;
+            return elapsed.TotalSeconds >= config.SnapCooldown;
         }
     }
 }

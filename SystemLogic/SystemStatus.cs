@@ -1,58 +1,38 @@
-﻿//monarch v2.1 – Runtime Environment Tracker
+﻿// neural v3.0
 using System;
-using System.Diagnostics;
+using System.Runtime.InteropServices;
+using JaysAi.Finale.Logging;
 
 namespace JaysAi.Finale.SystemLogic
 {
     public static class SystemStatus
     {
-        public static bool IsInDebugMode()
+        public static string MachineName => Environment.MachineName;
+        public static string OSVersion => RuntimeInformation.OSDescription;
+        public static string Architecture => RuntimeInformation.OSArchitecture.ToString();
+        public static string Framework => RuntimeInformation.FrameworkDescription;
+        public static string User => Environment.UserName;
+
+        public static bool Is64BitProcess => Environment.Is64BitProcess;
+        public static bool Is64BitOperatingSystem => Environment.Is64BitOperatingSystem;
+        public static DateTime Uptime => DateTime.Now - TimeSpan.FromMilliseconds(Environment.TickCount64);
+
+        public static void LogSystemInfo()
         {
-#if DEBUG
-            return true;
-#else
-            return false;
-#endif
+            Log.Info("===== SYSTEM STATUS =====");
+            Log.Info($"Machine Name       : {MachineName}");
+            Log.Info($"User               : {User}");
+            Log.Info($"OS Version         : {OSVersion}");
+            Log.Info($"Architecture       : {Architecture}");
+            Log.Info($".NET Framework     : {Framework}");
+            Log.Info($"64-Bit OS          : {Is64BitOperatingSystem}");
+            Log.Info($"64-Bit Process     : {Is64BitProcess}");
+            Log.Info($"System Uptime      : {Uptime}");
         }
 
-        public static bool IsProcessRunning(string processName)
+        public static string GetStatusSummary()
         {
-            foreach (var process in Process.GetProcessesByName(processName))
-            {
-                return true;
-            }
-            return false;
-        }
-
-        public static string GetMachineName()
-        {
-            return Environment.MachineName;
-        }
-
-        public static string GetUserName()
-        {
-            return Environment.UserName;
-        }
-
-        public static string GetOSVersion()
-        {
-            return Environment.OSVersion.ToString();
-        }
-
-        public static bool IsElevated()
-        {
-            try
-            {
-                using (var identity = System.Security.Principal.WindowsIdentity.GetCurrent())
-                {
-                    var principal = new System.Security.Principal.WindowsPrincipal(identity);
-                    return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
-                }
-            }
-            catch
-            {
-                return false;
-            }
+            return $"User: {User} | OS: {OSVersion} | Arch: {Architecture} | Uptime: {Uptime}";
         }
     }
 }

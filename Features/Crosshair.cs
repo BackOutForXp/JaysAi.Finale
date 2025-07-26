@@ -1,31 +1,35 @@
-﻿// heavenly v3.0 – Dynamic Crosshair Overlay Logic
+﻿// neural v3.0
 using System.Windows.Media;
 using System.Windows;
-using System.Windows.Shapes;
+using JaysAi.Finale.Visuals;
 
 namespace JaysAi.Finale.Features
 {
     public class Crosshair
     {
-        private readonly double size;
-        private readonly Brush color;
-        private readonly double thickness;
+        public bool Enabled { get; set; } = true;
+        public double Thickness { get; set; } = 1.5;
+        public double Length { get; set; } = 10;
+        public Color LineColor { get; set; } = Colors.Red;
+        public bool DynamicCentering { get; set; } = true;
+        public Point? TargetPoint { get; set; }
 
-        public Crosshair(double size = 12.0, Brush? color = null, double thickness = 2.0)
+        public void Draw(DrawingContext context, double centerX, double centerY)
         {
-            this.size = size;
-            this.color = color ?? Brushes.Red;
-            this.thickness = thickness;
-        }
+            if (!Enabled || context == null) return;
 
-        public void Draw(DrawingContext dc, Point center)
-        {
-            Pen pen = new Pen(color, thickness);
+            Point position = TargetPoint ?? new Point(centerX, centerY);
+            Pen pen = new(new SolidColorBrush(LineColor), Thickness);
 
             // Horizontal line
-            dc.DrawLine(pen, new Point(center.X - size, center.Y), new Point(center.X + size, center.Y));
+            context.DrawLine(pen,
+                new Point(position.X - Length, position.Y),
+                new Point(position.X + Length, position.Y));
+
             // Vertical line
-            dc.DrawLine(pen, new Point(center.X, center.Y - size), new Point(center.X, center.Y + size));
+            context.DrawLine(pen,
+                new Point(position.X, position.Y - Length),
+                new Point(position.X, position.Y + Length));
         }
     }
 }

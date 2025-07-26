@@ -1,48 +1,44 @@
-﻿//heavenly v3.0 – Visual Frame Buffer Cache
+﻿// neural v3.0
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Windows;
-using JaysAi.Finale.AI;
 
 namespace JaysAi.Finale.Input
 {
-    public class FrameHistory
+    public class FrameHistory<T>
     {
-        private readonly int maxFrames;
-        private readonly Queue<FrameSnapshot> snapshots;
+        private readonly int _capacity;
+        private readonly Queue<T> _frames;
 
-        public FrameHistory(int capacity = 30)
+        public FrameHistory(int capacity = 60)
         {
-            maxFrames = capacity;
-            snapshots = new Queue<FrameSnapshot>(capacity);
+            _capacity = Math.Max(1, capacity);
+            _frames = new Queue<T>(_capacity);
         }
 
-        public void AddSnapshot(FrameSnapshot snapshot)
+        public void Add(T frame)
         {
-            if (snapshots.Count >= maxFrames)
-                snapshots.Dequeue();
+            if (_frames.Count >= _capacity)
+                _frames.Dequeue();
 
-            snapshots.Enqueue(snapshot);
+            _frames.Enqueue(frame);
         }
 
-        public IReadOnlyList<FrameSnapshot> GetRecentSnapshots(int count)
+        public IReadOnlyCollection<T> GetAll()
         {
-            return snapshots.Reverse().Take(count).ToList();
+            return _frames;
         }
 
-        public FrameSnapshot? GetLastSnapshot()
+        public T? GetLatest()
         {
-            return snapshots.Count > 0 ? snapshots.Last() : null;
+            return _frames.Count > 0 ? _frames.Peek() : default;
         }
+
+        public int Count => _frames.Count;
+        public bool IsFull => _frames.Count == _capacity;
 
         public void Clear()
         {
-            snapshots.Clear();
+            _frames.Clear();
         }
-
-        public bool IsEmpty => snapshots.Count == 0;
-
-        public int Count => snapshots.Count;
     }
 }

@@ -1,45 +1,49 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
+using System;
 using JaysAi.Finale.AI;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.Utility;
+using JaysAi.Finale.Data;
+using JaysAi.Finale.SystemLogic;
 
 namespace JaysAi.Finale.Aimbot
 {
-    public static class EntityLock
+    public class EntityLock
     {
-        private static TargetInfo _lockedTarget;
-        private static float _lockDurationSeconds = 2f;
-        private static DateTime _lastLockTime = DateTime.MinValue;
+        private TargetInfo currentLock;
+        private DateTime lockStartTime;
 
-        public static TargetInfo Current => _lockedTarget;
+        public bool IsLocked => currentLock != null && currentLock.IsAlive;
 
-        public static void AttemptLock(TargetInfo newTarget)
+        public TargetInfo GetLockedTarget()
         {
-            if (newTarget != null && newTarget.IsValid)
-            {
-                _lockedTarget = newTarget;
-                _lastLockTime = DateTime.UtcNow;
-                Logger.LogInfo($"[EntityLock] Locked onto {newTarget.Name}");
-            }
+            if (IsLocked && (DateTime.UtcNow - lockStartTime).TotalMilliseconds < 2000)
+                return currentLock;
+
+            ClearLock();
+            return null;
         }
 
-        public static void UpdateLock()
+        public void LockOnto(TargetInfo target)
         {
-            if (_lockedTarget == null)
+            if (target == null || !target.IsAlive)
                 return;
 
-            if (!_lockedTarget.IsValid || IsLockExpired())
+            currentLock = target;
+            lockStartTime = DateTime.UtcNow;
+
+            LogManager.Log($"[EntityLock] Locked onto target ID {target.Id}");
+        }
+
+        public void ClearLock()
+        {
+            currentLock = null;
+        }
+
+        public void UpdateLock(TargetInfo updatedTarget)
+        {
+            if (IsLocked && updatedTarget != null && updatedTarget.Id == currentLock.Id)
             {
-                Logger.LogDebug($"[EntityLock] Lock expired or target lost.");
-                _lockedTarget = null;
+                currentLock = updatedTarget;
             }
         }
-
-        private static bool IsLockExpired()
-        {
-            return (DateTime.UtcNow - _lastLockTime).TotalSeconds > _lockDurationSeconds;
-        }
-
-        public static bool HasLock => _lockedTarget != null && _lockedTarget.IsValid;
     }
 }

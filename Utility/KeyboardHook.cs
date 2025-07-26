@@ -1,43 +1,53 @@
-﻿//monarch v1.0
+﻿// neural v3.0
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
+using System.Windows;
+using System.Windows.Input;
 
 namespace JaysAi.Finale.Utility
 {
-    public class KeyboardHook : IDisposable
+    public sealed class KeyboardHook : IDisposable
     {
-        public event Action<Keys> KeyPressed;
+        private IntPtr _hookID = IntPtr.Zero;
+        private NativeMethods.LowLevelKeyboardProc? _proc;
 
-        private nint _hookId = nint.Zero;
-        private NativeMethods.LowLevelKeyboardProc _proc;
+        public event EventHandler<KeyEventArgs>? KeyPressed;
 
-        public void Start()
+        public void Install()
         {
             _proc = HookCallback;
-            _hookId = NativeMethods.SetHook(_proc);
+            _hookID = NativeMethods.SetHook(_proc);
         }
 
-        public void Stop()
+        public void Uninstall()
         {
-            NativeMethods.UnhookWindowsHookEx(_hookId);
+            NativeMethods.UnhookWindowsHookEx(_hookID);
         }
 
-        private nint HookCallback(int nCode, nint wParam, nint lParam)
+        private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            if (nCode >= 0 &&
-                (wParam == NativeMethods.WM_KEYDOWN || wParam == NativeMethods.WM_SYSKEYDOWN))
+            if (nCode >= 0)
             {
-                int vkCode = Marshal.ReadInt32(lParam);
-                KeyPressed?.Invoke((Keys)vkCode);
+                int msg = wParam.ToInt32();
+                var keyInfo = Marshal.PtrToStructure<NativeMethods.KBDLLHOOKSTRUCT>(lParam);
+
+                if (msg == NativeMethods.WM_KEYDOWN || msg == NativeMethods.WM_SYSKEYDOWN)
+                {
+                    var key = KeyInterop.KeyFromVirtualKey((int)keyInfo.vkCode);
+                    KeyPressed?.Invoke(this, new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(App.Current.MainWindow), 0, key)
+                    {
+                        RoutedEvent = Keyboard.KeyDownEvent
+                    });
+                }
             }
-            return NativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);
+            return NativeMethods.CallNextHookEx(_hookID, nCode, wParam, lParam);
         }
 
         public void Dispose()
         {
-            Stop();
+            Uninstall();
+            GC.SuppressFinalize(this);
         }
 
         private static class NativeMethods
@@ -46,26 +56,35 @@ namespace JaysAi.Finale.Utility
             public const int WM_KEYDOWN = 0x0100;
             public const int WM_SYSKEYDOWN = 0x0104;
 
-            public delegate nint LowLevelKeyboardProc(int nCode, nint wParam, nint lParam);
+            public delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+            [StructLayout(LayoutKind.Sequential)]
+            public struct KBDLLHOOKSTRUCT
+            {
+                public uint vkCode;
+                public uint scanCode;
+                public uint flags;
+                public uint time;
+                public IntPtr dwExtraInfo;
+            }
 
             [DllImport("user32.dll", SetLastError = true)]
-            public static extern nint SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, nint hMod, uint dwThreadId);
+            public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
 
             [DllImport("user32.dll", SetLastError = true)]
-            [return: MarshalAs(UnmanagedType.Bool)]
-            public static extern bool UnhookWindowsHookEx(nint hhk);
+            public static extern bool UnhookWindowsHookEx(IntPtr hhk);
 
             [DllImport("user32.dll")]
-            public static extern nint CallNextHookEx(nint hhk, int nCode, nint wParam, nint lParam);
+            public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
-            [DllImport("kernel32.dll")]
-            public static extern nint GetModuleHandle(string lpModuleName);
+            [DllImport("kernel32.dll", SetLastError = true)]
+            public static extern IntPtr GetModuleHandle(string lpModuleName);
 
-            public static nint SetHook(LowLevelKeyboardProc proc)
+            public static IntPtr SetHook(LowLevelKeyboardProc proc)
             {
-                using Process curProcess = Process.GetCurrentProcess();
-                using ProcessModule curModule = curProcess.MainModule;
-                return SetWindowsHookEx(WH_KEYBOARD_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
+                using var curProcess = Process.GetCurrentProcess();
+                using var curModule = curProcess.MainModule!;
+                return SetWindowsHookEx(WH_KEYBOARD_LL, proc, GetModuleHandle(curModule.ModuleName!), 0);
             }
         }
     }

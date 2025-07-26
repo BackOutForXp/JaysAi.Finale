@@ -1,50 +1,51 @@
-﻿//monarch v2.0
-using JaysAi.Finale.SystemLogic;
+﻿// neural v3.0
+using JaysAi.Finale.Hardware;
+using JaysAi.Finale.Input;
+using JaysAi.Finale.Input.Events;
+using JaysAi.Finale.Signals;
+using System;
+using System.Windows.Input;
 
-namespace JaysAi.Loader
+namespace JaysAi.Finale.Integration
 {
-    public class MainControlBridge
+    public sealed class MainControlBridge : IDisposable
     {
-        private readonly UserSettings _settings;
+        private readonly ControllerInputListener _controllerListener;
+        private readonly SignalBus _signalBus;
+        private readonly IInputMonitor _inputMonitor;
 
-        public MainControlBridge()
+        public event EventHandler<ControllerInputEventArgs>? OnControllerInput;
+        public event EventHandler<KeyboardEventArgs>? OnKeyboardInput;
+
+        public MainControlBridge(
+            ControllerInputListener controllerListener,
+            SignalBus signalBus,
+            IInputMonitor inputMonitor)
         {
-            _settings = UserSettings.Load();
-            ApplySettings();
+            _controllerListener = controllerListener;
+            _signalBus = signalBus;
+            _inputMonitor = inputMonitor;
+
+            _controllerListener.InputReceived += HandleControllerInput;
+            _inputMonitor.KeyboardEvent += HandleKeyboardInput;
         }
 
-        private void ApplySettings()
+        private void HandleControllerInput(object? sender, ControllerInputEventArgs e)
         {
-            FeatureToggleManager.EspEnabled = _settings.EspEnabled;
-            FeatureToggleManager.AimAssistEnabled = _settings.AimAssistEnabled;
-            FeatureToggleManager.SnapAssistEnabled = _settings.SnapAssistEnabled;
+            OnControllerInput?.Invoke(this, e);
+            _signalBus.Broadcast(e); // bridge to signal system
         }
 
-        public void ToggleEsp()
+        private void HandleKeyboardInput(object? sender, KeyboardEventArgs e)
         {
-            FeatureToggleManager.ToggleEsp();
-            LogManager.Log($"ESP toggled: {FeatureToggleManager.EspEnabled}");
+            OnKeyboardInput?.Invoke(this, e);
+            _signalBus.Broadcast(e); // bridge to signal system
         }
 
-        public void ToggleAimAssist()
+        public void Dispose()
         {
-            FeatureToggleManager.ToggleAimAssist();
-            LogManager.Log($"Aim Assist toggled: {FeatureToggleManager.AimAssistEnabled}");
-        }
-
-        public void ToggleSnapAssist()
-        {
-            FeatureToggleManager.ToggleSnapAssist();
-            LogManager.Log($"Snap Assist toggled: {FeatureToggleManager.SnapAssistEnabled}");
-        }
-
-        public void SaveSettings()
-        {
-            _settings.EspEnabled = FeatureToggleManager.EspEnabled;
-            _settings.AimAssistEnabled = FeatureToggleManager.AimAssistEnabled;
-            _settings.SnapAssistEnabled = FeatureToggleManager.SnapAssistEnabled;
-            _settings.Save();
-            LogManager.Log("Settings saved.");
+            _controllerListener.InputReceived -= HandleControllerInput;
+            _inputMonitor.KeyboardEvent -= HandleKeyboardInput;
         }
     }
 }

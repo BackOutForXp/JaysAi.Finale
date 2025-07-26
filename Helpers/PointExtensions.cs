@@ -1,38 +1,57 @@
-﻿//heavenly v3.0 – Modern Point Extensions
+﻿// Neural v3.0 — VectorHelper.cs
 using System;
-using System.Windows;
+using System.Numerics;
 
 namespace JaysAi.Finale.Helpers
 {
-    public static class PointExtensions
+    public static class VectorHelper
     {
-        public static Point Clamp(this Point point, double minX, double maxX, double minY, double maxY)
+        public static float Distance2D(Vector2 a, Vector2 b)
         {
-            double x = Math.Max(minX, Math.Min(maxX, point.X));
-            double y = Math.Max(minY, Math.Min(maxY, point.Y));
-            return new Point(x, y);
+            return Vector2.Distance(a, b);
         }
 
-        public static Vector ToVector(this Point point)
+        public static float Distance3D(Vector3 a, Vector3 b)
         {
-            return new Vector(point.X, point.Y);
+            return Vector3.Distance(a, b);
         }
 
-        public static double DistanceTo(this Point point, Point other)
+        public static Vector2 Normalize(Vector2 v)
         {
-            double dx = point.X - other.X;
-            double dy = point.Y - other.Y;
-            return Math.Sqrt(dx * dx + dy * dy);
+            return v == Vector2.Zero ? v : Vector2.Normalize(v);
         }
 
-        public static Point Offset(this Point point, double dx, double dy)
+        public static Vector3 Normalize(Vector3 v)
         {
-            return new Point(point.X + dx, point.Y + dy);
+            return v == Vector3.Zero ? v : Vector3.Normalize(v);
         }
 
-        public static bool IsNear(this Point point, Point other, double threshold)
+        public static float Magnitude(Vector2 v)
         {
-            return point.DistanceTo(other) <= threshold;
+            return v.Length();
+        }
+
+        public static float Magnitude(Vector3 v)
+        {
+            return v.Length();
+        }
+
+        public static float Dot(Vector3 a, Vector3 b)
+        {
+            return Vector3.Dot(a, b);
+        }
+
+        public static float AngleBetween(Vector3 a, Vector3 b)
+        {
+            var dot = Vector3.Dot(a, b);
+            var magA = a.Length();
+            var magB = b.Length();
+            return (float)Math.Acos(dot / (magA * magB)) * (180f / (float)Math.PI);
+        }
+
+        public static Vector2 ProjectTo2D(Vector3 v)
+        {
+            return new Vector2(v.X, v.Y);
         }
     }
 }

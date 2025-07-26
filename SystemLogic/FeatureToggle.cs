@@ -1,34 +1,47 @@
-﻿//monarch v2.1 – Central toggle manager for features
+﻿// neural v3.0
+using System;
+using System.Collections.Concurrent;
+
 namespace JaysAi.Finale.SystemLogic
 {
     public static class FeatureToggle
     {
-        public static bool EspEnabled { get; set; } = false;
-        public static bool AimAssistEnabled { get; set; } = false;
-        public static bool SnapEnabled { get; set; } = false;
-        public static bool VisualsOverlayEnabled { get; set; } = false;
+        private static readonly ConcurrentDictionary<string, bool> _featureFlags = new(StringComparer.OrdinalIgnoreCase);
 
-        public static bool RecoilCompensationEnabled { get; set; } = false;
-        public static bool TriggerBotEnabled { get; set; } = false;
+        public static event Action<string, bool>? FeatureToggled;
 
-        public static void DisableAll()
+        public static void Enable(string featureName)
         {
-            EspEnabled = false;
-            AimAssistEnabled = false;
-            SnapEnabled = false;
-            VisualsOverlayEnabled = false;
-            RecoilCompensationEnabled = false;
-            TriggerBotEnabled = false;
+            Set(featureName, true);
         }
 
-        public static void EnableAll()
+        public static void Disable(string featureName)
         {
-            EspEnabled = true;
-            AimAssistEnabled = true;
-            SnapEnabled = true;
-            VisualsOverlayEnabled = true;
-            RecoilCompensationEnabled = true;
-            TriggerBotEnabled = true;
+            Set(featureName, false);
+        }
+
+        public static void Set(string featureName, bool isEnabled)
+        {
+            if (_featureFlags.TryGetValue(featureName, out var current) && current == isEnabled)
+                return;
+
+            _featureFlags[featureName] = isEnabled;
+            FeatureToggled?.Invoke(featureName, isEnabled);
+        }
+
+        public static bool IsEnabled(string featureName)
+        {
+            return _featureFlags.TryGetValue(featureName, out var isEnabled) && isEnabled;
+        }
+
+        public static void ClearAll()
+        {
+            _featureFlags.Clear();
+        }
+
+        public static IReadOnlyDictionary<string, bool> GetAll()
+        {
+            return new Dictionary<string, bool>(_featureFlags);
         }
     }
 }

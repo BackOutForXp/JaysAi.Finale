@@ -1,53 +1,54 @@
-﻿using System;
+﻿//neural v3.0
+using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Collections.Generic;
-using JaysAi.Finale.SystemLogic;
 
 namespace JaysAi.Finale.Integration
 {
     public static class GameDetector
     {
-        private static Dictionary<string, string> GameProcessMap = new()
+        private static readonly string[] TargetProcesses = new[]
         {
-            // Maps process name to OffsetProfile key
-            { "bo6", "BO6" },
-            { "r5apex", "Apex" }
+            "cod",            // Call of Duty (generic)
+            "bo6",            // Black Ops 6
+            "warzone",        // Warzone
+            "iw8",            // Modern Warfare engine internal
+            "vanguard",       // Vanguard
+            "t6sp",           // BO2 SP (legacy support)
         };
 
-        public static string? DetectRunningGame()
-        {
-            var processes = Process.GetProcesses();
+        public static string? ActiveGameName => DetectGame();
 
-            foreach (var proc in processes)
+        public static bool IsSupportedGameRunning()
+        {
+            return DetectGame() != null;
+        }
+
+        private static string? DetectGame()
+        {
+            foreach (var proc in Process.GetProcesses())
             {
-                if (GameProcessMap.TryGetValue(proc.ProcessName.ToLower(), out var profileKey))
+                try
                 {
-                    Console.WriteLine($"[GameDetector] Detected game: {profileKey}");
-                    return profileKey;
+                    if (TargetProcesses.Any(keyword => proc.ProcessName.ToLower().Contains(keyword)))
+                        return proc.ProcessName;
+                }
+                catch
+                {
+                    // Ignore inaccessible processes
                 }
             }
 
-            Console.WriteLine("[GameDetector] No supported game detected.");
             return null;
         }
 
-        public static void AutoApplyOffsetProfile(Dictionary<string, OffsetProfile> allProfiles)
+        public static void LogDetectedGame()
         {
-            var detected = DetectRunningGame();
-            if (detected != null && allProfiles.ContainsKey(detected))
-            {
-                allProfiles[detected].Apply();
-                Console.WriteLine($"[GameDetector] Auto-applied offset profile for: {detected}");
-            }
+            var game = DetectGame();
+            if (game != null)
+                Console.WriteLine($"[GameDetector] Detected running game: {game}");
+            else
+                Console.WriteLine("[GameDetector] No supported game detected.");
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Scans running processes for known games (bo6, r5apex, etc.)
-// ✅ Matches to OffsetProfile via OffsetProfileLoader
-// ✅ Applies offsets to OffsetMap on detection
-// - [ ] Link to GUI toggle for "Auto-detect Game"
-// - [ ] Add fallback dialog if game not found
-// ===================================================================

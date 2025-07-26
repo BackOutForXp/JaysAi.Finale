@@ -1,47 +1,45 @@
-﻿//heavenly v3.0
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Modules;
+﻿// neural v3.0
 using System;
 using System.Collections.Generic;
-using System.Numerics;
+using System.Linq;
+using JaysAi.Finale.Aim;
 
 namespace JaysAi.Finale.Aim
 {
-    public static class TargetEvaluator
+    public class TargetEvaluator
     {
-        public static SnapTarget EvaluateBestTarget(List<TrackedTarget> targets, Vector2 crosshairPosition, float maxSnapDistance)
+        private readonly float visibilityThreshold;
+        private readonly float maxDistance;
+
+        public TargetEvaluator(float visibilityThreshold = 0.5f, float maxDistance = 100f)
         {
-            SnapTarget best = null;
-            float bestScore = float.MinValue;
-
-            foreach (var target in targets)
-            {
-                if (!target.IsAlive || !target.IsVisible)
-                    continue;
-
-                Vector2 screenPos = target.ScreenPosition;
-                float distance = Vector2.Distance(screenPos, crosshairPosition);
-                if (distance > maxSnapDistance)
-                    continue;
-
-                float score = CalculateTargetScore(target, distance);
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    best = new SnapTarget(target, screenPos, distance, score, target.IsVisible);
-                }
-            }
-
-            return best;
+            this.visibilityThreshold = visibilityThreshold;
+            this.maxDistance = maxDistance;
         }
 
-        private static float CalculateTargetScore(TrackedTarget target, float distance)
+        public SnapTarget? EvaluateBestTarget(List<SnapTarget> candidates)
         {
-            float healthFactor = target.Health > 0 ? 1f : 0f;
-            float distanceWeight = 1f / (distance + 1f); // Avoid division by zero
-            float priority = target.PriorityScore;
+            if (candidates == null || candidates.Count == 0)
+                return null;
 
-            return (distanceWeight * 0.6f) + (priority * 0.3f) + (healthFactor * 0.1f);
+            var filtered = candidates
+                .Where(t => t.IsValid() && t.VisibilityScore >= visibilityThreshold && t.DistanceToCrosshair <= maxDistance)
+                .ToList();
+
+            if (filtered.Count == 0)
+                return null;
+
+            return filtered
+                .OrderByDescending(t => t.GetPriorityScore())
+                .FirstOrDefault();
+        }
+
+        public List<SnapTarget> SortByPriority(List<SnapTarget> targets)
+        {
+            return targets
+                .Where(t => t.IsValid())
+                .OrderByDescending(t => t.GetPriorityScore())
+                .ToList();
         }
     }
 }

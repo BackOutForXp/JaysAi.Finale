@@ -1,35 +1,64 @@
-﻿// File: System/TimerService.cs
-// Monarch v2.1 – Global timer logic fully resolved
-
+﻿// neural v3.0
 using System;
-using System.Timers;
-using Timer = System.Timers.Timer;
+using System.Collections.Concurrent;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace JaysAi.Finale.SystemLogic
 {
-    public class TimerService
+    public sealed class TimerService : IDisposable
     {
-        private readonly System.Timers.Timer _timer;
+        private readonly ConcurrentDictionary<string, Timer> _timers = new();
+        private readonly ConcurrentDictionary<string, CancellationTokenSource> _cancellationTokens = new();
 
-        public TimerService(double interval)
+        public void Schedule(string key, TimeSpan interval, Action callback, bool autoReset = true)
         {
-            _timer = new Timer(interval)
+            Cancel(key);
+
+            var cts = new CancellationTokenSource();
+            _cancellationTokens[key] = cts;
+
+            void ExecuteCallback(object? _)
             {
-                AutoReset = true,
-                Enabled = false
-            };
-            _timer.Elapsed += TimerElapsed;
+                if (cts.IsCancellationRequested) return;
+
+                try
+                {
+                    callback();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[TimerService] Error in callback for '{key}': {ex.Message}");
+                }
+
+                if (!autoReset)
+                    Cancel(key);
+            }
+
+            var timer = new Timer(ExecuteCallback, null, interval, autoReset ? interval : Timeout.InfiniteTimeSpan);
+            _timers[key] = timer;
         }
 
-        public void Start() => _timer.Start();
-
-        public void Stop() => _timer.Stop();
-
-        private void TimerElapsed(object sender, ElapsedEventArgs e)
+        public void Cancel(string key)
         {
-            // Placeholder for future timed logic
-            // Use this to trigger auto-updates, cleanup cycles, heartbeat checks, etc.
-            // Example: Logger.Log("[TimerService] Tick.");
+            if (_timers.TryRemove(key, out var timer))
+                timer.Dispose();
+
+            if (_cancellationTokens.TryRemove(key, out var cts))
+                cts.Cancel();
+        }
+
+        public void CancelAll()
+        {
+            foreach (var key in _timers.Keys)
+                Cancel(key);
+        }
+
+        public bool IsRunning(string key) => _timers.ContainsKey(key);
+
+        public void Dispose()
+        {
+            CancelAll();
         }
     }
 }

@@ -1,44 +1,51 @@
-﻿//heavenly v3.0 – Calibration Interface for Model Alignment
+﻿// neural v3.0
 using System;
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Utility;
+using JaysAi.Finale.Data;
+using JaysAi.Finale.SystemLogic;
 
 namespace JaysAi.Finale.AI
 {
     public static class ModelCalibration
     {
-        public static CalibrationSettings Current { get; private set; } = new CalibrationSettings();
+        private static float _modelInputWidth = 320f;
+        private static float _modelInputHeight = 320f;
+        private static float _screenWidth = 1920f;
+        private static float _screenHeight = 1080f;
 
-        public static void LoadCalibration()
+        public static void SetModelInputSize(float width, float height)
         {
-            string path = FilePathHelper.GetConfigPath("model_calibration.json");
-            if (FileHelper.Exists(path))
+            _modelInputWidth = width;
+            _modelInputHeight = height;
+        }
+
+        public static void SetScreenSize(float width, float height)
+        {
+            _screenWidth = width;
+            _screenHeight = height;
+        }
+
+        public static BoundingBox ScaleBoundingBox(YoloBoundingBox box)
+        {
+            float x = box.X * (_screenWidth / _modelInputWidth);
+            float y = box.Y * (_screenHeight / _modelInputHeight);
+            float w = box.Width * (_screenWidth / _modelInputWidth);
+            float h = box.Height * (_screenHeight / _modelInputHeight);
+
+            return new BoundingBox
             {
-                Current = FileHelper.ReadJson<CalibrationSettings>(path);
-            }
+                X = x,
+                Y = y,
+                Width = w,
+                Height = h,
+                Confidence = box.Confidence,
+                Label = box.Label
+            };
         }
 
-        public static void SaveCalibration()
+        public static void AutoDetectFromSystem()
         {
-            string path = FilePathHelper.GetConfigPath("model_calibration.json");
-            FileHelper.WriteJson(path, Current);
+            var resolution = ScreenManager.GetPrimaryResolution();
+            SetScreenSize(resolution.Width, resolution.Height);
         }
-
-        public static void ApplyCalibration(ref float x, ref float y, float width, float height)
-        {
-            x += Current.XOffset;
-            y += Current.YOffset;
-
-            x *= Current.XScale;
-            y *= Current.YScale;
-        }
-    }
-
-    public class CalibrationSettings
-    {
-        public float XOffset { get; set; } = 0f;
-        public float YOffset { get; set; } = 0f;
-        public float XScale { get; set; } = 1f;
-        public float YScale { get; set; } = 1f;
     }
 }

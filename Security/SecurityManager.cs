@@ -1,44 +1,53 @@
-﻿//monarch v1.0
+﻿//neural v3.0
+using JaysAi.Finale.Security.Diagnostics;
+using JaysAi.Finale.Security.Licensing;
+using JaysAi.Finale.Security.Validation;
+using JaysAi.Finale.Utility;
 using System;
-using System.Security.Cryptography;
-using System.Text;
-using System.Diagnostics;
 
 namespace JaysAi.Finale.Security
 {
     public static class SecurityManager
     {
-        // Generates a secure SHA256 hash
-        public static string ComputeHash(string input)
+        public static bool IsAuthenticated { get; private set; }
+        public static bool IsLicenseValid => LicenseValidator.Instance.IsValid;
+        public static bool IsSystemFingerprintValid => FingerprintValidator.Instance.IsSystemValid();
+        public static bool IsDebuggerSafe => !AntiDebugHook.Instance.IsDebuggerAttached;
+
+        public static void Initialize()
         {
-            using (SHA256 sha256 = SHA256.Create())
+            try
             {
-                byte[] bytes = Encoding.UTF8.GetBytes(input);
-                byte[] hash = sha256.ComputeHash(bytes);
-                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+                Logger.Log("Initializing security checks...");
+
+                AntiDebugHook.Instance.Hook();
+
+                if (!IsDebuggerSafe)
+                    throw new InvalidOperationException("Debugger detected!");
+
+                if (!IsLicenseValid)
+                    throw new UnauthorizedAccessException("License invalid.");
+
+                if (!IsSystemFingerprintValid)
+                    throw new UnauthorizedAccessException("System fingerprint mismatch.");
+
+                IsAuthenticated = true;
+
+                Logger.Log("SecurityManager: All checks passed. System secure.");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("SecurityManager Init Failed: " + ex.Message);
+                IsAuthenticated = false;
+                Environment.Exit(1); // Immediate shutdown
             }
         }
 
-        // Checks if debugger is attached (basic anti-debug)
-        public static bool IsDebuggerAttached()
+        public static void ForceLogout(string reason = "Security violation.")
         {
-            return Debugger.IsAttached || IsDebuggerPresent();
-        }
-
-        // Low-level Windows anti-debug check
-        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
-        private static extern bool IsDebuggerPresent();
-
-        // Random hardware identifier simulation (can be replaced with real HWID)
-        public static string GetFakeHardwareId()
-        {
-            return ComputeHash(Environment.MachineName + Environment.UserName);
-        }
-
-        // Timestamp for build verification or session tracking
-        public static long GetUnixTimestamp()
-        {
-            return DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            Logger.LogCritical($"Forced logout: {reason}");
+            IsAuthenticated = false;
+            Environment.Exit(1);
         }
     }
 }

@@ -1,39 +1,33 @@
-﻿//heavenly v3.0
-using JaysAi.Finale.Modules;
+﻿// neural v3.0
 using System;
+using JaysAi.Finale.Data;
 
 namespace JaysAi.Finale.AI
 {
-    public static class SnapScore
+    public class SnapScore
     {
-        public static float Calculate(TargetInfo target, AimContext context)
+        public Enemy Target { get; }
+        public float DistanceScore { get; }
+        public float MovementScore { get; }
+        public float VisibilityScore { get; }
+        public float AlignmentScore { get; }
+        public float TotalScore => DistanceScore * 0.25f +
+                                   MovementScore * 0.25f +
+                                   VisibilityScore * 0.25f +
+                                   AlignmentScore * 0.25f;
+
+        public SnapScore(Enemy target, float distanceScore, float movementScore, float visibilityScore, float alignmentScore)
         {
-            if (target == null || context == null) return 0f;
-
-            float distanceScore = 1f - Math.Clamp(target.Distance / context.MaxRange, 0f, 1f);
-            float visibilityScore = target.IsVisible ? 1f : 0.2f;
-            float movementScore = 1f - Math.Clamp(target.Velocity.Magnitude / context.MaxTargetSpeed, 0f, 1f);
-
-            float centerOffset = Math.Abs(target.ScreenX - context.CrosshairX) + Math.Abs(target.ScreenY - context.CrosshairY);
-            float centeringScore = 1f - Math.Clamp(centerOffset / context.MaxOffsetTolerance, 0f, 1f);
-
-            // Weighted sum
-            float score = (distanceScore * 0.4f) +
-                          (visibilityScore * 0.2f) +
-                          (movementScore * 0.2f) +
-                          (centeringScore * 0.2f);
-
-            return score;
+            Target = target ?? throw new ArgumentNullException(nameof(target));
+            DistanceScore = distanceScore;
+            MovementScore = movementScore;
+            VisibilityScore = visibilityScore;
+            AlignmentScore = alignmentScore;
         }
-    }
 
-    public class AimContext
-    {
-        public float MaxRange { get; set; } = 100f;
-        public float MaxTargetSpeed { get; set; } = 20f;
-        public float MaxOffsetTolerance { get; set; } = 200f;
-
-        public float CrosshairX { get; set; }
-        public float CrosshairY { get; set; }
+        public override string ToString()
+        {
+            return $"[SnapScore] ID: {Target.ID}, Total: {TotalScore:F2}, D:{DistanceScore:F2}, M:{MovementScore:F2}, V:{VisibilityScore:F2}, A:{AlignmentScore:F2}";
+        }
     }
 }

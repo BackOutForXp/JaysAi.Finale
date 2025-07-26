@@ -1,54 +1,53 @@
-﻿// File: Modules/BoneVisualizer.cs
+﻿// neural v3.0
 using JaysAi.Finale.AI;
-using JaysAi.Finale.Data;
-using JaysAi.Finale.Settings;
-using JaysAi.Finale.Visuals;
+using JaysAi.Finale.Visuals.Overlay;
+using OpenCvSharp;
+using System;
 using System.Collections.Generic;
-using System.Numerics;
+using System.Windows;
+using System.Windows.Media;
 
-namespace JaysAi.Finale.Modules
+namespace JaysAi.Finale.Visuals
 {
     public class BoneVisualizer
     {
-        private readonly AppSettings _settings;
-        private readonly ESPDrawer _drawer;
+        private readonly IOverlayRenderer _renderer;
 
-        public bool IsEnabled => _settings.EnableBoneESP;
-
-        public BoneVisualizer(AppSettings settings, ESPDrawer drawer)
+        public BoneVisualizer(IOverlayRenderer renderer)
         {
-            _settings = settings;
-            _drawer = drawer;
+            _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
         }
 
-        public void Draw(List<Enemy> enemies)
+        public void DrawBones(List<Keypoint> keypoints, Color color, float thickness = 1.5f)
         {
-            if (!IsEnabled) return;
+            if (keypoints == null || keypoints.Count < 17)
+                return;
 
-            _drawer.Clear();
-
-            foreach (var enemy in enemies)
+            // COCO 17 keypoints format bone connections
+            int[,] bonePairs = new int[,]
             {
-                if (!enemy.IsVisible || enemy.Bones == null || !enemy.Bones.HasValidBones)
-                    continue;
+                {5, 6}, {5, 7}, {7, 9}, {6, 8}, {8, 10}, // Arms
+                {11, 12}, {11, 13}, {13, 15}, {12, 14}, {14, 16}, // Legs
+                {0, 1}, {1, 2}, {2, 3}, {3, 4}, {1, 5}, {1, 6}, {5, 11}, {6, 12} // Torso and base
+            };
 
-                BoneData bones = enemy.Bones;
+            for (int i = 0; i < bonePairs.GetLength(0); i++)
+            {
+                int startIdx = bonePairs[i, 0];
+                int endIdx = bonePairs[i, 1];
 
-                // Draw lines between bones
-                DrawLine(bones.Head, bones.Chest);
-                DrawLine(bones.Chest, bones.Stomach);
-                DrawLine(bones.Stomach, bones.Feet);
+                if (IsValidKeypoint(keypoints[startIdx]) && IsValidKeypoint(keypoints[endIdx]))
+                {
+                    Point start = new Point(keypoints[startIdx].X, keypoints[startIdx].Y);
+                    Point end = new Point(keypoints[endIdx].X, keypoints[endIdx].Y);
+                    _renderer.DrawLine(start, end, color, thickness);
+                }
             }
-
-            _drawer.Render();
         }
 
-        private void DrawLine(Vector3 from, Vector3 to)
+        private bool IsValidKeypoint(Keypoint kp)
         {
-            var from2D = new Vector2(from.X, from.Y);
-            var to2D = new Vector2(to.X, to.Y);
-
-            _drawer.DrawLine(from2D, to2D, _settings.BoneColor);
+            return kp.Confidence > 0.3f && kp.X > 0 && kp.Y > 0;
         }
     }
 }

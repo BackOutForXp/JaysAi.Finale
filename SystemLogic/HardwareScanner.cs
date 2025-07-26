@@ -1,85 +1,62 @@
-﻿// File: System\HardwareScanner.cs
+﻿// neural v3.0
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Management;
 
 namespace JaysAi.Finale.SystemLogic
 {
     public static class HardwareScanner
     {
-        public static string GetGPUName()
+        public static Dictionary<string, string> GetHardwareIdentifiers()
         {
-            try
+            return new Dictionary<string, string>
             {
-                using var searcher = new ManagementObjectSearcher("select * from Win32_VideoController");
-                foreach (ManagementObject obj in searcher.Get())
-                {
-                    return obj["Name"]?.ToString() ?? "Unknown GPU";
-                }
-            }
-            catch (Exception ex)
-            {
-                return $"Error: {ex.Message}";
-            }
-
-            return "Unknown GPU";
+                ["CPU"] = GetCpuId(),
+                ["GPU"] = GetGpuId(),
+                ["Motherboard"] = GetMotherboardId(),
+                ["Disk"] = GetDiskId()
+            };
         }
 
-        public static string GetCPUName()
+        private static string GetCpuId()
         {
-            try
-            {
-                using var searcher = new ManagementObjectSearcher("select * from Win32_Processor");
-                foreach (ManagementObject obj in searcher.Get())
-                {
-                    return obj["Name"]?.ToString() ?? "Unknown CPU";
-                }
-            }
-            catch (Exception ex)
-            {
-                return $"Error: {ex.Message}";
-            }
-
-            return "Unknown CPU";
+            return QueryWmi("Win32_Processor", "ProcessorId");
         }
 
-        public static List<string> GetMonitors()
+        private static string GetGpuId()
         {
-            var monitors = new List<string>();
+            return QueryWmi("Win32_VideoController", "PNPDeviceID");
+        }
 
+        private static string GetMotherboardId()
+        {
+            return QueryWmi("Win32_BaseBoard", "SerialNumber");
+        }
+
+        private static string GetDiskId()
+        {
+            return QueryWmi("Win32_DiskDrive", "SerialNumber");
+        }
+
+        private static string QueryWmi(string wmiClass, string wmiProperty)
+        {
             try
             {
-                using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_DesktopMonitor");
+                using var searcher = new ManagementObjectSearcher($"SELECT {wmiProperty} FROM {wmiClass}");
                 foreach (ManagementObject obj in searcher.Get())
                 {
-                    monitors.Add(obj["Name"]?.ToString() ?? "Unnamed Monitor");
+                    var value = obj[wmiProperty]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(value))
+                        return value.Trim();
                 }
             }
             catch
             {
-                monitors.Add("Error retrieving monitors");
+                // Silent fail – fallback logic can be implemented if needed
             }
-
-            return monitors;
-        }
-
-        public static string GetTotalRAM()
-        {
-            try
-            {
-                using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_ComputerSystem");
-                foreach (ManagementObject obj in searcher.Get())
-                {
-                    double totalBytes = Convert.ToDouble(obj["TotalPhysicalMemory"]);
-                    return $"{Math.Round(totalBytes / (1024 * 1024 * 1024), 2)} GB";
-                }
-            }
-            catch (Exception ex)
-            {
-                return $"Error: {ex.Message}";
-            }
-
-            return "Unknown RAM";
+            return "UNKNOWN";
         }
     }
 }
+

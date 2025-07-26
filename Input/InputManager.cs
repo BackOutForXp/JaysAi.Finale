@@ -1,68 +1,47 @@
-﻿//heavenly v3.0 – InputManager
+﻿// neural v3.0
+using JaysAi.Finale.Input.Interfaces;
+using JaysAi.Finale.Input.Handlers;
+using JaysAi.Finale.Input.Models;
+using JaysAi.Finale.Input.Devices;
+using JaysAi.Finale.SystemLogic.Signals;
 using System;
-using JaysAi.Finale.Input;
-using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.Input
 {
-    public class InputManager
+    public class InputManager : IDisposable
     {
-        private readonly InputDispatcher _dispatcher;
-        private readonly InputMonitor _monitor;
-        private readonly ControllerInputListener _controllerListener;
-        private readonly KeyboardPresser _keyboardPresser;
-        private readonly MouseEmulator _mouseEmulator;
-        private readonly StickAssist _stickAssist;
+        private IInputHandler _inputHandler;
+        private readonly ControllerSignalBus _signalBus;
+        private bool _disposed;
 
-        public bool IsInitialized { get; private set; }
-
-        public InputManager()
+        public InputManager(IInputHandler? customHandler = null)
         {
-            _dispatcher = new InputDispatcher();
-            _monitor = new InputMonitor();
-            _controllerListener = new ControllerInputListener();
-            _keyboardPresser = new KeyboardPresser();
-            _mouseEmulator = new MouseEmulator();
-            _stickAssist = new StickAssist();
+            _inputHandler = customHandler ?? InputHandlerFactory.CreateDefault();
+            _signalBus = ControllerSignalBus.Instance;
+
+            _inputHandler.InputReceived += OnInputReceived;
         }
 
-        public void Initialize()
+        private void OnInputReceived(object? sender, ControllerInputState state)
         {
-            if (IsInitialized) return;
-
-            _monitor.Start();
-            _controllerListener.StartListening();
-            _dispatcher.BindKeyEvents();
-            _dispatcher.BindControllerEvents();
-            _stickAssist.LoadProfile("Default");
-
-            Logger.Log("InputManager initialized.");
-            IsInitialized = true;
+            _signalBus.Broadcast(state); // Unified bus signal to other systems
         }
 
-        public void Update()
+        public void SwitchInputHandler(IInputHandler newHandler)
         {
-            _controllerListener.Update();
-            _stickAssist.Update();
-            _monitor.CheckHotkeys();
+            if (_inputHandler == newHandler)
+                return;
+
+            _inputHandler.InputReceived -= OnInputReceived;
+            _inputHandler = newHandler;
+            _inputHandler.InputReceived += OnInputReceived;
         }
 
-        public void SimulateKeyPress(ConsoleKey key)
+        public void Dispose()
         {
-            _keyboardPresser.PressKey(key);
-        }
-
-        public void MoveMouseTo(int x, int y)
-        {
-            _mouseEmulator.MoveTo(x, y);
-        }
-
-        public void Shutdown()
-        {
-            _monitor.Stop();
-            _controllerListener.StopListening();
-            Logger.Log("InputManager shutdown.");
-            IsInitialized = false;
+            if (_disposed) return;
+            _inputHandler.InputReceived -= OnInputReceived;
+            _disposed = true;
         }
     }
 }

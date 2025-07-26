@@ -1,28 +1,37 @@
-﻿// Monarch v1.0 – SnapZoneConfig.cs
-// ✅ Monarch Fix Checklist
-// [x] Stores FOV radius for lock-on
-// [x] Configurable toggle for dynamic or static snap zone
-// [x] Supports HUD visualization if needed later
+﻿//neural v3.0
+using System.Collections.Generic;
+using System.Numerics;
 
 namespace JaysAi.Finale.Modules
 {
-    public static class SnapZoneConfig
+    public sealed class SnapZoneConfig
     {
-        public static float SnapRadius { get; set; } = 50f;
+        public List<SnapZone> Zones { get; private set; } = new();
 
-        public static bool DynamicZoneEnabled { get; set; } = false;
-        public static float MinSnapRadius { get; set; } = 35f;
-        public static float MaxSnapRadius { get; set; } = 80f;
-
-        public static void AdjustSnapRadius(float playerSpeed)
+        public void AddZone(Vector3 center, Vector3 size, string name = "Unnamed", bool isPriority = false)
         {
-            if (!DynamicZoneEnabled)
-                return;
-
-            // Dynamic scaling: wider radius at faster speeds
-            SnapRadius = MinSnapRadius + (playerSpeed * 0.5f);
-            if (SnapRadius > MaxSnapRadius)
-                SnapRadius = MaxSnapRadius;
+            Zones.Add(new SnapZone
+            {
+                Center = center,
+                Dimensions = size,
+                ZoneName = name,
+                IsPriorityZone = isPriority
+            });
         }
+
+        public void ClearZones() => Zones.Clear();
+
+        public SnapZone? GetPrimaryZone()
+        {
+            foreach (var zone in Zones)
+            {
+                if (zone.IsPriorityZone)
+                    return zone;
+            }
+
+            return Zones.Count > 0 ? Zones[0] : null;
+        }
+
+        public IEnumerable<SnapZone> GetAllZones() => Zones;
     }
 }

@@ -1,25 +1,54 @@
-﻿//monarch v2.1 – Keybind profile for feature mapping
-
-using global::System.Collections.Generic;
-using global::System.Windows.Input;
+﻿// neural v3.0
+using System;
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace JaysAi.Finale.Input
 {
-    public class KeyBindProfile
+    public class KeybindProfile
     {
-        public Dictionary<string, KeyBindConfig> KeyBinds { get; } = new();
+        [JsonPropertyName("profileName")]
+        public string ProfileName { get; set; } = "Default";
 
-        public void AddBind(string name, Key key, bool toggleMode = false)
+        [JsonPropertyName("bindings")]
+        public Dictionary<string, InputBinding> Bindings { get; set; } = new();
+
+        public KeybindProfile() { }
+
+        public KeybindProfile(string profileName)
         {
-            KeyBinds[name] = new KeyBindConfig(name, key, toggleMode);
+            ProfileName = profileName;
         }
 
-        public bool IsBindPressed(string name)
+        public void AddOrUpdateBinding(string actionName, InputBinding binding)
         {
-            if (!KeyBinds.TryGetValue(name, out var bind))
-                return false;
+            if (Bindings.ContainsKey(actionName))
+                Bindings[actionName] = binding;
+            else
+                Bindings.Add(actionName, binding);
+        }
 
-            return Keyboard.IsKeyDown(bind.Key);
+        public bool TryGetBinding(string actionName, out InputBinding binding)
+        {
+            return Bindings.TryGetValue(actionName, out binding!);
+        }
+
+        public void RemoveBinding(string actionName)
+        {
+            Bindings.Remove(actionName);
+        }
+
+        public void ClearBindings()
+        {
+            Bindings.Clear();
+        }
+
+        public KeybindProfile Clone()
+        {
+            return new KeybindProfile(ProfileName + "_Copy")
+            {
+                Bindings = new Dictionary<string, InputBinding>(Bindings)
+            };
         }
     }
 }

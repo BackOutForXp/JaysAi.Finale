@@ -1,56 +1,39 @@
-﻿<UserControl x:Class="JaysAi.Finale.UI.AimAssistSettingsPanel"
+﻿<!-- Neural v3.0 -->
+<UserControl x:Class="JaysAi.Finale.UI.AimAssistSettingsPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignHeight="300" d:DesignWidth="320">
+             d:DesignHeight="300" d:DesignWidth="500"
+             Background="#1A1A1A">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-    <StackPanel Orientation="Vertical" Margin="10" VerticalAlignment="Top" Spacing="12">
         <TextBlock Text="Aim Assist Settings"
+                   Foreground="White"
                    FontSize="18"
                    FontWeight="Bold"
-                   Foreground="Red"
                    Margin="0 0 0 10"/>
 
-        <!-- Smoothing -->
-        <StackPanel Orientation="Vertical">
-            <TextBlock Text="Smoothing:" FontWeight="SemiBold" Foreground="White"/>
-            <Slider x:Name="SmoothingSlider"
-                    Minimum="1"
-                    Maximum="20"
-                    TickFrequency="1"
-                    IsSnapToTickEnabled="True"
-                    Width="200"/>
+        <StackPanel Grid.Row="1" Orientation="Vertical" Spacing="8">
+            <CheckBox x:Name="EnableAimAssistCheckBox" Content="Enable Aim Assist" Foreground="White"/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Strength:" Foreground="White" VerticalAlignment="Center"/>
+                <Slider x:Name="StrengthSlider" Minimum="0" Maximum="100" Width="200"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="FOV Radius:" Foreground="White" VerticalAlignment="Center"/>
+                <Slider x:Name="FovSlider" Minimum="10" Maximum="180" Width="200"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Smoothing:" Foreground="White" VerticalAlignment="Center"/>
+                <Slider x:Name="SmoothingSlider" Minimum="0" Maximum="10" Width="200"/>
+            </StackPanel>
         </StackPanel>
-
-        <!-- Bullet Speed -->
-        <StackPanel Orientation="Vertical">
-            <TextBlock Text="Bullet Speed:" FontWeight="SemiBold" Foreground="White"/>
-            <Slider x:Name="BulletSpeedSlider"
-                    Minimum="200"
-                    Maximum="3000"
-                    TickFrequency="100"
-                    Width="200"/>
-        </StackPanel>
-
-        <!-- Snap Distance (FOV) -->
-        <StackPanel Orientation="Vertical">
-            <TextBlock Text="Max Snap Distance (FOV):" FontWeight="SemiBold" Foreground="White"/>
-            <Slider x:Name="SnapDistanceSlider"
-                    Minimum="100"
-                    Maximum="800"
-                    TickFrequency="50"
-                    Width="200"/>
-        </StackPanel>
-
-        <!-- Apply Button -->
-        <Button Content="Apply Settings"
-                Click="Apply_Click"
-                Width="140"
-                Margin="0,10,0,0"
-                HorizontalAlignment="Left"
-                Background="#444"
-                Foreground="White"/>
-    </StackPanel>
+    </Grid>
 </UserControl>
+

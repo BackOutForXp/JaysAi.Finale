@@ -1,23 +1,18 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
 namespace JaysAi.Finale.Aimbot
 {
-    public static class SnapConfig
+    public class SnapConfig
     {
-        public static bool Enabled { get; set; } = true;
-
-        // Max pixel distance from crosshair to target before snap triggers
-        public static float SnapRadius { get; set; } = 80.0f;
-
-        // Multiplier for how fast aim is pulled toward target (0.0f - 1.0f)
-        public static float SnapStrength { get; set; } = 0.85f;
-
-        // Delay between valid snaps (in ms)
-        public static int SnapCooldownMs { get; set; } = 100;
-
-        // Option to prevent snapping through walls (line of sight check)
-        public static bool RequireVisibility { get; set; } = true;
-
-        // Dynamic adjustment when tracking moving targets
-        public static bool PredictMovement { get; set; } = true;
+        public bool IsEnabled { get; set; } = true;
+        public float SnapFOV { get; set; } = 90.0f; // Degrees
+        public float Sensitivity { get; set; } = 1.0f; // Pixel ratio
+        public bool UsePrediction { get; set; } = true;
+        public bool RequireADS { get; set; } = true;
+        public bool HeadOnly { get; set; } = false;
+        public bool PrioritizeVisibleTargets { get; set; } = true;
+        public bool StickyAim { get; set; } = false;
+        public float SnapCooldown { get; set; } = 0.15f; // Seconds
+        public float SmoothingFactor { get; set; } = 0.0f; // 0 = instant snap
+        public int SnapZoneLayer { get; set; } = 0; // For snap zone prioritization
     }
 }

@@ -1,42 +1,62 @@
-﻿// heavenly v3.0 – Unified AI Orchestration Logic
+﻿// neural v3.0
 using JaysAi.Finale.AI;
 using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.Input;
 using JaysAi.Finale.Modules;
+using JaysAi.Finale.Data;
+using JaysAi.Finale.Input;
 using JaysAi.Finale.SystemLogic;
+using System;
+using System.Collections.Generic;
 
 namespace JaysAi.Finale.Core
 {
-    public static class AiOrchestrator
+    public class AiOrchestrator
     {
-        private static bool _isRunning;
+        private readonly TargetingSystem targetingSystem;
+        private readonly PredictionEngine predictionEngine;
+        private readonly BehaviorTrigger behaviorTrigger;
+        private readonly ModuleManager moduleManager;
 
-        public static void Start()
+        public AiOrchestrator(
+            TargetingSystem targetingSystem,
+            PredictionEngine predictionEngine,
+            BehaviorTrigger behaviorTrigger,
+            ModuleManager moduleManager)
         {
-            if (_isRunning) return;
-
-            AiManager.Initialize();
-            ModuleManager.Initialize();
-            BehaviorTrigger.Initialize();
-            RuntimeBehaviorLog.Initialize();
-
-            _isRunning = true;
+            this.targetingSystem = targetingSystem;
+            this.predictionEngine = predictionEngine;
+            this.behaviorTrigger = behaviorTrigger;
+            this.moduleManager = moduleManager;
         }
 
-        public static void Execute()
+        public void RunCycle(FrameSnapshot frame, InputSnapshot input)
         {
-            if (!_isRunning)
-                Start();
+            if (!frame.IsValid) return;
 
-            GameMemory.Refresh(); // Sync latest game memory data
-            AiManager.Update();   // Main detection and targeting
-            ModuleManager.Tick(); // Run all active modules
-            InputDispatcher.Tick(); // Inject inputs based on decisions
+            List<TargetInfo> targets = targetingSystem.EvaluateTargets(frame);
+            TargetInfo selectedTarget = targetingSystem.SelectOptimalTarget(targets, input);
+
+            if (selectedTarget == null)
+            {
+                moduleManager.DisableAll();
+                return;
+            }
+
+            predictionEngine.ApplyPrediction(ref selectedTarget, frame, input);
+
+            if (behaviorTrigger.ShouldTrigger(selectedTarget, input))
+            {
+                moduleManager.Execute(selectedTarget, input);
+            }
+            else
+            {
+                moduleManager.DisableAll();
+            }
         }
 
-        public static void Stop()
+        public void ResetState()
         {
-            _isRunning = false;
+            moduleManager?.ResetModules();
         }
     }
 }

@@ -1,35 +1,49 @@
-﻿// Monarch v1.0 – StickInputBridge.cs
-// ✅ Monarch Fix Checklist
-// [x] Accepts Vector2 input from AimbotLogic
-// [x] Injects smooth stick movement
-// [x] Includes magnitude clamping for legit-looking aim
-
+﻿//neural v3.0
 using System;
-using System.Numerics;
-using JaysAi.Finale.SystemLogic;
 using JaysAi.Finale.Input;
+using JaysAi.Finale.Helpers;
+using JaysAi.Finale.Modules.Stick;
+using JaysAi.Finale.Structures;
 
 namespace JaysAi.Finale.Modules
 {
-    public static class StickInputBridge
+    public sealed class StickInputBridge
     {
-        private const float MaxMagnitude = 100f; // Max movement allowed per tick
+        private readonly StickCalibrator _calibrator;
+        private readonly DeadzoneFilter _deadzoneFilter;
+        private readonly StickZoneProfile _profile;
 
-        public static void ApplyOffset(Vector2 offset)
+        public StickInputBridge()
         {
-            if (offset == Vector2.Zero)
-                return;
+            _calibrator = new StickCalibrator();
+            _deadzoneFilter = new DeadzoneFilter();
+            _profile = StickZoneProfileLoader.Default;
+        }
 
-            // Clamp magnitude to prevent teleporting snap
-            if (offset.Length() > MaxMagnitude)
-                offset = Vector2.Normalize(offset) * MaxMagnitude;
+        public StickInputData Process(ControllerInputState inputState)
+        {
+            var calibrated = _calibrator.ApplyCalibration(inputState.LeftStick, inputState.RightStick);
+            var filtered = _deadzoneFilter.Apply(calibrated.Left, calibrated.Right);
 
-            // Optional: scale to controller range (0–100 or -100 to 100)
-            short stickX = (short)Math.Clamp(offset.X, -100f, 100f);
-            short stickY = (short)Math.Clamp(offset.Y, -100f, 100f);
+            return new StickInputData
+            {
+                Left = filtered.Left,
+                Right = filtered.Right,
+                IsInsideSnapZone = _profile.IsInsideSnapZone(filtered.Right),
+                Angle = MathHelper.CalculateAngle(filtered.Right),
+                Magnitude = MathHelper.CalculateMagnitude(filtered.Right)
+            };
+        }
 
-            ControllerSignalBus.SendAnalogInput(stickX, stickY);
-            Logger.Log($"[Stick] Injected aim offset X:{stickX} Y:{stickY}");
+        public void SetDeadzone(float deadzone)
+        {
+            _deadzoneFilter.SetThreshold(deadzone);
+        }
+
+        public void SetProfile(StickZoneProfile profile)
+        {
+            if (profile != null)
+                _profile.CopyFrom(profile);
         }
     }
 }

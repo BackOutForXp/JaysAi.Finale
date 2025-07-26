@@ -1,19 +1,27 @@
-﻿// File: IModule.cs
+﻿// neural v3.0
 namespace JaysAi.Finale.Modules
 {
-    /// <summary>
-    /// Base interface for all feature modules in the loader.
-    /// </summary>
     public interface IModule
     {
         /// <summary>
-        /// Whether this module is currently enabled.
+        /// Initializes the module, preparing it for operation.
         /// </summary>
-        bool Enabled { get; set; }
+        void Initialize();
 
         /// <summary>
-        /// Called once per update tick/frame.
+        /// Executes one tick of the module's core logic.
+        /// Called on a fixed or variable interval by the loader.
         /// </summary>
-        void Update();
+        void Tick();
+
+        /// <summary>
+        /// Cleans up resources or gracefully shuts down the module.
+        /// </summary>
+        void Shutdown();
+
+        /// <summary>
+        /// Optional method to check if the module is currently active.
+        /// </summary>
+        bool IsActive { get; }
     }
 }

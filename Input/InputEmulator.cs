@@ -1,50 +1,48 @@
-﻿//heavenly v3.0 – InputEmulator Signal Injector
+﻿// neural v3.0
 using System;
 using System.Runtime.InteropServices;
-using JaysAi.Finale.Utility;
+using System.Threading;
+using JaysAi.Finale.Helpers;
 
 namespace JaysAi.Finale.Input
 {
-    public class InputEmulator
+    public static class InputEmulator
     {
-        private int _pendingMouseX;
-        private int _pendingMouseY;
-        private bool _hasPendingMove;
+        [DllImport("user32.dll")]
+        private static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extraInfo);
 
-        public void MoveMouseRelative(int deltaX, int deltaY)
+        private const uint MOUSEEVENTF_MOVE = 0x0001;
+        private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
+        private const uint MOUSEEVENTF_LEFTUP = 0x0004;
+        private const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
+        private const uint MOUSEEVENTF_RIGHTUP = 0x0010;
+
+        public static void MoveMouse(int dx, int dy)
         {
-            _pendingMouseX += deltaX;
-            _pendingMouseY += deltaY;
-            _hasPendingMove = true;
+            mouse_event(MOUSEEVENTF_MOVE, (uint)dx, (uint)dy, 0, UIntPtr.Zero);
         }
 
-        public void ApplyPendingInputs()
+        public static void LeftClick()
         {
-            if (_hasPendingMove)
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
+            Thread.Sleep(15);
+            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
+        }
+
+        public static void RightClick()
+        {
+            mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, UIntPtr.Zero);
+            Thread.Sleep(15);
+            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, UIntPtr.Zero);
+        }
+
+        public static void FireBurst(int shots, int delayMs)
+        {
+            for (int i = 0; i < shots; i++)
             {
-                NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_MOVE, _pendingMouseX, _pendingMouseY, 0, 0);
-                _hasPendingMove = false;
-                _pendingMouseX = 0;
-                _pendingMouseY = 0;
+                LeftClick();
+                Thread.Sleep(delayMs);
             }
-        }
-
-        public void ClickLeftMouse()
-        {
-            NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-            NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-        }
-
-        public void ClickRightMouse()
-        {
-            NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
-            NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
-        }
-
-        public void PressKey(ushort keyCode)
-        {
-            NativeMethods.keybd_event((byte)keyCode, 0, 0, 0);
-            NativeMethods.keybd_event((byte)keyCode, 0, NativeMethods.KEYEVENTF_KEYUP, 0);
         }
     }
 }

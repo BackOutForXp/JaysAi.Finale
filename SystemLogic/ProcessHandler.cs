@@ -1,42 +1,59 @@
-﻿//monarch v2.0
+﻿// neural v3.0
 using System;
 using System.Diagnostics;
 using System.Linq;
-using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.SystemLogic
 {
-    public class ProcessHandler
+    public static class ProcessHandler
     {
-        public string TargetProcessName { get; set; } = "cod";
-        public Process? TargetProcess { get; private set; }
-
-        public bool FindTarget()
+        public static Process? FindProcessByName(string name)
         {
-            var processes = Process.GetProcessesByName(TargetProcessName);
-            TargetProcess = processes.FirstOrDefault();
-            return TargetProcess != null;
+            if (string.IsNullOrWhiteSpace(name)) return null;
+
+            try
+            {
+                return Process.GetProcessesByName(name).FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ProcessHandler] Error finding process: {ex.Message}");
+                return null;
+            }
         }
 
-        public int GetTargetPid()
+        public static bool IsProcessRunning(string name)
         {
-            return TargetProcess?.Id ?? -1;
+            return FindProcessByName(name) != null;
         }
 
-        public bool IsRunning()
+        public static IntPtr GetMainModuleBaseAddress(string name)
         {
-            return TargetProcess != null && !TargetProcess.HasExited;
+            var process = FindProcessByName(name);
+            if (process == null || process.MainModule == null)
+                return IntPtr.Zero;
+
+            try
+            {
+                return process.MainModule.BaseAddress;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ProcessHandler] Failed to get base address: {ex.Message}");
+                return IntPtr.Zero;
+            }
         }
 
-        public void HideWindow(nint hwnd)
+        public static int? GetProcessId(string name)
         {
-            // Use native method for hiding window (must be implemented via NativeMethods.cs)
-            NativeMethods.ShowWindow(hwnd, 0); // 0 = SW_HIDE
+            var process = FindProcessByName(name);
+            return process?.Id;
         }
 
-        public void MinimizeWindow(nint hwnd)
+        public static bool TryGetHandle(string name, out Process? process)
         {
-            NativeMethods.ShowWindow(hwnd, 6); // 6 = SW_MINIMIZE
+            process = FindProcessByName(name);
+            return process != null;
         }
     }
 }

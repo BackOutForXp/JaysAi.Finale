@@ -1,13 +1,28 @@
-﻿using System;
+﻿// neural v3.0
+using System;
 using System.Runtime.InteropServices;
-using System.Threading;
+using System.Windows.Forms;
 
 namespace JaysAi.Finale.Input
 {
     public static class NativeMouse
     {
-        [DllImport("user32.dll")]
-        private static extern bool SetCursorPos(int X, int Y);
+        [Flags]
+        private enum MouseEventFlags : uint
+        {
+            MOVE = 0x0001,
+            LEFTDOWN = 0x0002,
+            LEFTUP = 0x0004,
+            RIGHTDOWN = 0x0008,
+            RIGHTUP = 0x0010,
+            MIDDLEDOWN = 0x0020,
+            MIDDLEUP = 0x0040,
+            WHEEL = 0x0800,
+            ABSOLUTE = 0x8000
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern void mouse_event(MouseEventFlags dwFlags, int dx, int dy, int dwData, IntPtr dwExtraInfo);
 
         [DllImport("user32.dll")]
         private static extern bool GetCursorPos(out POINT lpPoint);
@@ -19,36 +34,34 @@ namespace JaysAi.Finale.Input
             public int Y;
         }
 
-        public static void MoveRelative(int deltaX, int deltaY)
+        public static void LeftClick()
         {
-            if (GetCursorPos(out POINT current))
-            {
-                int targetX = current.X + deltaX;
-                int targetY = current.Y + deltaY;
-                SetCursorPos(targetX, targetY);
-            }
+            mouse_event(MouseEventFlags.LEFTDOWN, 0, 0, 0, IntPtr.Zero);
+            mouse_event(MouseEventFlags.LEFTUP, 0, 0, 0, IntPtr.Zero);
         }
 
-        public static void MoveSmooth(int deltaX, int deltaY, int steps = 10, int delayMs = 1)
+        public static void RightClick()
         {
-            if (GetCursorPos(out POINT start))
-            {
-                for (int i = 1; i <= steps; i++)
-                {
-                    int x = start.X + deltaX * i / steps;
-                    int y = start.Y + deltaY * i / steps;
-                    SetCursorPos(x, y);
-                    Thread.Sleep(delayMs);
-                }
-            }
+            mouse_event(MouseEventFlags.RIGHTDOWN, 0, 0, 0, IntPtr.Zero);
+            mouse_event(MouseEventFlags.RIGHTUP, 0, 0, 0, IntPtr.Zero);
+        }
+
+        public static void MiddleClick()
+        {
+            mouse_event(MouseEventFlags.MIDDLEDOWN, 0, 0, 0, IntPtr.Zero);
+            mouse_event(MouseEventFlags.MIDDLEUP, 0, 0, 0, IntPtr.Zero);
+        }
+
+        public static void Scroll(int amount)
+        {
+            mouse_event(MouseEventFlags.WHEEL, 0, 0, amount, IntPtr.Zero);
+        }
+
+        public static Point GetCursorPosition()
+        {
+            return GetCursorPos(out POINT point)
+                ? new Point(point.X, point.Y)
+                : Point.Empty;
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Low-level mouse movement for aim assist and recoil
-// ✅ Supports smooth or instant movement
-// ✅ Used by RecoilControl, AimSnap, StickAssist, etc.
-// - [ ] Add acceleration curves / easing
-// - [ ] Add safety limiter (max delta range)
-// ===================================================================

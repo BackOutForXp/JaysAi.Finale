@@ -1,62 +1,73 @@
-﻿//heavenly v3.0 – Aimbot Logic Core Frame Handler
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Input;
+﻿// neural v3.0
 using JaysAi.Finale.AI;
+using JaysAi.Finale.Aim;
+using JaysAi.Finale.Aimbot;
+using JaysAi.Finale.Data;
+using JaysAi.Finale.Helpers;
+using JaysAi.Finale.Input;
+using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Utility;
+using System;
+using System.Collections.Generic;
 
 namespace JaysAi.Finale.AI
 {
-    public static class AimbotLogic
+    public class AimbotLogic
     {
-        private static bool _isInitialized;
+        private readonly TargetingSystem _targetingSystem;
+        private readonly PredictionEngine _predictionEngine;
+        private readonly InputInjector _inputInjector;
+        private readonly RecoilHandler _recoilHandler;
+        private readonly AimSmoother _smoother;
+        private readonly PIDController _pid;
+        private readonly MotionTracker _motionTracker;
 
-        public static void Initialize()
+        public bool IsEnabled { get; set; } = true;
+
+        public AimbotLogic()
         {
-            if (_isInitialized) return;
-
-            PredictionEngine.Initialize();
-            InputDispatcher.Initialize();
-            SnapAssist.Initialize();
-            _isInitialized = true;
+            _targetingSystem = new TargetingSystem();
+            _predictionEngine = new PredictionEngine();
+            _inputInjector = new InputInjector();
+            _recoilHandler = new RecoilHandler();
+            _smoother = new AimSmoother();
+            _pid = new PIDController();
+            _motionTracker = new MotionTracker();
         }
 
-        public static void Update()
+        public void Initialize()
         {
-            if (!_isInitialized)
-                Initialize();
+            _targetingSystem.Initialize();
+            _predictionEngine.Initialize();
+            _motionTracker.Initialize();
+            LogManager.Log("AimbotLogic initialized.");
+        }
 
-            // Step 1: Get current input and frame data
-            var inputState = InputDispatcher.GetCurrentState();
-            var trackedTargets = TargetingSystem.GetValidTargets();
+        public void Execute()
+        {
+            if (!IsEnabled) return;
 
-            if (trackedTargets == null || trackedTargets.Count == 0)
-                return;
+            TrackedTarget target = _targetingSystem.GetPrimaryTarget();
+            if (target == null || !target.IsValid) return;
 
-            // Step 2: Score and select best target
-            var bestTarget = TargetSelector.GetBestTarget(trackedTargets);
+            Vector2 predictedPos = _predictionEngine.PredictTargetPosition(target);
+            Vector2 aimAdjustment = _smoother.CalculateSmoothAdjustment(predictedPos);
+            Vector2 correctedAim = _pid.ApplyCorrection(aimAdjustment);
 
-            if (bestTarget == null)
-                return;
+            _inputInjector.InjectAimCorrection(correctedAim);
+            _recoilHandler.ApplyCompensation();
+        }
 
-            // Step 3: Snap logic or predictive pathing
-            if (AppSettings.Aim.UsePrediction)
-            {
-                var predictedPos = PredictionEngine.Predict(bestTarget);
-                if (AppSettings.Aim.SnapEnabled)
-                    SnapAssist.LockOn(predictedPos);
-            }
-            else
-            {
-                SnapAssist.LockOn(bestTarget);
-            }
+        public void Disable()
+        {
+            IsEnabled = false;
+            LogManager.Log("AimbotLogic disabled.");
+        }
 
-            // Step 4: Trigger bot support (optional)
-            if (AppSettings.Aim.AutoTrigger && bestTarget.IsInCrosshair)
-                AutoTrigger.TryFire(bestTarget);
-
-            // Step 5: Log or store behavior
-            RuntimeBehaviorLog.Log(bestTarget);
+        public void Enable()
+        {
+            IsEnabled = true;
+            LogManager.Log("AimbotLogic enabled.");
         }
     }
 }

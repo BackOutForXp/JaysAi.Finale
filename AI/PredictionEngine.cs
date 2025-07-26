@@ -1,86 +1,68 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Numerics;
+using JaysAi.Finale.AI;
 using JaysAi.Finale.Utility;
+using JaysAi.Finale.Data;
 
 namespace JaysAi.Finale.AI
 {
     public class PredictionEngine
     {
-        private readonly int frameWindow = 6;
-        private readonly Queue<FrameSnapshot> frameSnapshots = new();
-        private readonly object syncLock = new();
+        private readonly Dictionary<int, List<FrameSnapshot>> _history = new();
+        private readonly PredictionCache _cache = new();
+        private readonly float _maxHistoryDuration = 0.5f; // seconds
 
-        public void AddFrame(FrameSnapshot snapshot)
+        public void UpdateHistory(TrackedTarget target, float currentTime)
         {
-            lock (syncLock)
+            if (!_history.TryGetValue(target.Id, out var list))
+                _history[target.Id] = list = new List<FrameSnapshot>();
+
+            list.Add(new FrameSnapshot
             {
-                frameSnapshots.Enqueue(snapshot);
-                if (frameSnapshots.Count > frameWindow)
-                    frameSnapshots.Dequeue();
-            }
+                Position = target.Position,
+                Velocity = target.Velocity,
+                Time = currentTime
+            });
+
+            list.RemoveAll(f => currentTime - f.Time > _maxHistoryDuration);
         }
 
-        public Vector2? PredictDisplacement(int framesAhead = 1)
+        public Vector3 PredictPosition(TrackedTarget target, float currentTime, float extrapolationTime = 0.15f)
         {
-            lock (syncLock)
-            {
-                if (frameSnapshots.Count < 2)
-                    return null;
+            UpdateHistory(target, currentTime);
 
-                var array = frameSnapshots.ToArray();
-                var start = array.First();
-                var end = array.Last();
+            // Try to use cached result if valid
+            var cached = _cache.Get(target.Id, currentTime);
+            if (cached.HasValue)
+                return cached.Value;
 
-                float dx = (end.Position.X - start.Position.X) / (array.Length - 1) * framesAhead;
-                float dy = (end.Position.Y - start.Position.Y) / (array.Length - 1) * framesAhead;
+            var velocity = target.Velocity;
 
-                return new Vector2(dx, dy);
-            }
-        }
+            // Simple linear prediction
+            var predicted = target.Position + velocity * extrapolationTime;
 
-        public Vector2? PredictFuturePosition(Vector2 currentPosition, int framesAhead = 1)
-        {
-            var displacement = PredictDisplacement(framesAhead);
-            if (displacement == null) return null;
-
-            return currentPosition + displacement.Value;
+            _cache.Store(target.Id, predicted, currentTime);
+            return predicted;
         }
 
         public void Clear()
         {
-            lock (syncLock)
+            _history.Clear();
+            _cache.ClearAll();
+        }
+
+        public void ClearExpired(float currentTime)
+        {
+            _cache.ClearOld(currentTime);
+
+            foreach (var key in new List<int>(_history.Keys))
             {
-                frameSnapshots.Clear();
+                _history[key].RemoveAll(s => currentTime - s.Time > _maxHistoryDuration);
+                if (_history[key].Count == 0)
+                    _history.Remove(key);
             }
         }
-    }
-
-    public class FrameSnapshot
-    {
-        public Vector2 Position { get; set; }
-        public DateTime Timestamp { get; set; }
-
-        public FrameSnapshot(Vector2 position)
-        {
-            Position = position;
-            Timestamp = DateTime.UtcNow;
-        }
-    }
-
-    public struct Vector2
-    {
-        public float X, Y;
-
-        public Vector2(float x, float y)
-        {
-            X = x;
-            Y = y;
-        }
-
-        public static Vector2 operator +(Vector2 a, Vector2 b) => new(a.X + b.X, a.Y + b.Y);
-        public static Vector2 operator -(Vector2 a, Vector2 b) => new(a.X - b.X, a.Y - b.Y);
-        public override string ToString() => $"({X:F2}, {Y:F2})";
     }
 }

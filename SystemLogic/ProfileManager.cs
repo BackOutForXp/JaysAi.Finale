@@ -1,90 +1,95 @@
-﻿//monarch v2.1 – Profile Manager (Multi-Profile System)
-using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Utility;
+﻿// neural v3.0
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using JaysAi.Finale.Settings;
+using JaysAi.Finale.Utility;
 
-namespace JaysAi.Finale.Utility
+namespace JaysAi.Finale.SystemLogic
 {
-    public static class ProfileManager
+    public sealed class ProfileManager
     {
-        private static readonly string ProfileFolder = "Profiles";
+        private static readonly Lazy<ProfileManager> _instance = new(() => new ProfileManager());
+        private readonly string _profileDirectory;
+        private readonly Dictionary<string, UserProfile> _profiles;
 
-        static ProfileManager()
+        public static ProfileManager Instance => _instance.Value;
+        public UserProfile? ActiveProfile { get; private set; }
+
+        private ProfileManager()
         {
-            if (!Directory.Exists(ProfileFolder))
-                Directory.CreateDirectory(ProfileFolder);
+            _profileDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Profiles");
+            _profiles = new Dictionary<string, UserProfile>(StringComparer.OrdinalIgnoreCase);
+
+            Directory.CreateDirectory(_profileDirectory);
+            LoadAllProfiles();
         }
 
-        public static void SaveProfile(string profileName)
+        private void LoadAllProfiles()
         {
-            var config = new FeatureSettings
+            foreach (var file in Directory.GetFiles(_profileDirectory, "*.json"))
             {
-                EspEnabled = FeatureToggle.EspEnabled,
-                BoxEsp = FeatureToggle.BoxEsp,
-                NameEsp = FeatureToggle.NameEsp,
-                AimbotEnabled = FeatureToggle.AimbotEnabled,
-                AimFov = FeatureToggle.AimFov,
-                AimSmoothness = FeatureToggle.AimSmoothness,
-                RecoilControlEnabled = FeatureToggle.RecoilControlEnabled,
-                RecoilSmoothness = FeatureToggle.RecoilSmoothness,
-                SnapAssistEnabled = FeatureToggle.SnapAssistEnabled,
-                SnapStrength = FeatureToggle.SnapStrength,
-                StealthMode = FeatureToggle.StealthMode,
-                LoaderActive = FeatureToggle.LoaderActive
-            };
-
-            var path = Path.Combine(ProfileFolder, $"{profileName}.json");
-            var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(path, json);
+                try
+                {
+                    string json = File.ReadAllText(file);
+                    var profile = JsonSerializer.Deserialize<UserProfile>(json);
+                    if (profile != null && !_profiles.ContainsKey(profile.Name))
+                        _profiles[profile.Name] = profile;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"Failed to load profile: {file}. Error: {ex.Message}");
+                }
+            }
         }
 
-        public static void LoadProfile(string profileName)
+        public void SaveProfile(UserProfile profile)
         {
-            var path = Path.Combine(ProfileFolder, $"{profileName}.json");
-            if (!File.Exists(path)) return;
-
-            var json = File.ReadAllText(path);
-            var config = JsonSerializer.Deserialize<FeatureSettings>(json);
-
-            FeatureToggle.EspEnabled = config.EspEnabled;
-            FeatureToggle.BoxEsp = config.BoxEsp;
-            FeatureToggle.NameEsp = config.NameEsp;
-            FeatureToggle.AimbotEnabled = config.AimbotEnabled;
-            FeatureToggle.AimFov = config.AimFov;
-            FeatureToggle.AimSmoothness = config.AimSmoothness;
-            FeatureToggle.RecoilControlEnabled = config.RecoilControlEnabled;
-            FeatureToggle.RecoilSmoothness = config.RecoilSmoothness;
-            FeatureToggle.SnapAssistEnabled = config.SnapAssistEnabled;
-            FeatureToggle.SnapStrength = config.SnapStrength;
-            FeatureToggle.StealthMode = config.StealthMode;
-            FeatureToggle.LoaderActive = config.LoaderActive;
+            try
+            {
+                string path = Path.Combine(_profileDirectory, $"{profile.Name}.json");
+                string json = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(path, json);
+                _profiles[profile.Name] = profile;
+                Logger.Info($"Profile saved: {profile.Name}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to save profile {profile.Name}: {ex.Message}");
+            }
         }
 
-        public static List<string> ListProfiles()
+        public void DeleteProfile(string name)
         {
-            var files = Directory.GetFiles(ProfileFolder, "*.json");
-            var profileNames = new List<string>();
-            foreach (var file in files)
-                profileNames.Add(Path.GetFileNameWithoutExtension(file));
-            return profileNames;
+            if (_profiles.TryGetValue(name, out _))
+            {
+                string path = Path.Combine(_profileDirectory, $"{name}.json");
+                if (File.Exists(path)) File.Delete(path);
+                _profiles.Remove(name);
+                Logger.Info($"Profile deleted: {name}");
+            }
         }
 
-        private class FeatureSettings
+        public bool LoadProfile(string name)
         {
-            public bool EspEnabled { get; set; }
-            public bool BoxEsp { get; set; }
-            public bool NameEsp { get; set; }
-            public bool AimbotEnabled { get; set; }
-            public float AimFov { get; set; }
-            public float AimSmoothness { get; set; }
-            public bool RecoilControlEnabled { get; set; }
-            public float RecoilSmoothness { get; set; }
-            public bool SnapAssistEnabled { get; set; }
-            public float SnapStrength { get; set; }
-            public bool StealthMode { get; set; }
-            public bool LoaderActive { get; set; }
+            if (_profiles.TryGetValue(name, out var profile))
+            {
+                ActiveProfile = profile;
+                Logger.Info($"Profile loaded: {name}");
+                return true;
+            }
+
+            Logger.Warn($"Profile not found: {name}");
+            return false;
+        }
+
+        public IEnumerable<string> GetAllProfileNames() => _profiles.Keys;
+
+        public void SetActiveProfile(UserProfile profile)
+        {
+            ActiveProfile = profile;
+            Logger.Info($"Active profile set to: {profile.Name}");
         }
     }
 }

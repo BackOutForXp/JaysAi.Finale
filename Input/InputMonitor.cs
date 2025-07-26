@@ -1,54 +1,58 @@
-﻿//heavenly v3.0 – InputMonitor
+﻿// neural v3.0
+using JaysAi.Finale.Input.Events;
+using JaysAi.Finale.Input.Models;
+using JaysAi.Finale.SystemLogic.Logging;
+using JaysAi.Finale.Utility;
 using System;
 using System.Timers;
-using JaysAi.Finale.Input;
-using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.Input
 {
-    public class InputMonitor
+    public sealed class InputMonitor : IDisposable
     {
         private readonly Timer _pollTimer;
-        private readonly ControllerInputPoller _controllerPoller;
-        private readonly KeyboardPresser _keyboardPresser;
-        private readonly InputStateLogger _stateLogger;
+        private ControllerInputState _lastState;
+        private readonly IInputSource _inputSource;
 
-        public event Action<string>? OnInputDetected;
+        public event EventHandler<ControllerInputEventArgs>? InputChanged;
 
-        public InputMonitor()
+        public InputMonitor(IInputSource inputSource, double pollIntervalMs = 16.67) // ~60Hz
         {
-            _controllerPoller = new ControllerInputPoller();
-            _keyboardPresser = new KeyboardPresser();
-            _stateLogger = new InputStateLogger();
-
-            _pollTimer = new Timer(10); // 100 FPS poll rate
-            _pollTimer.Elapsed += PollInputs;
+            _inputSource = inputSource ?? throw new ArgumentNullException(nameof(inputSource));
+            _pollTimer = new Timer(pollIntervalMs);
+            _pollTimer.Elapsed += PollInput;
             _pollTimer.AutoReset = true;
+            _lastState = new ControllerInputState();
         }
 
-        public void Start() => _pollTimer.Start();
-        public void Stop() => _pollTimer.Stop();
-
-        private void PollInputs(object? sender, ElapsedEventArgs e)
+        public void Start()
         {
-            foreach (var binding in InputMap.KeyboardBinds)
-            {
-                if (_keyboardPresser.IsKeyPressed(binding.Value))
-                {
-                    _stateLogger.LogKey(binding.Key);
-                    OnInputDetected?.Invoke(binding.Key);
-                }
-            }
+            Logger.Info("InputMonitor started.");
+            _pollTimer.Start();
+        }
 
-            foreach (var binding in InputMap.ControllerBinds)
+        public void Stop()
+        {
+            Logger.Info("InputMonitor stopped.");
+            _pollTimer.Stop();
+        }
+
+        private void PollInput(object? sender, ElapsedEventArgs e)
+        {
+            var currentState = _inputSource.GetCurrentState();
+            if (!_lastState.Equals(currentState))
             {
-                if (_controllerPoller.IsButtonPressed(binding.Value))
-                {
-                    _stateLogger.LogButton(binding.Key);
-                    OnInputDetected?.Invoke(binding.Key);
-                }
+                InputChanged?.Invoke(this, new ControllerInputEventArgs(currentState));
+                _lastState = currentState;
+                Logger.Trace("InputMonitor: Detected input change.");
             }
+        }
+
+        public void Dispose()
+        {
+            _pollTimer.Stop();
+            _pollTimer.Dispose();
+            Logger.Info("InputMonitor disposed.");
         }
     }
 }

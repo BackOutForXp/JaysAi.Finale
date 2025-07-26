@@ -1,55 +1,39 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
+using System;
 using System.Collections.Generic;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.Visuals;
-using JaysAi.Finale.Utility;
+using System.Linq;
+using OpenCvSharp;
 
 namespace JaysAi.Finale.AI
 {
-    public static class YoloDetector
+    public class YoloDetector
     {
-        private static IModelBridge _modelBridge;
+        private readonly YOLOBridge yoloBridge;
+        private readonly float confidenceThreshold;
+        private readonly string[] targetLabels;
 
-        public static void Initialize(IModelBridge modelBridge)
+        public YoloDetector(YOLOBridge bridge, float threshold = 0.45f, string[] validLabels = null)
         {
-            _modelBridge = modelBridge;
-            Logger.Log("YoloDetector initialized with model bridge.");
+            yoloBridge = bridge;
+            confidenceThreshold = threshold;
+            targetLabels = validLabels ?? new[] { "enemy", "person", "target" };
         }
 
-        public static List<YoloBoundingBox> GetDetectedObjects()
+        public List<YoloBoundingBox> Detect(Mat frame)
         {
-            if (_modelBridge == null || !_modelBridge.IsReady)
-            {
-                Logger.Warn("YoloDetector called before model bridge is ready.");
-                return new List<YoloBoundingBox>();
-            }
-
-            var rawDetections = _modelBridge.Predict();
-            var boundingBoxes = new List<YoloBoundingBox>();
-
-            foreach (var detection in rawDetections)
-            {
-                if (IsValidDetection(detection))
-                {
-                    boundingBoxes.Add(new YoloBoundingBox
-                    {
-                        X = detection.X,
-                        Y = detection.Y,
-                        Width = detection.Width,
-                        Height = detection.Height,
-                        Confidence = detection.Confidence,
-                        Label = detection.Label,
-                        IsEnemy = detection.Label.ToLower() == "enemy"
-                    });
-                }
-            }
-
-            return boundingBoxes;
+            var rawBoxes = yoloBridge.RunDetection(frame);
+            return FilterDetections(rawBoxes);
         }
 
-        private static bool IsValidDetection(YoloBoundingBox box)
+        private List<YoloBoundingBox> FilterDetections(IEnumerable<YoloBoundingBox> detections)
         {
-            return box.Confidence > 0.5f && box.Width > 5 && box.Height > 5;
+            return detections
+                .Where(box =>
+                    box.Confidence >= confidenceThreshold &&
+                    targetLabels.Any(label => string.Equals(box.Label, label, StringComparison.OrdinalIgnoreCase))
+                )
+                .OrderByDescending(b => b.Confidence)
+                .ToList();
         }
     }
 }

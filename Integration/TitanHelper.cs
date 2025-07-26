@@ -1,65 +1,106 @@
-﻿using System;
+﻿//neural v3.0
+using System;
 using System.IO.Ports;
-using System.Linq;
+using System.Text;
+using System.Threading;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.Integration
 {
-    public static class TitanHelper
+    public sealed class TitanHelper : IDisposable
     {
-        public static bool IsConnected()
+        private SerialPort? _serialPort;
+        private readonly object _lock = new();
+        private bool _connected;
+
+        public bool IsConnected => _connected;
+
+        public TitanHelper(string portName = "COM3", int baudRate = 115200)
         {
             try
             {
-                string[] ports = SerialPort.GetPortNames();
-
-                foreach (var port in ports)
+                _serialPort = new SerialPort(portName, baudRate, Parity.None, 8, StopBits.One)
                 {
-                    if (port.ToLower().Contains("com"))
-                    {
-                        Console.WriteLine($"[TitanHelper] Found port: {port}");
+                    Handshake = Handshake.None,
+                    Encoding = Encoding.ASCII,
+                    ReadTimeout = 500,
+                    WriteTimeout = 500
+                };
 
-                        if (IsLikelyTitanDevice(port))
-                        {
-                            Console.WriteLine("[TitanHelper] Titan device likely connected.");
-                            return true;
-                        }
-                    }
+                _serialPort.DataReceived += OnDataReceived;
+                _serialPort.Open();
+
+                _connected = true;
+                Logger.Info($"[TitanHelper] Connected to Titan Two on {portName}.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[TitanHelper] Connection failed: {ex.Message}");
+                _connected = false;
+            }
+        }
+
+        public void SendCommand(string command)
+        {
+            if (!_connected || _serialPort == null)
+                return;
+
+            lock (_lock)
+            {
+                try
+                {
+                    _serialPort.WriteLine(command);
+                    Logger.Debug($"[TitanHelper] Sent: {command}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"[TitanHelper] Send failed: {ex.Message}");
+                }
+            }
+        }
+
+        private void OnDataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            try
+            {
+                var line = _serialPort?.ReadLine();
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    Logger.Debug($"[TitanHelper] Received: {line.Trim()}");
+                    // You can route this to another event system or trigger logic
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[TitanHelper] Detection failed: {ex.Message}");
+                Logger.Warn($"[TitanHelper] Data read failed: {ex.Message}");
             }
-
-            return false;
         }
 
-        private static bool IsLikelyTitanDevice(string port)
+        public void Dispose()
         {
-            // TODO: Match based on serial descriptor, VID/PID, or device name
-            return port.Contains("4") || port.Contains("Titan"); // Placeholder logic
-        }
+            lock (_lock)
+            {
+                if (_serialPort != null)
+                {
+                    try
+                    {
+                        _serialPort.DataReceived -= OnDataReceived;
+                        if (_serialPort.IsOpen)
+                            _serialPort.Close();
 
-        public static void Initialize()
-        {
-            if (IsConnected())
-            {
-                Console.WriteLine("[TitanHelper] Initializing Titan integration...");
-                // TODO: Inject profile, start monitoring, or bind inputs
-            }
-            else
-            {
-                Console.WriteLine("[TitanHelper] No Titan detected. Skipping init.");
+                        _serialPort.Dispose();
+                        Logger.Info("[TitanHelper] Disconnected.");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warn($"[TitanHelper] Dispose failed: {ex.Message}");
+                    }
+
+                    _serialPort = null;
+                }
+
+                _connected = false;
             }
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Prepares Titan One/Two detection (COM-based)
-// ✅ Modular init avoids crashing if not connected
-// ✅ Future-safe with placeholder logic
-// - [ ] Add Titan COM descriptor parsing
-// - [ ] Link to GPC loader or input injector
-// - [ ] Add support to AutoDetectionHelper.cs
-// ===================================================================

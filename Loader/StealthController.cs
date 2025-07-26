@@ -1,49 +1,67 @@
-﻿//monarch v2.0
+﻿// neural v3.0
 using System;
-using System.Diagnostics;
-using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.SystemLogic.Diagnostics;
 using JaysAi.Finale.Utility;
+using JaysAi.Finale.Signals;
 
-namespace JaysAi.Loader
+namespace JaysAi.Finale.Integration
 {
-    public static class StealthController
+    public sealed class StealthController : IDisposable
     {
-        public static bool IsStealthModeActive { get; private set; } = false;
+        private readonly IProcessCloaker _cloaker;
+        private readonly IObfuscationEngine _obfuscator;
+        private readonly SignalBus _signalBus;
+        private bool _isStealthEnabled;
 
-        public static void EnableStealth(IntPtr hwnd)
+        public bool IsStealthed => _isStealthEnabled;
+
+        public StealthController(
+            IProcessCloaker cloaker,
+            IObfuscationEngine obfuscator,
+            SignalBus signalBus)
         {
-            NativeMethods.ShowWindow(hwnd, 0); // Hide window
-            IsStealthModeActive = true;
-            LogManager.Log("Stealth mode ENABLED.");
+            _cloaker = cloaker;
+            _obfuscator = obfuscator;
+            _signalBus = signalBus;
         }
 
-        public static void DisableStealth(IntPtr hwnd)
+        public void EnableStealth()
         {
-            NativeMethods.ShowWindow(hwnd, 1); // Show window (SW_SHOWNORMAL)
-            IsStealthModeActive = false;
-            LogManager.Log("Stealth mode DISABLED.");
+            if (_isStealthEnabled) return;
+
+            _cloaker.HideFromTaskManager();
+            _obfuscator.ObfuscateProcessName();
+            _obfuscator.MorphMemoryLayout();
+            _isStealthEnabled = true;
+
+            Logger.Info("🕵️ Stealth mode enabled");
+            _signalBus.Broadcast(new StealthSignal(true));
         }
 
-        public static void ToggleStealth(IntPtr hwnd)
+        public void DisableStealth()
         {
-            if (IsStealthModeActive)
-                DisableStealth(hwnd);
+            if (!_isStealthEnabled) return;
+
+            _cloaker.RestoreProcessVisibility();
+            _obfuscator.RevertAll();
+            _isStealthEnabled = false;
+
+            Logger.Warn("🛑 Stealth mode disabled");
+            _signalBus.Broadcast(new StealthSignal(false));
+        }
+
+        public void Toggle()
+        {
+            if (_isStealthEnabled)
+                DisableStealth();
             else
-                EnableStealth(hwnd);
+                EnableStealth();
         }
 
-        public static void HideLoaderFromTaskbar(Process loaderProcess)
+        public void Dispose()
         {
-            try
-            {
-                var handle = loaderProcess.MainWindowHandle;
-                NativeMethods.ShowWindow(handle, 0); // Hide main window
-                NativeMethods.SetWindowLong(handle, -20, 0x80); // WS_EX_TOOLWINDOW
-            }
-            catch (Exception ex)
-            {
-                LogManager.Log($"Stealth error: {ex.Message}");
-            }
+            if (_isStealthEnabled)
+                DisableStealth();
         }
     }
 }

@@ -1,35 +1,45 @@
-﻿//heavenly v3.0.0 – ESP Style Configurator
+﻿// neural v3.0
 using System.Windows.Media;
 
 namespace JaysAi.Finale.AI
 {
     public static class ESPStyleConfig
     {
-        public static SolidColorBrush EnemyBoxColor { get; set; } = new SolidColorBrush(Color.FromRgb(255, 0, 0));
-        public static SolidColorBrush TeamBoxColor { get; set; } = new SolidColorBrush(Color.FromRgb(0, 255, 0));
-        public static SolidColorBrush SquadBoxColor { get; set; } = new SolidColorBrush(Color.FromRgb(0, 128, 255));
-        public static SolidColorBrush TrackedBoxColor { get; set; } = new SolidColorBrush(Color.FromRgb(255, 255, 0));
-        public static SolidColorBrush PredictionPathColor { get; set; } = new SolidColorBrush(Color.FromRgb(255, 165, 0));
+        // Colors
+        public static SolidColorBrush EnemyColor { get; set; } = new(Color.FromRgb(255, 0, 0));     // Red
+        public static SolidColorBrush TeamColor { get; set; } = new(Color.FromRgb(0, 255, 0));      // Green
+        public static SolidColorBrush NeutralColor { get; set; } = new(Color.FromRgb(255, 255, 0)); // Yellow
+        public static SolidColorBrush HealthBarColor { get; set; } = new(Color.FromRgb(0, 200, 0)); // Darker Green
+        public static SolidColorBrush OutlineColor { get; set; } = new(Color.FromRgb(0, 0, 0));     // Black
 
-        public static double BoxThickness { get; set; } = 2.0;
-        public static bool ShowHealthBar { get; set; } = true;
-        public static bool ShowDistance { get; set; } = true;
-        public static bool ShowLabels { get; set; } = true;
-        public static bool EnableFadeOut { get; set; } = true;
+        // Styling
+        public static double LineThickness { get; set; } = 2.0;
+        public static double FontSize { get; set; } = 14;
+        public static double HealthBarWidth { get; set; } = 4.0;
+        public static double SnapLineOpacity { get; set; } = 0.7;
 
-        public static void ResetDefaults()
+        // Outline Control
+        public static bool EnableOutline { get; set; } = true;
+
+        // Font family (optional future expansion)
+        public static string FontFamily { get; set; } = "Segoe UI";
+
+        public static void ApplyPreset(string theme)
         {
-            EnemyBoxColor = new SolidColorBrush(Color.FromRgb(255, 0, 0));
-            TeamBoxColor = new SolidColorBrush(Color.FromRgb(0, 255, 0));
-            SquadBoxColor = new SolidColorBrush(Color.FromRgb(0, 128, 255));
-            TrackedBoxColor = new SolidColorBrush(Color.FromRgb(255, 255, 0));
-            PredictionPathColor = new SolidColorBrush(Color.FromRgb(255, 165, 0));
+            switch (theme.ToLower())
+            {
+                case "dark":
+                    EnemyColor = new SolidColorBrush(Color.FromRgb(255, 80, 80));
+                    TeamColor = new SolidColorBrush(Color.FromRgb(80, 255, 80));
+                    NeutralColor = new SolidColorBrush(Color.FromRgb(255, 255, 150));
+                    break;
 
-            BoxThickness = 2.0;
-            ShowHealthBar = true;
-            ShowDistance = true;
-            ShowLabels = true;
-            EnableFadeOut = true;
+                case "neon":
+                    EnemyColor = new SolidColorBrush(Color.FromRgb(255, 0, 255)); // Pink
+                    TeamColor = new SolidColorBrush(Color.FromRgb(0, 255, 255)); // Cyan
+                    NeutralColor = new SolidColorBrush(Color.FromRgb(255, 255, 0));
+                    break;
+            }
         }
     }
 }

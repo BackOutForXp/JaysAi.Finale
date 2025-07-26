@@ -1,46 +1,42 @@
-﻿//heavenly v3.0 – InputHandler Core
-using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.Input;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Utility;
+﻿// neural v3.0
+using JaysAi.Finale.Input.Handlers;
+using JaysAi.Finale.Input.Models;
 using System;
+using System.Windows.Input;
 
 namespace JaysAi.Finale.Input
 {
-    public class InputHandler
+    public sealed class InputHandler
     {
-        private readonly InputStateLogger _stateLogger;
-        private readonly InputDispatcher _dispatcher;
+        private readonly IInputDevice _device;
+        private readonly InputNormalizer _normalizer;
+        private readonly InputFilter _filter;
+        private readonly InputStateLogger _logger;
 
-        public InputHandler()
+        public event Action<ControllerInputState>? OnProcessedInput;
+
+        public InputHandler(IInputDevice device, InputNormalizer normalizer, InputFilter filter, InputStateLogger logger)
         {
-            _stateLogger = new InputStateLogger();
-            _dispatcher = new InputDispatcher();
+            _device = device;
+            _normalizer = normalizer;
+            _filter = filter;
+            _logger = logger;
+
+            _device.InputReceived += HandleInput;
         }
 
-        public void ProcessInput(InputState currentState)
+        private void HandleInput(ControllerInputState rawState)
         {
-            if (currentState == null)
-                return;
+            var normalized = _normalizer.Normalize(rawState);
+            var filtered = _filter.Apply(normalized);
 
-            _stateLogger.Log(currentState);
-            _dispatcher.RouteInput(currentState);
-
-            if (FeatureToggle.IsEnabled("AutoTrigger") && currentState.FirePressed)
-                SnapAssist.Instance?.TriggerFire();
-
-            if (FeatureToggle.IsEnabled("RecoilControl"))
-                RecoilManager.Instance?.ApplyRecoilCorrection(currentState);
-
-            if (FeatureToggle.IsEnabled("StickAssist"))
-                StickXModule.Instance?.AdjustStickMovement(currentState);
+            _logger.LogState(filtered);
+            OnProcessedInput?.Invoke(filtered);
         }
 
-        public void Tick()
+        public void Detach()
         {
-            var inputState = InputPoller.Poll();
-            ProcessInput(inputState);
+            _device.InputReceived -= HandleInput;
         }
     }
 }

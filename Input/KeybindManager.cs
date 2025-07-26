@@ -1,45 +1,64 @@
-﻿//monarch v2.1 – Key Bind Manager
+﻿// neural v3.0
+using System;
 using System.Collections.Generic;
 using System.Windows.Input;
 
-namespace JaysAi.Finale.Utility
+namespace JaysAi.Finale.Input
 {
-    public static class KeyBindManager
+    public sealed class KeybindManager
     {
-        // Default Keybinds (can be expanded later)
-        private static readonly Dictionary<string, Key> keyBindings = new()
-        {
-            { "ToggleESP", Key.F1 },
-            { "ToggleAimbot", Key.F2 },
-            { "ToggleSnapAssist", Key.F3 },
-            { "ToggleStealthMode", Key.F4 },
-            { "ReloadConfig", Key.F5 },
-            { "Panic", Key.Delete }
-        };
+        private static readonly Lazy<KeybindManager> _instance = new(() => new KeybindManager());
+        public static KeybindManager Instance => _instance.Value;
 
-        public static bool IsKeyPressed(string action)
+        private readonly KeybindConfig _config;
+        private readonly Dictionary<string, Action> _bindings = new();
+
+        private KeybindManager()
         {
-            if (!keyBindings.ContainsKey(action)) return false;
-            return Keyboard.IsKeyDown(keyBindings[action]);
+            _config = new KeybindConfig();
         }
 
-        public static Key GetKeyBind(string action)
+        public void RegisterAction(string actionName, Action callback)
         {
-            return keyBindings.ContainsKey(action) ? keyBindings[action] : Key.None;
+            if (!_bindings.ContainsKey(actionName))
+                _bindings.Add(actionName, callback);
         }
 
-        public static void SetKeyBind(string action, Key newKey)
+        public void BindKey(string actionName, Key key, string device = "Keyboard", bool isToggle = false)
         {
-            if (keyBindings.ContainsKey(action))
-                keyBindings[action] = newKey;
-            else
-                keyBindings.Add(action, newKey);
+            var binding = new InputBinding
+            {
+                Device = device,
+                Key = key.ToString(),
+                IsToggle = isToggle
+            };
+
+            _config.SetBinding(actionName, binding);
         }
 
-        public static Dictionary<string, Key> GetAllBindings()
+        public void HandleKeyInput(Key keyPressed)
         {
-            return new Dictionary<string, Key>(keyBindings);
+            foreach (var kvp in _config.Bindings)
+            {
+                var binding = kvp.Value;
+                if (binding.Device != "Keyboard") continue;
+                if (binding.Key.Equals(keyPressed.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (_bindings.TryGetValue(kvp.Key, out var action))
+                        action?.Invoke();
+                }
+            }
+        }
+
+        public InputBinding? GetBinding(string actionName)
+        {
+            return _config.TryGetBinding(actionName, out var binding) ? binding : null;
+        }
+
+        public void ClearAll()
+        {
+            _config.Clear();
+            _bindings.Clear();
         }
     }
 }
- 

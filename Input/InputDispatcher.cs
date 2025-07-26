@@ -1,59 +1,36 @@
-﻿//heavenly v3.0 – Input Router Hub
+﻿// neural v3.0
 using System;
-using JaysAi.Finale.Input;
-using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.Utility;
+using System.Collections.Generic;
 
 namespace JaysAi.Finale.Input
 {
     public class InputDispatcher
     {
-        private readonly InputMonitor _inputMonitor;
-        private readonly InputEmulator _inputEmulator;
-        private readonly ControllerInputListener _controllerListener;
-        private readonly TriggerBot _triggerBot;
-        private readonly SnapAssist _snapAssist;
-        private readonly Logger _logger;
+        private readonly Dictionary<string, Action<object>> _handlers = new();
 
-        public InputDispatcher(
-            InputMonitor inputMonitor,
-            InputEmulator inputEmulator,
-            ControllerInputListener controllerListener,
-            TriggerBot triggerBot,
-            SnapAssist snapAssist,
-            Logger logger)
+        public void Register(string key, Action<object> handler)
         {
-            _inputMonitor = inputMonitor;
-            _inputEmulator = inputEmulator;
-            _controllerListener = controllerListener;
-            _triggerBot = triggerBot;
-            _snapAssist = snapAssist;
-            _logger = logger;
+            if (!_handlers.ContainsKey(key))
+                _handlers[key] = handler;
         }
 
-        public void ProcessInputs()
+        public void Unregister(string key)
         {
-            _inputMonitor.Update();
+            if (_handlers.ContainsKey(key))
+                _handlers.Remove(key);
+        }
 
-            if (_inputMonitor.IsLeftMouseDown || _controllerListener.IsTriggerPressed())
-            {
-                _logger.Debug("Fire input detected");
-                _triggerBot.TryShoot();
-            }
-
-            if (_inputMonitor.IsAimKeyHeld || _controllerListener.IsADSActive())
-            {
-                _snapAssist.UpdateTargeting();
-            }
-
-            _inputEmulator.ApplyPendingInputs();
+        public void Dispatch(string key, object payload)
+        {
+            if (_handlers.TryGetValue(key, out var handler))
+                handler.Invoke(payload);
         }
 
         public void Clear()
         {
-            _triggerBot?.Reset();
-            _snapAssist?.Reset();
+            _handlers.Clear();
         }
+
+        public bool Contains(string key) => _handlers.ContainsKey(key);
     }
 }

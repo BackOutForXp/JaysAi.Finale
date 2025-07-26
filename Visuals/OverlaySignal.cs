@@ -1,27 +1,43 @@
-﻿//monarch v2.1 – Overlay Render Dispatcher
-using System.Collections.Concurrent;
+﻿// Neural v3.0 — OverlaySignal.cs
+using System;
 
-namespace JaysAi.Finale.Visuals
+namespace JaysAi.Finale.Overlay
 {
     public static class OverlaySignal
     {
-        private static readonly ConcurrentQueue<OverlayRectangle> _renderQueue = new();
+        public static event Action<string>? OnOverlayEvent;
 
-        public static void Enqueue(OverlayRectangle rectangle)
+        /// <summary>
+        /// Broadcasts a signal to all overlay listeners with a string event code.
+        /// Example: "toggle_esp", "refresh_overlay", "hide_all"
+        /// </summary>
+        public static void Emit(string signalCode)
         {
-            _renderQueue.Enqueue(rectangle);
+            OnOverlayEvent?.Invoke(signalCode);
         }
 
-        public static bool TryDequeue(out OverlayRectangle rectangle)
+        /// <summary>
+        /// Allows overlay modules to subscribe to specific overlay events.
+        /// </summary>
+        public static void Subscribe(Action<string> handler)
         {
-            return _renderQueue.TryDequeue(out rectangle);
+            OnOverlayEvent += handler;
         }
 
-        public static void Clear()
+        /// <summary>
+        /// Unsubscribes a handler from overlay signals.
+        /// </summary>
+        public static void Unsubscribe(Action<string> handler)
         {
-            while (_renderQueue.TryDequeue(out _)) { }
+            OnOverlayEvent -= handler;
         }
 
-        public static int Count => _renderQueue.Count;
+        /// <summary>
+        /// Clears all listeners (useful during finalization).
+        /// </summary>
+        public static void ClearListeners()
+        {
+            OnOverlayEvent = null;
+        }
     }
 }

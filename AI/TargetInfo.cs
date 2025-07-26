@@ -1,47 +1,48 @@
-﻿//heavenly v3.0
-using OpenCvSharp;
+﻿// neural v3.0
+using System;
+using System.Numerics;
+using JaysAi.Finale.Data;
 
 namespace JaysAi.Finale.AI
 {
     public class TargetInfo
     {
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public Rect BoundingBox { get; set; }
-        public Point2f Center => new Point2f(BoundingBox.X + BoundingBox.Width / 2f, BoundingBox.Y + BoundingBox.Height / 2f);
-
-        public float Distance { get; set; } // Distance from camera/player
-        public Vector2 Velocity { get; set; } // Target motion (for prediction)
+        public Enemy Target { get; set; }
+        public Vector3 Position { get; set; }
+        public Vector3 Velocity { get; set; }
+        public Vector3 LastKnownDirection { get; set; }
+        public float Distance { get; set; }
         public bool IsVisible { get; set; }
-        public bool IsEnemy { get; set; }
-        public bool IsTracked { get; set; }
+        public bool IsAlive { get; set; }
+        public DateTime LastSeen { get; set; }
 
-        public float Health { get; set; }
-        public float ThreatLevel { get; set; }
+        // Scoring for prioritization
+        public float AimWeightScore { get; set; }
+        public float VisibilityScore { get; set; }
 
-        public float ScreenX { get; set; }
-        public float ScreenY { get; set; }
+        // Extra prediction variables
+        public Vector3 PredictedPosition { get; set; }
+        public float LeadTime { get; set; }
 
-        public TargetInfo(int id, Rect bbox)
+        public TargetInfo(Enemy target, Vector3 position)
         {
-            Id = id;
-            BoundingBox = bbox;
-            Velocity = new Vector2(0, 0);
-            IsVisible = true;
+            Target = target ?? throw new ArgumentNullException(nameof(target));
+            Position = position;
+            Velocity = Vector3.Zero;
+            LastKnownDirection = Vector3.Zero;
+            Distance = 0f;
+            IsVisible = false;
+            IsAlive = true;
+            LastSeen = DateTime.UtcNow;
+            AimWeightScore = 0f;
+            VisibilityScore = 0f;
+            PredictedPosition = Vector3.Zero;
+            LeadTime = 0f;
         }
-    }
 
-    public struct Vector2
-    {
-        public float X;
-        public float Y;
-
-        public float Magnitude => (float)System.Math.Sqrt(X * X + Y * Y);
-
-        public Vector2(float x, float y)
+        public override string ToString()
         {
-            X = x;
-            Y = y;
+            return $"Target[{Target.ID}] Pos={Position}, Visible={IsVisible}, Distance={Distance:F1}, Score={AimWeightScore:F2}";
         }
     }
 }

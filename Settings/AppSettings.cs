@@ -1,33 +1,61 @@
-﻿// File: Settings/AppSettings.cs
+﻿//neural v3.0
 using System;
+using System.Collections.Generic;
 
 namespace JaysAi.Finale.Settings
 {
-    public class AppSettings
+    public sealed class AppSettings
     {
-        public bool EnableESP { get; set; } = true;
-        public bool EnableAimAssist { get; set; } = true;
-        public bool EnableCrosshair { get; set; } = true;
-        public bool EnableStealth { get; set; } = false;
-        public bool EnableStickAssist { get; set; } = false;
+        private static readonly Lazy<AppSettings> _instance = new(() => new AppSettings());
 
-        public int TickRate { get; set; } = 60;
+        public static AppSettings Instance => _instance.Value;
 
-        // Crosshair
-        public string CrosshairColor { get; set; } = "#FF0000";
-        public int CrosshairLength { get; set; } = 10;
-        public int CrosshairThickness { get; set; } = 2;
-        public bool ShowCenterDot { get; set; } = true;
+        // Core Configurable Settings
+        public bool IsDebugModeEnabled { get; set; } = false;
+        public bool EnableOverlay { get; set; } = true;
+        public bool UseControllerInput { get; set; } = true;
+        public string CurrentGameProfile { get; set; } = "BO6";
 
-        // Aim Assist
-        public float SmoothingAmount { get; set; } = 4.0f;
-        public float FovLimit { get; set; } = 100.0f;
+        // Diagnostic Logging
+        public bool EnableDiagnostics { get; set; } = false;
+        public string DiagnosticsOutputPath { get; set; } = "Logs/Diagnostics.log";
 
-        // Profiles (optional future)
-        public string ActiveProfileName { get; set; } = "Default";
+        // Performance Settings
+        public int FrameRateLimit { get; set; } = 144;
+        public int MaxThreadPoolSize { get; set; } = 8;
+
+        // Experimental Flags
+        public bool UseExperimentalFeatures { get; set; } = false;
+        public bool EnableNeuralFeedback { get; set; } = false;
+
+        // Input Profiles
+        public Dictionary<string, string> InputProfileMappings { get; private set; }
+
+        private AppSettings()
+        {
+            InputProfileMappings = new Dictionary<string, string>
+            {
+                { "Default", "Input/Profiles/Default.json" },
+                { "ControllerBO6", "Input/Profiles/ControllerBO6.json" }
+            };
+        }
+
+        public void LoadFrom(AppSettings other)
+        {
+            if (other == null) return;
+
+            IsDebugModeEnabled = other.IsDebugModeEnabled;
+            EnableOverlay = other.EnableOverlay;
+            UseControllerInput = other.UseControllerInput;
+            CurrentGameProfile = other.CurrentGameProfile;
+            EnableDiagnostics = other.EnableDiagnostics;
+            DiagnosticsOutputPath = other.DiagnosticsOutputPath;
+            FrameRateLimit = other.FrameRateLimit;
+            MaxThreadPoolSize = other.MaxThreadPoolSize;
+            UseExperimentalFeatures = other.UseExperimentalFeatures;
+            EnableNeuralFeedback = other.EnableNeuralFeedback;
+
+            InputProfileMappings = new Dictionary<string, string>(other.InputProfileMappings);
+        }
     }
 }
-
-// ✅ Holds all toggle + config data
-// ✅ Used by FeatureManager, MainLoop, UI bindings
-// ☐ Expand with saved profiles and hotload logic

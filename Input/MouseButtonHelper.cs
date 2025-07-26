@@ -1,29 +1,67 @@
-﻿// File: Input/MouseButtonHelper.cs
+﻿// neural v3.0
+using System;
 using System.Runtime.InteropServices;
 
 namespace JaysAi.Finale.Input
 {
     public static class MouseButtonHelper
     {
-        private const int VK_LBUTTON = 0x01;
-        private const int VK_RBUTTON = 0x02;
-        private const int VK_MBUTTON = 0x04;
-        private const int VK_XBUTTON1 = 0x05;
-        private const int VK_XBUTTON2 = 0x06;
+        [Flags]
+        public enum MouseEventFlags : uint
+        {
+            LEFTDOWN = 0x0002,
+            LEFTUP = 0x0004,
+            RIGHTDOWN = 0x0008,
+            RIGHTUP = 0x0010,
+            MIDDLEDOWN = 0x0020,
+            MIDDLEUP = 0x0040,
+        }
 
-        [DllImport("user32.dll")]
-        private static extern short GetAsyncKeyState(int vKey);
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern void mouse_event(
+            MouseEventFlags dwFlags,
+            uint dx,
+            uint dy,
+            uint dwData,
+            IntPtr dwExtraInfo
+        );
 
-        public static bool IsLeftButtonDown() => (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
-        public static bool IsRightButtonDown() => (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
-        public static bool IsMiddleButtonDown() => (GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0;
-        public static bool IsXButton1Down() => (GetAsyncKeyState(VK_XBUTTON1) & 0x8000) != 0;
-        public static bool IsXButton2Down() => (GetAsyncKeyState(VK_XBUTTON2) & 0x8000) != 0;
+        public static void ClickLeft()
+        {
+            mouse_event(MouseEventFlags.LEFTDOWN, 0, 0, 0, IntPtr.Zero);
+            mouse_event(MouseEventFlags.LEFTUP, 0, 0, 0, IntPtr.Zero);
+        }
+
+        public static void ClickRight()
+        {
+            mouse_event(MouseEventFlags.RIGHTDOWN, 0, 0, 0, IntPtr.Zero);
+            mouse_event(MouseEventFlags.RIGHTUP, 0, 0, 0, IntPtr.Zero);
+        }
+
+        public static void ClickMiddle()
+        {
+            mouse_event(MouseEventFlags.MIDDLEDOWN, 0, 0, 0, IntPtr.Zero);
+            mouse_event(MouseEventFlags.MIDDLEUP, 0, 0, 0, IntPtr.Zero);
+        }
+
+        public static void HoldLeft()
+        {
+            mouse_event(MouseEventFlags.LEFTDOWN, 0, 0, 0, IntPtr.Zero);
+        }
+
+        public static void ReleaseLeft()
+        {
+            mouse_event(MouseEventFlags.LEFTUP, 0, 0, 0, IntPtr.Zero);
+        }
+
+        public static void HoldRight()
+        {
+            mouse_event(MouseEventFlags.RIGHTDOWN, 0, 0, 0, IntPtr.Zero);
+        }
+
+        public static void ReleaseRight()
+        {
+            mouse_event(MouseEventFlags.RIGHTUP, 0, 0, 0, IntPtr.Zero);
+        }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Simple and fast mouse button detection
-// ✅ Fully native and stealth compatible
-// ✅ Used in InputEmulator or TriggerBot logic
-// ===================================================================

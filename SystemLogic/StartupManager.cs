@@ -1,58 +1,77 @@
-﻿using System;
-using System.Diagnostics;
+﻿// neural v3.0
+using System;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
-using System.Windows;
+using JaysAi.Finale.Logging;
 
 namespace JaysAi.Finale.SystemLogic
 {
     public static class StartupManager
     {
-        public static async Task InitializeAsync()
+        public static bool HasInitialized { get; private set; }
+
+        public static async Task<bool> InitializeAsync()
         {
-            Console.WriteLine("[StartupManager] Preparing application launch...");
+            if (HasInitialized)
+                return true;
 
-            if (!Directory.Exists("Logs"))
-                Directory.CreateDirectory("Logs");
-
-            // Optional: Delay to bypass anti-injection checks
-            await Task.Delay(200);
-
-            HandleRestartIfNeeded();
-
-            Console.WriteLine("[StartupManager] Startup complete.");
-        }
-
-        private static void HandleRestartIfNeeded()
-        {
-            string restartFile = "restart.flag";
-            if (File.Exists(restartFile))
+            try
             {
-                File.Delete(restartFile);
-                MessageBox.Show("Loader restarted after crash", "JaysAi", MessageBoxButton.OK, MessageBoxImage.Information);
+                Log.Info("Initializing JaysAi startup sequence...");
+
+                await Task.WhenAll(
+                    ValidateRuntimeEnvironment(),
+                    CheckFilePermissions(),
+                    PreloadStaticDependencies()
+                );
+
+                HasInitialized = true;
+                Log.Info("Startup complete.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"StartupManager failed: {ex.Message}");
+                return false;
             }
         }
 
-        public static void MarkForRestart()
+        private static Task ValidateRuntimeEnvironment()
         {
-            File.WriteAllText("restart.flag", "1");
-            Process.Start(Assembly.GetExecutingAssembly().Location);
-            Environment.Exit(0);
+            return Task.Run(() =>
+            {
+                var clrVersion = Environment.Version;
+                if (clrVersion.Major < 6)
+                    throw new PlatformNotSupportedException($"Incompatible .NET version: {clrVersion}");
+
+                Log.Info($"Detected .NET version: {clrVersion}");
+            });
         }
 
-        public static void LaunchMinimized(Window window)
+        private static Task CheckFilePermissions()
         {
-            window.WindowState = WindowState.Minimized;
-            window.ShowInTaskbar = false;
+            return Task.Run(() =>
+            {
+                var exePath = Assembly.GetExecutingAssembly().Location;
+                var directory = Path.GetDirectoryName(exePath) ?? throw new InvalidOperationException("Cannot determine directory");
+
+                var testFilePath = Path.Combine(directory, "permission_test.tmp");
+                File.WriteAllText(testFilePath, "test");
+                File.Delete(testFilePath);
+
+                Log.Info("File permissions validated.");
+            });
+        }
+
+        private static Task PreloadStaticDependencies()
+        {
+            return Task.Run(() =>
+            {
+                // Placeholder for loading large static files or initializing memory maps
+                Log.Info("Preloading core dependencies...");
+                // e.g., StaticModelCache.LoadDefaults();
+            });
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ To finalize this module:
-// - [x] Call await StartupManager.InitializeAsync() in App.xaml.cs
-// - [ ] Add setting to ConfigManager.Config: LaunchMinimized
-// - [ ] Add task scheduler or registry integration for auto-boot (optional)
-// - [ ] Trigger MarkForRestart() on crash or remote reboot
-// ===================================================================

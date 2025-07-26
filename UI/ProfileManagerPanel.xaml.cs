@@ -1,72 +1,55 @@
-﻿// File: UI/ProfileManagerPanel.xaml.cs
-using JaysAi.Finale.Settings;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿// neural v3.0
 using System.Windows;
 using System.Windows.Controls;
+using JaysAi.Finale.Settings;
+using System.Collections.ObjectModel;
 
-namespace JaysAi.Finale.UI
+namespace JaysAi.Finale.UI.Settings
 {
-    public partial class ProfileManagerPanel : UserControl
+    public partial class ProfileManager : UserControl
     {
-        private string ProfilesFolder => SettingsManager<AppSettings>.ProfilesFolder;
-        private List<string> Profiles => Directory.Exists(ProfilesFolder)
-            ? Directory.GetFiles(ProfilesFolder, "*.json").Select(Path.GetFileNameWithoutExtension).ToList()
-            : new List<string>();
+        private ObservableCollection<string> _profiles;
 
-        public ProfileManagerPanel()
+        public ProfileManager()
         {
             InitializeComponent();
-            RefreshProfileList();
+            LoadProfiles();
         }
 
-        private void RefreshProfileList()
+        private void LoadProfiles()
         {
-            ProfileDropdown.ItemsSource = Profiles;
+            _profiles = new ObservableCollection<string>(SettingsManager.Instance.GetAvailableProfiles());
+            ProfileList.ItemsSource = _profiles;
         }
 
-        private void LoadProfile_Click(object sender, RoutedEventArgs e)
+        private void Load_Click(object sender, RoutedEventArgs e)
         {
-            if (ProfileDropdown.SelectedItem is string name)
+            if (ProfileList.SelectedItem is string profile)
             {
-                SettingsManager<AppSettings>.LoadProfile(name);
-                MessageBox.Show($"Loaded profile: {name}");
+                SettingsManager.Instance.ApplyProfile(profile);
+                MessageBox.Show($"Loaded profile: {profile}", "Profile", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
-        private void SaveProfile_Click(object sender, RoutedEventArgs e)
+        private void Save_Click(object sender, RoutedEventArgs e)
         {
-            if (ProfileDropdown.SelectedItem is string name)
+            string profileName = Microsoft.VisualBasic.Interaction.InputBox("Enter profile name to save:", "Save Profile", "Default");
+            if (!string.IsNullOrWhiteSpace(profileName))
             {
-                SettingsManager<AppSettings>.SaveProfile(name);
-                MessageBox.Show($"Saved profile: {name}");
+                SettingsManager.Instance.SaveCurrentProfile(profileName);
+                LoadProfiles();
             }
         }
 
-        private void DeleteProfile_Click(object sender, RoutedEventArgs e)
+        private void Delete_Click(object sender, RoutedEventArgs e)
         {
-            if (ProfileDropdown.SelectedItem is string name)
+            if (ProfileList.SelectedItem is string profile)
             {
-                var path = Path.Combine(ProfilesFolder, $"{name}.json");
-                if (File.Exists(path))
+                if (MessageBox.Show($"Delete profile: {profile}?", "Confirm Delete", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                 {
-                    File.Delete(path);
-                    MessageBox.Show($"Deleted profile: {name}");
-                    RefreshProfileList();
+                    SettingsManager.Instance.DeleteProfile(profile);
+                    LoadProfiles();
                 }
-            }
-        }
-
-        private void SaveAsNewProfile_Click(object sender, RoutedEventArgs e)
-        {
-            string name = NewProfileNameBox.Text.Trim();
-            if (!string.IsNullOrWhiteSpace(name))
-            {
-                SettingsManager<AppSettings>.SaveProfile(name);
-                MessageBox.Show($"Saved new profile: {name}");
-                RefreshProfileList();
             }
         }
     }

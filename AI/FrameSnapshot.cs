@@ -1,36 +1,53 @@
-﻿//heavenly v3.0.0 – Frame Snapshot Structure
-using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.Input;
+﻿// neural v3.0
 using System;
 using System.Collections.Generic;
+using System.Numerics;
+using JaysAi.Finale.Data;
 
 namespace JaysAi.Finale.AI
 {
     public class FrameSnapshot
     {
-        public DateTime Timestamp { get; set; }
-        public List<TrackedTarget> Targets { get; set; } = new();
-        public ControllerInputState InputState { get; set; }
-        public float PlayerYaw { get; set; }
-        public float PlayerPitch { get; set; }
-        public float PlayerFov { get; set; }
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+        // Entity tracking at the moment of capture
+        public List<TrackedTarget> TrackedEnemies { get; set; } = new();
+
+        // Player location and aim direction at this frame
+        public Vector3 PlayerPosition { get; set; }
+        public Vector3 PlayerViewDirection { get; set; }
+
+        // Mouse + aim data (for recoil or compensation correction)
+        public Vector2 CursorPosition { get; set; }
+        public Vector2 AimDelta { get; set; }
+
+        // Prediction data (for aim assist + training)
+        public Dictionary<Guid, Vector3> PredictedEnemyPositions { get; set; } = new();
+        public Dictionary<Guid, Vector3> LastSeenEnemyPositions { get; set; } = new();
+
+        // ESP metadata
+        public bool ESPActive { get; set; }
+        public string ActiveAimProfile { get; set; }
+
+        // For ML logging / training replay
+        public string FrameSource { get; set; } = "live"; // e.g., "live", "simulated", "replay"
 
         public FrameSnapshot Clone()
         {
             return new FrameSnapshot
             {
                 Timestamp = this.Timestamp,
-                PlayerYaw = this.PlayerYaw,
-                PlayerPitch = this.PlayerPitch,
-                PlayerFov = this.PlayerFov,
-                InputState = this.InputState?.Clone(),
-                Targets = new List<TrackedTarget>(this.Targets)
+                TrackedEnemies = new List<TrackedTarget>(this.TrackedEnemies),
+                PlayerPosition = this.PlayerPosition,
+                PlayerViewDirection = this.PlayerViewDirection,
+                CursorPosition = this.CursorPosition,
+                AimDelta = this.AimDelta,
+                PredictedEnemyPositions = new Dictionary<Guid, Vector3>(this.PredictedEnemyPositions),
+                LastSeenEnemyPositions = new Dictionary<Guid, Vector3>(this.LastSeenEnemyPositions),
+                ESPActive = this.ESPActive,
+                ActiveAimProfile = this.ActiveAimProfile,
+                FrameSource = this.FrameSource
             };
-        }
-
-        public override string ToString()
-        {
-            return $"[{Timestamp:HH:mm:ss.fff}] Targets: {Targets.Count}, Yaw: {PlayerYaw:F2}, Pitch: {PlayerPitch:F2}";
         }
     }
 }

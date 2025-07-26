@@ -1,33 +1,44 @@
-﻿// File: Modules/EnemyScanner.cs
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Data;
-using JaysAi.Finale.Settings;
+﻿// neural v3.0
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Aimbot;
 
-namespace JaysAi.Finale.Modules
+namespace JaysAi.Finale.AI
 {
     public class EnemyScanner
     {
-        private readonly AppSettings _settings;
+        private readonly float _minConfidence;
+        private readonly Func<DetectedObject, bool>? _customFilter;
 
-        public EnemyScanner(AppSettings settings)
+        public EnemyScanner(float minConfidenceThreshold = 0.6f, Func<DetectedObject, bool>? customFilter = null)
         {
-            _settings = settings;
+            _minConfidence = minConfidenceThreshold;
+            _customFilter = customFilter;
         }
 
-        public List<Enemy> GetVisibleEnemies(Vector2 playerPosition)
+        public List<DetectedObject> Scan(IEnumerable<DetectedObject> detectedObjects)
         {
-            var enemies = TargetingSystem.GetEnemies();
+            if (detectedObjects == null)
+                return new();
 
-            return enemies
-                .Where(e =>
-                    e.IsEnemy &&
-                    e.IsVisible &&
-                    e.Health > 0 &&
-                    Vector2.Distance(playerPosition, e.ScreenPosition) <= _settings.MaxScanDistance)
+            return detectedObjects
+                .Where(obj =>
+                    obj != null &&
+                    obj.IsVisible &&
+                    obj.IsEnemy &&
+                    obj.Confidence >= _minConfidence &&
+                    obj.IsValid &&
+                    (_customFilter == null || _customFilter(obj)))
+                .OrderByDescending(obj => obj.Confidence)
+                .ThenBy(obj => obj.Area)
                 .ToList();
+        }
+
+        public DetectedObject? GetTopEnemy(IEnumerable<DetectedObject> detectedObjects)
+        {
+            return Scan(detectedObjects).FirstOrDefault();
         }
     }
 }

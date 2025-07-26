@@ -1,33 +1,76 @@
-﻿//monarch v2.1 – Live Visual Debug Console
-using SkiaSharp;
+﻿// Neural v3.0 — OverlayConsole.cs
 using System;
-using System.Linq;
+using System.Collections.Concurrent;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Threading;
 
-namespace JaysAi.Finale.Visuals
+namespace JaysAi.Finale.Overlay
 {
     public class OverlayConsole
     {
-        private readonly SKPaint _paint;
-        private readonly float _lineHeight = 18f;
-        private readonly int _maxLines = 10;
+        private readonly TextBlock _targetTextBlock;
+        private readonly DispatcherTimer _flushTimer;
+        private readonly ConcurrentQueue<string> _logBuffer;
+        private readonly StringBuilder _currentText;
 
-        public OverlayConsole()
+        public bool IsVisible { get; private set; } = true;
+        public int MaxLines { get; set; } = 100;
+
+        public OverlayConsole(TextBlock targetTextBlock)
         {
-            _paint = new SKPaint
+            _targetTextBlock = targetTextBlock ?? throw new ArgumentNullException(nameof(targetTextBlock));
+
+            _logBuffer = new ConcurrentQueue<string>();
+            _currentText = new StringBuilder();
+
+            _flushTimer = new DispatcherTimer
             {
-                Color = SKColors.Lime,
-                TextSize = 16,
-                Typeface = SKTypeface.FromFamilyName("Consolas", SKFontStyle.Bold)
+                Interval = TimeSpan.FromMilliseconds(100)
             };
+            _flushTimer.Tick += FlushLogs;
+            _flushTimer.Start();
         }
 
-        public void Draw(SKCanvas canvas, float x, float y)
+        public void Log(string message)
         {
-            var entries = AI.RuntimeBehaviorLog.GetEntries().Reverse().Take(_maxLines).ToArray();
-            for (int i = 0; i < entries.Length; i++)
-            {
-                canvas.DrawText(entries[i], x, y + i * _lineHeight, _paint);
-            }
+            string timestamp = $"[{DateTime.Now:HH:mm:ss}] ";
+            _logBuffer.Enqueue($"{timestamp}{message}");
         }
+
+        private void FlushLogs(object sender, EventArgs e)
+        {
+            while (_logBuffer.TryDequeue(out string line))
+            {
+                _currentText.AppendLine(line);
+
+                // Trim old lines
+                string[] lines = _currentText.ToString().Split('\n');
+                if (lines.Length > MaxLines)
+                {
+                    _currentText.Clear();
+                    int start = lines.Length - MaxLines;
+                    for (int i = start; i < lines.Length; i++)
+                        _currentText.AppendLine(lines[i]);
+                }
+            }
+
+            _targetTextBlock.Text = _currentText.ToString();
+        }
+
+        public void Clear()
+        {
+            _currentText.Clear();
+            _targetTextBlock.Text = string.Empty;
+        }
+
+        public void SetVisibility(bool visible)
+        {
+            IsVisible = visible;
+            _targetTextBlock.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public void ToggleVisibility() => SetVisibility(!IsVisible);
     }
 }

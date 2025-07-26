@@ -1,47 +1,43 @@
-﻿//heavenly v3.0
-using System;
-using JaysAi.Finale.Input;
+﻿// neural v3.0
+using JaysAi.Finale.Data;
+using JaysAi.Finale.Utility;
+using System.Numerics;
+using static Unity.Storage.RegistrationSet;
 
 namespace JaysAi.Finale.Aim
 {
     public class RecoilHandler
     {
-        private readonly RecoilPattern _pattern;
-        private int _shotCount;
-        private float _smoothingFactor;
+        private Vector2 _currentRecoilOffset;
+        private Vector2 _targetRecoilOffset;
+        private float _recoilSmoothFactor = 0.12f;
 
-        public RecoilHandler(RecoilPattern pattern, float smoothingFactor = 0.85f)
+        public void ApplyRecoilCompensation(Entity player, Vector2 weaponRecoil, float deltaTime)
         {
-            _pattern = pattern;
-            _smoothingFactor = Math.Clamp(smoothingFactor, 0.5f, 1f);
-            _shotCount = 0;
+            if (weaponRecoil == Vector2.Zero || player == null)
+                return;
+
+            _targetRecoilOffset = weaponRecoil;
+            _currentRecoilOffset = Vector2.Lerp(_currentRecoilOffset, _targetRecoilOffset, _recoilSmoothFactor * deltaTime);
+
+            Vector2 compensation = -_currentRecoilOffset;
+            InputAdjuster.ApplyMouseOffset(compensation);
         }
 
-        public void ApplyRecoil()
+        public void Reset()
         {
-            var offset = _pattern.GetOffset(_shotCount);
-            offset = Smooth(offset);
-            InputInjector.MoveMouse(offset.X, offset.Y);
-            _shotCount++;
+            _currentRecoilOffset = Vector2.Zero;
+            _targetRecoilOffset = Vector2.Zero;
         }
 
-        public void ResetRecoil()
+        public void SetSmoothFactor(float smooth)
         {
-            _shotCount = 0;
+            _recoilSmoothFactor = Math.Clamp(smooth, 0.01f, 1f);
         }
 
-        private Offset Smooth(Offset raw)
+        public Vector2 GetCompensationVector()
         {
-            return new Offset(
-                raw.X * _smoothingFactor,
-                raw.Y * _smoothingFactor
-            );
+            return -_currentRecoilOffset;
         }
-    }
-
-    public struct Offset
-    {
-        public float X, Y;
-        public Offset(float x, float y) => (X, Y) = (x, y);
     }
 }

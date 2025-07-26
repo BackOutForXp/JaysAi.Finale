@@ -1,16 +1,17 @@
-﻿//heavenly v3.0 – Mouse Movement Bridge
+﻿// neural v3.0
+using System;
+using System.Numerics;
 using System.Runtime.InteropServices;
-using System.Windows;
 
 namespace JaysAi.Finale.Input
 {
-    public static class CursorMover
+    public sealed class CursorMover
     {
         [DllImport("user32.dll")]
-        private static extern bool SetCursorPos(int x, int y);
+        private static extern bool GetCursorPos(out POINT lpPoint);
 
         [DllImport("user32.dll")]
-        private static extern bool GetCursorPos(out POINT lpPoint);
+        private static extern bool SetCursorPos(int x, int y);
 
         [StructLayout(LayoutKind.Sequential)]
         private struct POINT
@@ -19,28 +20,25 @@ namespace JaysAi.Finale.Input
             public int Y;
         }
 
-        public static Point GetCurrentCursorPosition()
+        private float _sensitivity = 1.0f;
+
+        public void SetSensitivity(float value)
         {
-            GetCursorPos(out var point);
-            return new Point(point.X, point.Y);
+            _sensitivity = Math.Clamp(value, 0.1f, 10f);
         }
 
-        public static void MoveCursorBy(double deltaX, double deltaY)
+        public void Move(Vector2 delta)
         {
-            var current = GetCurrentCursorPosition();
-            int targetX = (int)(current.X + deltaX);
-            int targetY = (int)(current.Y + deltaY);
-            SetCursorPos(targetX, targetY);
-        }
+            if (delta == Vector2.Zero)
+                return;
 
-        public static void SetCursorPosition(int x, int y)
-        {
-            SetCursorPos(x, y);
-        }
+            if (!GetCursorPos(out var current))
+                return;
 
-        public static void SetCursorPosition(Point point)
-        {
-            SetCursorPos((int)point.X, (int)point.Y);
+            int newX = current.X + (int)(delta.X * _sensitivity);
+            int newY = current.Y - (int)(delta.Y * _sensitivity); // Invert Y
+
+            SetCursorPos(newX, newY);
         }
     }
 }

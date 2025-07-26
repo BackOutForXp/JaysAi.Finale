@@ -1,7 +1,7 @@
-﻿//monarch v2.1 – Fully Refactored & Synced
-
-using global::System;
-using global::System.Runtime.InteropServices;
+﻿// neural v3.0
+using System;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 namespace JaysAi.Finale.Input
 {
@@ -10,11 +10,34 @@ namespace JaysAi.Finale.Input
         [DllImport("user32.dll")]
         private static extern bool SetCursorPos(int x, int y);
 
-        public static void MoveToScreenPosition(float x, float y)
+        [DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out POINT lpPoint);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT
         {
-            int targetX = (int)Math.Round(x);
-            int targetY = (int)Math.Round(y);
-            SetCursorPos(targetX, targetY);
+            public int X;
+            public int Y;
+        }
+
+        public static void MoveTo(int x, int y)
+        {
+            SetCursorPos(x, y);
+        }
+
+        public static void MoveBy(int deltaX, int deltaY)
+        {
+            if (GetCursorPos(out POINT currentPos))
+            {
+                SetCursorPos(currentPos.X + deltaX, currentPos.Y + deltaY);
+            }
+        }
+
+        public static Point GetPosition()
+        {
+            return GetCursorPos(out POINT point)
+                ? new Point(point.X, point.Y)
+                : Point.Empty;
         }
     }
 }

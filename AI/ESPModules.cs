@@ -1,42 +1,52 @@
-﻿//heavenly v3.0.0 – Dynamic ESP Module Dispatcher
+﻿// neural v3.0
+using JaysAi.Finale.Features;
+using JaysAi.Finale.Visuals;
 using System.Collections.Generic;
-using JaysAi.Finale.Modules;
 
 namespace JaysAi.Finale.AI
 {
     public static class ESPModules
     {
-        private static readonly List<IEnemyProvider> _providers = new List<IEnemyProvider>();
-        private static bool _initialized;
-
-        public static void RegisterProvider(IEnemyProvider provider)
+        private static readonly Dictionary<string, bool> _modules = new()
         {
-            if (!_providers.Contains(provider))
-                _providers.Add(provider);
+            { "BoundingBox", true },
+            { "Skeleton", true },
+            { "HealthBar", true },
+            { "SnapLine", true },
+            { "NameTag", true },
+            { "Distance", false }
+        };
+
+        public static bool IsEnabled(string moduleName)
+        {
+            return _modules.TryGetValue(moduleName, out bool enabled) && enabled;
         }
 
-        public static void Initialize()
+        public static void SetEnabled(string moduleName, bool enabled)
         {
-            if (_initialized) return;
-
-            // Register default enemy providers
-            RegisterProvider(new DummyEnemyProvider());
-            _initialized = true;
+            if (_modules.ContainsKey(moduleName))
+                _modules[moduleName] = enabled;
         }
 
-        public static List<DetectedObject> GetAllEnemies()
+        public static Dictionary<string, bool> GetAllModules()
         {
-            if (!_initialized)
-                Initialize();
+            return new Dictionary<string, bool>(_modules);
+        }
 
-            var allEnemies = new List<DetectedObject>();
-            foreach (var provider in _providers)
-            {
-                var enemies = provider.GetEnemies();
-                if (enemies != null)
-                    allEnemies.AddRange(enemies);
-            }
-            return allEnemies;
+        public static void ToggleModule(string moduleName)
+        {
+            if (_modules.ContainsKey(moduleName))
+                _modules[moduleName] = !_modules[moduleName];
+        }
+
+        public static void ResetDefaults()
+        {
+            _modules["BoundingBox"] = true;
+            _modules["Skeleton"] = true;
+            _modules["HealthBar"] = true;
+            _modules["SnapLine"] = true;
+            _modules["NameTag"] = true;
+            _modules["Distance"] = false;
         }
     }
 }

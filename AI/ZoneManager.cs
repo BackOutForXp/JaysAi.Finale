@@ -1,69 +1,50 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Windows;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.Visuals;
+using OpenCvSharp;
 
 namespace JaysAi.Finale.AI
 {
-    public static class ZoneManager
+    public class ZoneManager
     {
-        private static readonly List<Zone> ActiveZones = new();
+        private readonly Size frameSize;
+        private readonly double fieldOfViewRadius;
+        private readonly Point2f screenCenter;
+        private readonly double minimumConfidence;
 
-        public static void UpdateZones(List<YoloBoundingBox> detectedObjects)
+        public ZoneManager(Size frameSize, double fovRadius = 160, double confidenceThreshold = 0.5)
         {
-            ActiveZones.Clear();
+            this.frameSize = frameSize;
+            fieldOfViewRadius = fovRadius;
+            screenCenter = new Point2f(frameSize.Width / 2f, frameSize.Height / 2f);
+            minimumConfidence = confidenceThreshold;
+        }
 
-            foreach (var obj in detectedObjects)
+        public bool IsTargetInFov(YoloBoundingBox target)
+        {
+            if (target.Confidence < minimumConfidence)
+                return false;
+
+            var center = target.GetCenter();
+            return Distance(center, screenCenter) <= fieldOfViewRadius;
+        }
+
+        public List<YoloBoundingBox> FilterByFov(List<YoloBoundingBox> targets)
+        {
+            var validTargets = new List<YoloBoundingBox>();
+            foreach (var target in targets)
             {
-                if (obj.IsEnemy)
-                {
-                    var zone = new Zone
-                    {
-                        Type = ZoneType.Danger,
-                        Area = new Rect(obj.X - 10, obj.Y - 10, obj.Width + 20, obj.Height + 20),
-                        Label = "ENEMY ZONE"
-                    };
-
-                    ActiveZones.Add(zone);
-                }
+                if (IsTargetInFov(target))
+                    validTargets.Add(target);
             }
+            return validTargets;
         }
 
-        public static bool IsInDangerZone(Point point)
+        private static double Distance(Point2f a, Point2f b)
         {
-            return ActiveZones.Any(zone =>
-                zone.Type == ZoneType.Danger && zone.Area.Contains(point));
+            float dx = a.X - b.X;
+            float dy = a.Y - b.Y;
+            return Math.Sqrt(dx * dx + dy * dy);
         }
-
-        public static void DrawZones()
-        {
-            foreach (var zone in ActiveZones)
-            {
-                OverlayDrawer.DrawRectangle(
-                    zone.Area.X,
-                    zone.Area.Y,
-                    zone.Area.Width,
-                    zone.Area.Height,
-                    OverlayColor.Orange,
-                    label: zone.Label
-                );
-            }
-        }
-    }
-
-    public enum ZoneType
-    {
-        Neutral,
-        Danger,
-        TargetPriority
-    }
-
-    public class Zone
-    {
-        public ZoneType Type { get; set; }
-        public Rect Area { get; set; }
-        public string Label { get; set; }
     }
 }

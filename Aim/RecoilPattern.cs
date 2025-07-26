@@ -1,44 +1,35 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace JaysAi.Finale.Aim
 {
     public class RecoilPattern
     {
-        private readonly List<Offset> _pattern;
-        private readonly bool _loop;
+        private readonly List<Vector2> _patternPoints = new();
+        private int _currentIndex = 0;
 
-        public RecoilPattern(IEnumerable<Offset> pattern, bool loop = true)
+        public RecoilPattern(IEnumerable<Vector2> pattern)
         {
-            _pattern = new List<Offset>(pattern);
-            _loop = loop;
+            if (pattern != null)
+                _patternPoints.AddRange(pattern);
         }
 
-        public Offset GetOffset(int shotIndex)
+        public Vector2 GetNextOffset()
         {
-            if (_pattern.Count == 0)
-                return new Offset(0, 0);
+            if (_patternPoints.Count == 0)
+                return Vector2.Zero;
 
-            if (shotIndex < _pattern.Count)
-                return _pattern[shotIndex];
-
-            return _loop ? _pattern[shotIndex % _pattern.Count] : new Offset(0, 0);
+            Vector2 offset = _patternPoints[_currentIndex];
+            _currentIndex = (_currentIndex + 1) % _patternPoints.Count;
+            return offset;
         }
 
-        public void AddStep(float x, float y)
+        public void Reset()
         {
-            _pattern.Add(new Offset(x, y));
+            _currentIndex = 0;
         }
 
-        public void Clear()
-        {
-            _pattern.Clear();
-        }
-    }
-
-    public struct Offset
-    {
-        public float X, Y;
-        public Offset(float x, float y) => (X, Y) = (x, y);
+        public bool IsEmpty => _patternPoints.Count == 0;
     }
 }

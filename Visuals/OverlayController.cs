@@ -1,55 +1,58 @@
-﻿// File: Visuals/OverlayController.cs
-using JaysAi.Finale.Core;
-using JaysAi.Finale.Overlay;
-using JaysAi.Finale.Settings;
-using System;
-using System.Windows;
-using System.Windows.Threading;
+﻿// Neural v3.0 — OverlayController.cs
+using System.Collections.Generic;
+using SkiaSharp;
 
-namespace JaysAi.Finale.Visuals
+namespace JaysAi.Finale.Overlay
 {
     public class OverlayController
     {
-        private readonly OverlayWindow _overlayWindow;
-        private readonly ESPOverlay _espOverlay;
-        private readonly CrosshairOverlay _crosshairOverlay;
-        private readonly DispatcherTimer _updateTimer;
+        private readonly List<IOverlayRenderer> _renderers;
 
-        public OverlayController(AppSettings settings)
+        public bool IsActive { get; private set; } = true;
+
+        public OverlayController()
         {
-            _espOverlay = new ESPOverlay(settings);
-            _crosshairOverlay = new CrosshairOverlay(settings);
-            _overlayWindow = new OverlayWindow(_espOverlay, _crosshairOverlay);
+            _renderers = new List<IOverlayRenderer>();
+        }
 
-            _updateTimer = new DispatcherTimer
+        public void AddRenderer(IOverlayRenderer renderer)
+        {
+            if (renderer != null && !_renderers.Contains(renderer))
             {
-                Interval = TimeSpan.FromMilliseconds(33) // ~30 FPS for performance
-            };
-            _updateTimer.Tick += (s, e) => Update();
+                _renderers.Add(renderer);
+            }
         }
 
-        public void Start()
+        public void RemoveRenderer(IOverlayRenderer renderer)
         {
-            _overlayWindow.Show();
-            _updateTimer.Start();
+            if (renderer != null && _renderers.Contains(renderer))
+            {
+                _renderers.Remove(renderer);
+            }
         }
 
-        public void Stop()
+        public void ClearRenderers()
         {
-            _updateTimer.Stop();
-            _overlayWindow.Hide();
+            _renderers.Clear();
         }
 
-        public void Update()
-        {
-            // Optionally implement dynamic visibility or game-window resizing here
-            _overlayWindow.RefreshCrosshair(); // Ensure visuals are up to date
-        }
+        public void ToggleOverlay() => IsActive = !IsActive;
 
-        public void RefreshSettings(AppSettings newSettings)
+        public void EnableOverlay() => IsActive = true;
+
+        public void DisableOverlay() => IsActive = false;
+
+        public void RenderAll(SKCanvas canvas, int width, int height)
         {
-            _espOverlay.ApplySettings(newSettings);
-            _crosshairOverlay.ApplySettings(newSettings);
+            if (!IsActive || canvas == null) return;
+
+            foreach (var renderer in _renderers)
+            {
+                if (renderer.IsActive)
+                {
+                    renderer.Draw(canvas, width, height);
+                }
+            }
         }
     }
 }

@@ -1,34 +1,55 @@
-﻿// File: Security/FeatureManager.cs
-using JaysAi.Finale.Settings;
+﻿// neural v3.0
 using System;
+using System.Collections.Concurrent;
+using JaysAi.Finale.Models;
 
 namespace JaysAi.Finale.Security
 {
-    public static class FeatureManager
+    public sealed class FeatureManager
     {
-        private static AppSettings? _settings;
+        private static readonly Lazy<FeatureManager> _instance = new(() => new FeatureManager());
+        public static FeatureManager Instance => _instance.Value;
 
-        public static void Initialize(AppSettings settings)
+        private readonly ConcurrentDictionary<FeatureFlag, bool> _featureStates;
+
+        private FeatureManager()
         {
-            _settings = settings;
+            _featureStates = new ConcurrentDictionary<FeatureFlag, bool>();
+
+            // Default feature state setup (can be replaced by config file or server sync)
+            foreach (FeatureFlag flag in Enum.GetValues(typeof(FeatureFlag)))
+                _featureStates[flag] = false;
         }
 
-        public static bool IsFeatureEnabled(string featureKey)
+        public bool IsEnabled(FeatureFlag feature)
         {
-            return featureKey switch
-            {
-                "AimAssist" => _settings?.EnableAimAssist ?? false,
-                "ESP" => _settings?.EnableESP ?? false,
-                "Crosshair" => _settings?.EnableCrosshair ?? false,
-                "Stealth" => _settings?.EnableStealthMode ?? false,
-                _ => false
-            };
+            return _featureStates.TryGetValue(feature, out var enabled) && enabled;
         }
 
-        public static void RequireFeature(string featureKey)
+        public void EnableFeature(FeatureFlag feature)
         {
-            if (!IsFeatureEnabled(featureKey))
-                throw new UnauthorizedAccessException($"Feature '{featureKey}' is not enabled.");
+            _featureStates[feature] = true;
+        }
+
+        public void DisableFeature(FeatureFlag feature)
+        {
+            _featureStates[feature] = false;
+        }
+
+        public void ToggleFeature(FeatureFlag feature)
+        {
+            _featureStates.AddOrUpdate(feature, true, (_, current) => !current);
+        }
+
+        public void SetFeatureState(FeatureFlag feature, bool enabled)
+        {
+            _featureStates[feature] = enabled;
+        }
+
+        public void ResetAll()
+        {
+            foreach (var key in _featureStates.Keys)
+                _featureStates[key] = false;
         }
     }
 }

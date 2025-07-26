@@ -1,33 +1,39 @@
-﻿// File: UI/ESPSettingsPanel.xaml.cs
+﻿// neural v3.0
 using System.Windows;
 using System.Windows.Controls;
 using JaysAi.Finale.Settings;
+using JaysAi.Finale.Overlay.Panels.Components;
 
-namespace JaysAi.Finale.UI
+namespace JaysAi.Finale.Overlay.Panels
 {
     public partial class ESPSettingsPanel : UserControl
     {
-        private readonly SettingsManager<AppSettings> _settings;
-
         public ESPSettingsPanel()
         {
             InitializeComponent();
-
-            _settings = SettingsManager<AppSettings>.Instance;
-            DataContext = _settings.Current;
+            Loaded += ESPSettingsPanel_Loaded;
         }
 
-        private void OnPickColorClicked(object sender, RoutedEventArgs e)
+        private void ESPSettingsPanel_Loaded(object sender, RoutedEventArgs e)
         {
-            var dialog = new System.Windows.Forms.ColorDialog();
-            var result = dialog.ShowDialog();
-            if (result == System.Windows.Forms.DialogResult.OK)
-            {
-                var selected = dialog.Color;
-                _settings.Current.ESP.EnemyColor = System.Drawing.Color.FromArgb(
-                    selected.A, selected.R, selected.G, selected.B);
-                _settings.Save();
-            }
+            ToggleESP.IsChecked = UserSettings.Instance.ESPEnabled;
+            ToggleBox.IsChecked = UserSettings.Instance.BoxESP;
+            ToggleHealthBar.IsChecked = UserSettings.Instance.HealthBarESP;
+        }
+
+        private void ToggleESP_Checked(object sender, RoutedEventArgs e)
+        {
+            UserSettings.Instance.ESPEnabled = ToggleESP.IsChecked == true;
+        }
+
+        private void ToggleBox_Checked(object sender, RoutedEventArgs e)
+        {
+            UserSettings.Instance.BoxESP = ToggleBox.IsChecked == true;
+        }
+
+        private void ToggleHealthBar_Checked(object sender, RoutedEventArgs e)
+        {
+            UserSettings.Instance.HealthBarESP = ToggleHealthBar.IsChecked == true;
         }
     }
 }

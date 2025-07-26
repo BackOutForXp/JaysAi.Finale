@@ -1,56 +1,78 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
+﻿// neural v3.0
+using System;
 using JaysAi.Finale.Input;
+using JaysAi.Finale.Helpers;
+using JaysAi.Finale.Settings;
 
 namespace JaysAi.Finale.Modules
 {
-    public static class RecoilAssist
+    public class RecoilAssist
     {
-        private static bool _enabled;
-        private static CancellationTokenSource? _cts;
+        private readonly IInputSource _inputSource;
+        private readonly RecoilProfile _profile;
+        private readonly Timer _recoilTimer;
+        private int _stepIndex;
+        private bool _active;
 
-        public static void Toggle(bool state)
+        public RecoilAssist(IInputSource inputSource, RecoilProfile profile)
         {
-            if (_enabled == state)
-                return;
-
-            _enabled = state;
-
-            if (_enabled)
-                Start();
-            else
-                Stop();
+            _inputSource = inputSource;
+            _profile = profile;
+            _recoilTimer = new Timer();
         }
 
-        private static void Start()
+        public void Start()
         {
-            _cts = new CancellationTokenSource();
-            Task.Run(() => Loop(_cts.Token));
-            Console.WriteLine("Recoil Assist Enabled");
+            _active = true;
+            _stepIndex = 0;
+            _recoilTimer.Restart();
         }
 
-        private static void Stop()
+        public void Stop()
         {
-            _cts?.Cancel();
-            Console.WriteLine("Recoil Assist Disabled");
+            _active = false;
+            _stepIndex = 0;
+            _recoilTimer.Stop();
         }
 
-        private static async Task Loop(CancellationToken token)
+        public void Update()
         {
-            while (!token.IsCancellationRequested)
+            if (!_active || !_recoilTimer.HasElapsed(_profile.DelayBetweenSteps)) return;
+
+            if (_stepIndex >= _profile.Steps.Length)
             {
-                if (InputMonitor.IsLeftClickHeld())
-                {
-                    // Simulate slight downward movement
-                    MouseMover.Move(0, 1); // 1px down
-                    await Task.Delay(10, token);
-                }
-                else
-                {
-                    await Task.Delay(25, token);
-                }
+                Stop();
+                return;
             }
+
+            var step = _profile.Steps[_stepIndex];
+            _inputSource.InjectMouseMovement(step.X, step.Y);
+            _stepIndex++;
+            _recoilTimer.Restart();
+        }
+
+        public void SetProfile(RecoilProfile profile)
+        {
+            _profile.Steps = profile.Steps;
+            _profile.DelayBetweenSteps = profile.DelayBetweenSteps;
+        }
+    }
+
+    public class RecoilProfile
+    {
+        public RecoilStep[] Steps { get; set; } = Array.Empty<RecoilStep>();
+        public int DelayBetweenSteps { get; set; } = 15; // ms
+    }
+
+    public struct RecoilStep
+    {
+        public int X;
+        public int Y;
+
+        public RecoilStep(int x, int y)
+        {
+            X = x;
+            Y = y;
         }
     }
 }

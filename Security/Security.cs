@@ -1,49 +1,44 @@
-﻿using System;
-using JaysAi.Finale.System;
+﻿//neural v3.0
+using JaysAi.Finale.Security.Core;
+using JaysAi.Finale.Security.Cryptography;
+using JaysAi.Finale.Security.Diagnostics;
+using JaysAi.Finale.Security.Licensing;
+using JaysAi.Finale.Security.Validation;
+using JaysAi.Finale.Utility;
+using System;
+using System.Security.RightsManagement;
 
 namespace JaysAi.Finale.Security
 {
-    public static class LicenseValidator
+    public static class Security
     {
-        public static void Validate()
+        public static AntiDebugHook AntiDebug { get; } = new();
+        public static AuthManager Auth { get; } = new();
+        public static LicenseValidator License { get; } = new();
+        public static FeatureManager Features { get; } = new();
+        public static CryptoProvider Crypto { get; } = new();
+        public static FingerprintValidator Fingerprint { get; } = new();
+
+        public static void Initialize()
         {
-            string key = ConfigManager.Config.LastLicenseKey.Trim();
-
-            switch (key.ToUpperInvariant())
+            try
             {
-                case "PUB-FREE":
-                    FeatureManager.CurrentTier = LicenseTier.Public;
-                    break;
-
-                case "LITE-1234":
-                    FeatureManager.CurrentTier = LicenseTier.Lite;
-                    break;
-
-                case "ELITE-7777":
-                    FeatureManager.CurrentTier = LicenseTier.Elite;
-                    break;
-
-                case "OWNR-DEV":
-                case "OWNER-9999":
-                    FeatureManager.CurrentTier = LicenseTier.Owner;
-                    break;
-
-                default:
-                    FeatureManager.CurrentTier = LicenseTier.Public;
-                    Console.WriteLine($"[LicenseValidator] Unknown key '{key}' – defaulting to Public tier.");
-                    break;
+                AntiDebug.Hook();
+                Crypto.Initialize();
+                License.Validate();
+                Auth.Initialize();
+                Features.Initialize();
             }
-
-            Console.WriteLine($"[LicenseValidator] Tier: {FeatureManager.CurrentTier}");
+            catch (Exception ex)
+            {
+                Logger.LogCritical("Security initialization failed: " + ex.Message);
+                Environment.FailFast("Security enforcement failure.");
+            }
         }
+
+        public static bool IsSecure =>
+            !AntiDebug.IsDebuggerAttached &&
+            License.IsValid &&
+            Fingerprint.IsSystemValid();
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ To finalize this module:
-// - [x] Reads license from ConfigManager.Config.LastLicenseKey
-// - [x] Assigns license tier to FeatureManager.CurrentTier
-// - [ ] Add cloud API license validation later (via HTTPS POST)
-// - [ ] Hide Owner-only UI features based on this tier
-// - [ ] Inject Validate() into App.xaml.cs → during app startup
-// ===================================================================

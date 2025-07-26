@@ -1,64 +1,82 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Text.Json;
 using OpenCvSharp;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.Visuals;
 
 namespace JaysAi.Finale.AI
 {
-    public static class YOLOBridge
+    public class YOLOBridge
     {
-        private static YOLODetector _detector;
+        private readonly string pythonScriptPath;
+        private readonly string imageInputPath;
+        private readonly string detectionOutputPath;
 
-        public static void Initialize(string modelPath)
+        public YOLOBridge(string scriptPath, string inputPath, string outputPath)
         {
-            if (_detector == null)
-            {
-                _detector = new YOLODetector(modelPath);
-            }
+            pythonScriptPath = scriptPath;
+            imageInputPath = inputPath;
+            detectionOutputPath = outputPath;
         }
 
-        public static List<YoloBoundingBox> DetectEnemies(Mat frame)
+        public List<YoloBoundingBox> RunDetection(Mat frame)
         {
-            var results = _detector.Detect(frame);
-            var boxes = new List<YoloBoundingBox>();
-            int idCounter = 0;
+            // Save frame as image
+            Cv2.ImWrite(imageInputPath, frame);
 
-            foreach (var result in results)
+            // Run the Python script
+            using (var process = new Process())
             {
-                var box = new YoloBoundingBox(idCounter++, result.BoundingBox, result.Label, result.Confidence);
+                process.StartInfo.FileName = "python";
+                process.StartInfo.Arguments = $"\"{pythonScriptPath}\" \"{imageInputPath}\" \"{detectionOutputPath}\"";
+                process.StartInfo.CreateNoWindow = true;
+                process.StartInfo.UseShellExecute = false;
+                process.Start();
+                process.WaitForExit();
+            }
 
-                // Classification rules (can be upgraded with user config)
-                box.Classify(
-                    label => label.ToLower().Contains("enemy"),
-                    label => label.ToLower().Contains("teammate") || label.ToLower().Contains("ally")
-                );
+            return ParseDetectionOutput();
+        }
 
-                boxes.Add(box);
+        private List<YoloBoundingBox> ParseDetectionOutput()
+        {
+            var boxes = new List<YoloBoundingBox>();
+            if (!File.Exists(detectionOutputPath)) return boxes;
+
+            try
+            {
+                var json = File.ReadAllText(detectionOutputPath);
+                var detections = JsonSerializer.Deserialize<List<YoloDetectionResult>>(json);
+
+                foreach (var det in detections)
+                {
+                    boxes.Add(new YoloBoundingBox(
+                        det.ClassId,
+                        det.Label,
+                        det.Confidence,
+                        new Rect(det.X, det.Y, det.Width, det.Height)
+                    ));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[YOLOBridge] Error parsing detection output: {ex.Message}");
             }
 
             return boxes;
         }
 
-        public static void DebugOverlay(Mat frame)
+        private class YoloDetectionResult
         {
-            var detections = DetectEnemies(frame);
-
-            foreach (var box in detections)
-            {
-                if (box.IsEnemy)
-                {
-                    AiOverlay.QueueRectangle(
-                        box.BoundingBox.X,
-                        box.BoundingBox.Y,
-                        box.BoundingBox.Width,
-                        box.BoundingBox.Height,
-                        box.Label,
-                        OverlayColor.Red
-                    );
-                }
-            }
+            public int ClassId { get; set; }
+            public string Label { get; set; }
+            public float Confidence { get; set; }
+            public int X { get; set; }
+            public int Y { get; set; }
+            public int Width { get; set; }
+            public int Height { get; set; }
         }
     }
 }

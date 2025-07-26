@@ -1,51 +1,37 @@
-﻿// File: Overlay/RenderSkia.cs
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Features;
-using JaysAi.Finale.Settings;
-using JaysAi.Finale.Visuals;
+﻿// Neural v3.0 — RenderSkia.cs
 using SkiaSharp;
 using SkiaSharp.Views.Desktop;
 using System;
 using System.Windows.Controls;
 using System.Windows.Forms;
-using System.Windows.Media.Media3D;
 
 namespace JaysAi.Finale.Overlay
 {
-    public class RenderSkia : Form, IOverlayRenderer
+    public class RenderSkia : IDisposable
     {
-        private readonly SettingsManager<AppSettings> _settings;
-        private readonly SKControl _skControl;
+        private readonly Form _form;
+        private readonly SKControl _skiaControl;
+        private readonly CrosshairRenderer _crosshairRenderer;
 
-        private readonly Crosshair _crosshair;
-        private readonly ESP _esp;
-        private readonly IEnemyProvider _enemyProvider;
+        public bool IsRunning { get; private set; }
 
-        public RenderSkia(SettingsManager<AppSettings> settings)
+        public RenderSkia(Form form)
         {
-            _settings = settings;
-            _enemyProvider = new DummyEnemyProvider();
-            _esp = new ESP(_settings, this, _enemyProvider);
-            _crosshair = new Crosshair(_settings, this);
+            _form = form ?? throw new ArgumentNullException(nameof(form));
+            _skiaControl = new SKControl();
+            _crosshairRenderer = new CrosshairRenderer();
 
-            FormBorderStyle = FormBorderStyle.None;
-            TopMost = true;
-            ShowInTaskbar = false;
-            BackColor = System.Drawing.Color.Black;
-            TransparencyKey = System.Drawing.Color.Black;
-            Width = Screen.PrimaryScreen.Bounds.Width;
-            Height = Screen.PrimaryScreen.Bounds.Height;
-            StartPosition = FormStartPosition.Manual;
-            Location = new System.Drawing.Point(0, 0);
+            Initialize();
+        }
 
-            _skControl = new SKControl
-            {
-                Dock = DockStyle.Fill,
-                BackColor = System.Drawing.Color.Transparent
-            };
+        private void Initialize()
+        {
+            _skiaControl.Dock = DockStyle.Fill;
+            _skiaControl.PaintSurface += OnPaintSurface;
+            _form.Controls.Add(_skiaControl);
+            _form.FormClosing += (_, _) => Dispose();
 
-            _skControl.PaintSurface += OnPaintSurface;
-            Controls.Add(_skControl);
+            IsRunning = true;
         }
 
         private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
@@ -53,14 +39,30 @@ namespace JaysAi.Finale.Overlay
             var canvas = e.Surface.Canvas;
             canvas.Clear(SKColors.Transparent);
 
-            // Order matters — draw behind first
-            _esp.Render(canvas, Width, Height);
-            _crosshair.Render(canvas, Width, Height);
+            int width = e.Info.Width;
+            int height = e.Info.Height;
+
+            _crosshairRenderer.Render(canvas, width, height);
         }
 
-        public void Redraw()
+        public void ToggleCrosshair() => _crosshairRenderer.Toggle();
+
+        public void SetCrosshairColor(SKColor color) => _crosshairRenderer.SetColor(color);
+
+        public void SetCrosshairSize(float size) => _crosshairRenderer.SetSize(size);
+
+        public void SetCrosshairThickness(float thickness) => _crosshairRenderer.SetThickness(thickness);
+
+        public void SetCrosshairStyle(CrosshairStyle style) => _crosshairRenderer.SetStyle(style);
+
+        public void Refresh() => _skiaControl.Invalidate();
+
+        public void Dispose()
         {
-            _skControl.Invalidate();
+            IsRunning = false;
+            _skiaControl.PaintSurface -= OnPaintSurface;
+            _form?.Controls.Remove(_skiaControl);
+            _skiaControl?.Dispose();
         }
     }
 }

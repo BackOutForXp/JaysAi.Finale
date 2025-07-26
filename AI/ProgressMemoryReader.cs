@@ -1,59 +1,79 @@
-﻿//heavenly v3.0
-using System;
+﻿using JaysAi.Finale.Data;
+
 using JaysAi.Finale.SystemLogic;
+
+=// neural v3.0
+using System;
+using System.Collections.Generic;
+using System.Numerics;
+using JaysAi.Finale.Data;
+using JaysAi.Finale.AI;
 
 namespace JaysAi.Finale.AI
 {
     public class ProgressMemoryReader
     {
-        private readonly ISystemMemory _memory;
+        private readonly IEnemyProvider _enemyProvider;
+        private readonly Dictionary<int, TrackedTarget> _activeTargets;
 
-        public ProgressMemoryReader(ISystemMemory memory)
+        public ProgressMemoryReader(IEnemyProvider enemyProvider)
         {
-            _memory = memory ?? throw new ArgumentNullException(nameof(memory));
+            _enemyProvider = enemyProvider ?? throw new ArgumentNullException(nameof(enemyProvider));
+            _activeTargets = new Dictionary<int, TrackedTarget>();
         }
 
-        public float ReadPredictionConfidence(Guid targetId)
+        /// <summary>
+        /// Updates internal memory snapshot by reading live target data and applying position smoothing.
+        /// </summary>
+        public void Refresh()
         {
-            if (_memory == null)
-                return 0f;
+            var enemies = _enemyProvider.GetEnemies();
+            foreach (var enemy in enemies)
+            {
+                if (!_activeTargets.TryGetValue(enemy.ID, out var tracked))
+                {
+                    tracked = new TrackedTarget(enemy.ID);
+                    _activeTargets[enemy.ID] = tracked;
+                }
 
-            string key = $"prediction_confidence_{targetId}";
-            return _memory.TryReadFloat(key, out var value) ? value : 0f;
+                UpdateTrackedTarget(tracked, enemy);
+            }
         }
 
-        public int ReadTargetLockAttempts(Guid targetId)
-        {
-            if (_memory == null)
-                return 0;
+        /// <summary>
+        /// Returns a read-only list of currently tracked enemies.
+        /// </summary>
+        public IReadOnlyCollection<TrackedTarget> GetTrackedTargets() => _activeTargets.Values;
 
-            string key = $"lock_attempts_{targetId}";
-            return _memory.TryReadInt(key, out var value) ? value : 0;
+        private void UpdateTrackedTarget(TrackedTarget tracked, Enemy enemy)
+        {
+            var deltaTime = TimeUtils.DeltaTime;
+            var newVelocity = PredictionHelper.CalculateVelocity(tracked.Position, enemy.Position, deltaTime);
+
+            tracked.LastPosition = tracked.Position;
+            tracked.Position = enemy.Position;
+            tracked.Velocity = newVelocity;
+            tracked.LastSeenTime = DateTime.UtcNow;
+            tracked.IsVisible = enemy.IsVisible;
+            tracked.IsAlive = enemy.IsAlive;
         }
 
-        public bool HasLineOfSight(Guid targetId)
+        /// <summary>
+        /// Removes targets that haven't been updated in a while (stale).
+        /// </summary>
+        public void CleanupStaleTargets(double staleSeconds = 1.5)
         {
-            string key = $"line_of_sight_{targetId}";
-            return _memory.TryReadBool(key, out var value) && value;
-        }
+            var cutoff = DateTime.UtcNow - TimeSpan.FromSeconds(staleSeconds);
+            var staleKeys = new List<int>();
 
-        public void UpdateTargetPerformance(Guid targetId, float newConfidence)
-        {
-            if (_memory == null)
-                return;
+            foreach (var kvp in _activeTargets)
+            {
+                if (kvp.Value.LastSeenTime < cutoff)
+                    staleKeys.Add(kvp.Key);
+            }
 
-            string key = $"prediction_confidence_{targetId}";
-            _memory.WriteFloat(key, newConfidence);
-        }
-
-        public void IncrementLockAttempts(Guid targetId)
-        {
-            if (_memory == null)
-                return;
-
-            string key = $"lock_attempts_{targetId}";
-            int current = ReadTargetLockAttempts(targetId);
-            _memory.WriteInt(key, current + 1);
+            foreach (var key in staleKeys)
+                _activeTargets.Remove(key);
         }
     }
 }

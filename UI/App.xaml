@@ -1,0 +1,14 @@
+﻿<!-- Neural v3.0 -->
+<Application x:Class="JaysAi.Finale.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="UI/LoaderGUI.xaml">
+    <Application.Resources>
+        <!-- Global styles and resources can be added here -->
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Theme / Skin dictionaries can go here -->
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

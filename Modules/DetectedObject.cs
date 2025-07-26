@@ -1,23 +1,51 @@
-﻿//monarch v2.1 – Fully Refactored & Synced
+﻿// neural v3.0
+using JaysAi.Finale.Overlay;
+using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Visuals;
+using SkiaSharp;
+using SkiaSharp.Views.Desktop;
+using System;
+using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Threading;
 
-namespace JaysAi.Finale.Modules
+namespace JaysAi.Finale.Overlay
 {
-    public class DetectedObject
+    public partial class AIOverlay : Window
     {
-        public string Name { get; set; }
-        public bool IsEnemy { get; set; }
-        public bool IsVisible { get; set; }
+        private readonly DispatcherTimer _renderTimer;
+        private readonly OverlayRenderCoordinator _renderCoordinator;
 
-        public float ScreenX { get; set; }
-        public float ScreenY { get; set; }
-
-        public float ScreenDistance => CalculateScreenDistance(ScreenX, ScreenY);
-
-        private float CalculateScreenDistance(float x, float y)
+        public AIOverlay()
         {
-            float centerX = 960; // assume 1920x1080 for now (replace with dynamic center)
-            float centerY = 540;
-            return (float)System.Math.Sqrt(System.Math.Pow(centerX - x, 2) + System.Math.Pow(centerY - y, 2));
+            InitializeComponent();
+            _renderCoordinator = new OverlayRenderCoordinator(OverlayCanvas);
+            Loaded += OnLoaded;
+
+            _renderTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(1000 / 144) // match your capture FPS
+            };
+            _renderTimer.Tick += (s, e) => _renderCoordinator.DrawFrame();
+        }
+
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            MakeWindowTransparent();
+            _renderTimer.Start();
+        }
+
+        private void MakeWindowTransparent()
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            int extendedStyle = Win32.GetWindowLong(hwnd, Win32.GWL_EXSTYLE);
+            Win32.SetWindowLong(hwnd, Win32.GWL_EXSTYLE, extendedStyle | Win32.WS_EX_TRANSPARENT | Win32.WS_EX_LAYERED);
+        }
+
+        public void ShutdownOverlay()
+        {
+            _renderTimer.Stop();
+            Close();
         }
     }
 }

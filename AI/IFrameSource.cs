@@ -1,25 +1,24 @@
-﻿//heavenly v3.0.0 – Unified Frame Source Abstraction Interface
-using System;
-using System.Drawing;
+﻿// neural v3.0
+using JaysAi.Finale.AI;
 
 namespace JaysAi.Finale.AI
 {
-    public interface IFrameSource : IDisposable
+    public interface IFrameSource
     {
         /// <summary>
-        /// Gets the latest video frame from the input source.
+        /// Returns the most recent frame snapshot captured from the source.
         /// </summary>
-        /// <returns>A bitmap of the latest frame.</returns>
-        Bitmap GetLatestFrame();
+        /// <returns>Current FrameSnapshot</returns>
+        FrameSnapshot GetCurrentFrame();
 
         /// <summary>
-        /// Indicates whether the source is currently running or available.
+        /// Forces a new frame capture (used for polling or manual updates).
         /// </summary>
-        bool IsActive { get; }
+        void CaptureFrame();
 
         /// <summary>
-        /// Optional metadata or tag for the frame source (e.g., "Webcam", "CaptureCard").
+        /// The name of this frame source (e.g., "LiveGame", "Replay", "Simulated").
         /// </summary>
-        string SourceLabel { get; }
+        string SourceName { get; }
     }
 }

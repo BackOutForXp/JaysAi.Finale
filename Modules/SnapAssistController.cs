@@ -1,44 +1,67 @@
-﻿//monarch v2.1
-using JaysAi.AI.Models;
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Input;
-using JaysAi.Input;
+﻿//neural v3.0
 
-namespace JaysAi.Modules
+using System;
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Structures;
+using JaysAi.Finale.Core;
+using JaysAi.Finale.Utility;
+using JaysAi.Finale.Input;
+
+namespace JaysAi.Finale.Modules
 {
     public class SnapAssistController
     {
-        private readonly InputInjector InputInjector;
-        private readonly TargetTracker targetTracker;
-        private float snapStrength = 1.0f;
-        private float deadzone = 0.02f;
+        private readonly TargetMemory _targetMemory;
+        private readonly IInputSource _inputSource;
+        private readonly SnapSettings _settings;
 
-        public SnapAssistController(InputInjector injector, TargetTracker tracker)
+        public SnapAssistController(TargetMemory targetMemory, IInputSource inputSource, SnapSettings settings)
         {
-            inputInjector = injector;
-            targetTracker = tracker;
+            _targetMemory = targetMemory ?? throw new ArgumentNullException(nameof(targetMemory));
+            _inputSource = inputSource ?? throw new ArgumentNullException(nameof(inputSource));
+            _settings = settings ?? new SnapSettings();
         }
 
-        public void Update()
+        public void Tick()
         {
-            if (!targetTracker.HasTargets()) return;
+            if (!_settings.Enabled)
+                return;
 
-            var target = targetTracker.GetCurrentTarget();
-            if (target == null) return;
+            var target = _targetMemory.GetStrongestTarget(ScoreTarget);
+            if (target == null)
+                return;
 
-            float dx = target.CenterX - 0.5f; // Relative to screen center
-            float dy = target.CenterY - 0.5f;
-
-            if (MathF.Abs(dx) > deadzone || MathF.Abs(dy) > deadzone)
-            {
-                float moveX = dx * snapStrength;
-                float moveY = dy * snapStrength;
-
-                inputInjector.MoveAim(moveX, moveY);
-            }
+            var aimOffset = CalculateSnapOffset(target.LastKnownObject);
+            ApplySnap(aimOffset);
         }
 
-        public void SetSnapStrength(float strength) => snapStrength = strength;
-        public void SetDeadzone(float zone) => deadzone = zone;
+        private float ScoreTarget(TrackedTarget target)
+        {
+            var dist = target.LastKnownObject.Distance;
+            var vis = target.LastKnownObject.IsVisible ? 1f : 0f;
+            return (_settings.WeightVisible * vis) + (_settings.WeightDistance / (dist + 0.01f));
+        }
+
+        private Vector2 CalculateSnapOffset(DetectedObject obj)
+        {
+            var currentCrosshair = _inputSource.GetCrosshairPosition();
+            var targetPosition = obj.ScreenPosition;
+
+            var offset = targetPosition - currentCrosshair;
+
+            // Apply FOV check
+            if (offset.Magnitude > _settings.MaxSnapFov)
+                return Vector2.Zero;
+
+            return offset * _settings.SnapStrength;
+        }
+
+        private void ApplySnap(Vector2 offset)
+        {
+            if (offset == Vector2.Zero)
+                return;
+
+            _inputSource.MoveMouse(offset);
+        }
     }
 }

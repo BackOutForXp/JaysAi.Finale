@@ -1,30 +1,60 @@
-﻿// heavenly v3.0 – Enemy Model Representation
+﻿// neural v3.0
+using System;
+using System.Numerics;
+using JaysAi.Finale.AI;
+
 namespace JaysAi.Finale.Data
 {
     public class Enemy
     {
-        public int ID { get; set; }
+        public int Id { get; set; }
         public string Name { get; set; }
+        public Vector3 HeadPosition { get; set; }
+        public Vector3 ChestPosition { get; set; }
+        public Vector3 FeetPosition { get; set; }
+        public Vector2 ScreenPosition { get; set; }
         public float Distance { get; set; }
-        public float Health { get; set; }
         public bool IsVisible { get; set; }
+        public bool IsTracked { get; set; }
         public bool IsTargeted { get; set; }
+        public float ConfidenceScore { get; set; }
 
-        public float LastSeenTime { get; set; }
-        public float MovementSpeed { get; set; }
-        public string Team { get; set; }
+        public TargetInfo TargetInfo { get; set; }
+        public BoneData BoneData { get; set; }
 
-        public Enemy(int id, string name, float distance, float health, bool isVisible, string team = "Unknown")
+        public DateTime LastSeen { get; set; }
+
+        public Enemy()
         {
-            ID = id;
-            Name = name;
+            TargetInfo = new TargetInfo();
+            BoneData = new BoneData();
+            LastSeen = DateTime.Now;
+        }
+
+        public void UpdatePosition(Vector3 head, Vector3 chest, Vector3 feet)
+        {
+            HeadPosition = head;
+            ChestPosition = chest;
+            FeetPosition = feet;
+            LastSeen = DateTime.Now;
+        }
+
+        public void UpdateScreen(Vector2 screenPos, float distance)
+        {
+            ScreenPosition = screenPos;
             Distance = distance;
-            Health = health;
-            IsVisible = isVisible;
+        }
+
+        public void ResetFlags()
+        {
+            IsVisible = false;
+            IsTracked = false;
             IsTargeted = false;
-            Team = team;
-            LastSeenTime = 0f;
-            MovementSpeed = 0f;
+        }
+
+        public override string ToString()
+        {
+            return $"Enemy[{Id}] {Name} | Dist: {Distance:F1}m | Visible: {IsVisible}";
         }
     }
 }

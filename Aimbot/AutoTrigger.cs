@@ -1,45 +1,36 @@
-﻿//heavenly v3.0
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Input;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Utility;
+﻿// neural v3.0
 using System;
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Data;
+using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Input;
 
 namespace JaysAi.Finale.Aimbot
 {
-    public static class AutoTrigger
+    public class AutoTrigger
     {
-        private static bool _isEnabled = true;
-        private static DateTime _lastTriggerTime = DateTime.MinValue;
-        private static readonly int _triggerDelayMs = 50;
+        private readonly IEnemyProvider enemyProvider;
+        private readonly InputInjector inputInjector;
+        private readonly TriggerSettings triggerSettings;
 
-        public static void SetEnabled(bool enabled) => _isEnabled = enabled;
-
-        public static void Update(TargetInfo target)
+        public AutoTrigger(IEnemyProvider enemyProvider, InputInjector inputInjector, TriggerSettings triggerSettings)
         {
-            if (!_isEnabled || target == null || !target.IsValid)
-                return;
-
-            if (!IsCrosshairAligned(target))
-                return;
-
-            var now = DateTime.UtcNow;
-            if ((now - _lastTriggerTime).TotalMilliseconds < _triggerDelayMs)
-                return;
-
-            InputInjector.PressFire();
-            _lastTriggerTime = now;
-
-            Logger.LogInfo($"[AutoTrigger] Fired at target: {target.Name}");
+            this.enemyProvider = enemyProvider;
+            this.inputInjector = inputInjector;
+            this.triggerSettings = triggerSettings;
         }
 
-        private static bool IsCrosshairAligned(TargetInfo target)
+        public void Execute()
         {
-            // Simple 2D check, refine with dot product if needed later
-            var screenCenter = ScreenUtils.GetCenter();
-            return Math.Abs(target.ScreenX - screenCenter.X) < 5 &&
-                   Math.Abs(target.ScreenY - screenCenter.Y) < 5;
+            if (!triggerSettings.Enabled || !SystemStatus.IsInGame)
+                return;
+
+            var target = enemyProvider.GetTargetUnderCrosshair();
+            if (target != null && target.IsVisible && target.IsAlive)
+            {
+                inputInjector.PressFire(triggerSettings.FireHoldTimeMs);
+                LogManager.Log("[AutoTrigger] Fired at target under crosshair.");
+            }
         }
     }
 }

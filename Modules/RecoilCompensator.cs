@@ -1,49 +1,53 @@
-﻿// File: Modules/RecoilCompensator.cs
-using JaysAi.Finale.Input;
-using JaysAi.Finale.Settings;
+﻿// neural v3.0
 using System;
-using System.Timers;
+using JaysAi.Finale.Input;
+using JaysAi.Finale.Helpers;
+using JaysAi.Finale.Settings;
 
 namespace JaysAi.Finale.Modules
 {
     public class RecoilCompensator
     {
-        private readonly AppSettings _settings;
-        private readonly Timer _recoilTimer;
+        private readonly IInputSource _inputSource;
+        private readonly Timer _compensateTimer = new();
+        private float _intensity;
+        private bool _isActive;
 
-        public RecoilCompensator(AppSettings settings)
+        public float CompensationX { get; set; } = 0f;
+        public float CompensationY { get; set; } = 0f;
+        public int CompensationIntervalMs { get; set; } = 10;
+
+        public RecoilCompensator(IInputSource inputSource)
         {
-            _settings = settings;
-
-            _recoilTimer = new Timer
-            {
-                Interval = _settings.RecoilTickIntervalMs,
-                AutoReset = true
-            };
-
-            _recoilTimer.Elapsed += (_, _) => ApplyRecoil();
+            _inputSource = inputSource;
         }
 
-        public void Enable()
+        public void SetIntensity(float value)
         {
-            if (_settings.EnableRecoilControl)
-                _recoilTimer.Start();
+            _intensity = Math.Clamp(value, 0f, 1f);
         }
 
-        public void Disable()
+        public void Start()
         {
-            _recoilTimer.Stop();
+            _isActive = true;
+            _compensateTimer.Restart();
         }
 
-        private void ApplyRecoil()
+        public void Stop()
         {
-            if (InputHandler.IsLeftMouseDown())
-            {
-                int verticalOffset = _settings.RecoilVerticalOffset;
-                int horizontalOffset = _settings.RecoilHorizontalOffset;
+            _isActive = false;
+            _compensateTimer.Stop();
+        }
 
-                InputEmulator.MoveMouseRelative(horizontalOffset, verticalOffset);
-            }
+        public void Update()
+        {
+            if (!_isActive || !_compensateTimer.HasElapsed(CompensationIntervalMs)) return;
+
+            int moveX = (int)(CompensationX * _intensity);
+            int moveY = (int)(CompensationY * _intensity);
+
+            _inputSource.InjectMouseMovement(moveX, moveY);
+            _compensateTimer.Restart();
         }
     }
 }

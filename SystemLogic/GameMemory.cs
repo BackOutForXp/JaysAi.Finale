@@ -1,45 +1,81 @@
-﻿// File: System\GameMemory.cs
+﻿// neural v3.0
 using System;
-using System.Collections.Generic;
-using System.Numerics;
-using JaysAi.Finale.Data;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace JaysAi.Finale.SystemLogic
 {
     public static class GameMemory
     {
-        public static bool IsGameAttached { get; private set; } = false;
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr OpenProcess(int dwDesiredAccess, bool bInheritHandle, int dwProcessId);
 
-        public static void AttachToGameProcess()
+        [DllImport("kernel32.dll")]
+        private static extern bool ReadProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, int dwSize, out int lpNumberOfBytesRead);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, int nSize, out int lpNumberOfBytesWritten);
+
+        private const int PROCESS_ALL_ACCESS = 0x1F0FFF;
+        private static IntPtr _processHandle = IntPtr.Zero;
+        private static Process? _targetProcess;
+
+        public static bool Attach(string processName)
         {
-            // TODO: Add logic to attach to target game process
-            IsGameAttached = true;
+            var processes = Process.GetProcessesByName(processName);
+            if (processes.Length == 0)
+                return false;
+
+            _targetProcess = processes[0];
+            _processHandle = OpenProcess(PROCESS_ALL_ACCESS, false, _targetProcess.Id);
+
+            return _processHandle != IntPtr.Zero;
         }
 
-        public static void Detach()
+        public static bool ReadBytes(IntPtr address, byte[] buffer, out int bytesRead)
         {
-            IsGameAttached = false;
+            bytesRead = 0;
+            if (_processHandle == IntPtr.Zero)
+                return false;
+
+            return ReadProcessMemory(_processHandle, address, buffer, buffer.Length, out bytesRead);
         }
 
-        public static Vector3 GetPlayerWorldPosition()
+        public static bool WriteBytes(IntPtr address, byte[] data, out int bytesWritten)
         {
-            // TODO: Replace with actual memory read or fallback (mock data for now)
-            return new Vector3(100, 0, 50);
+            bytesWritten = 0;
+            if (_processHandle == IntPtr.Zero)
+                return false;
+
+            return WriteProcessMemory(_processHandle, address, data, data.Length, out bytesWritten);
         }
 
-        public static List<Enemy> ReadEnemiesFromMemory()
+        public static int ReadInt32(IntPtr address)
         {
-            // TODO: Read from memory, currently mocked
-            return new List<Enemy>
-            {
-                new Enemy
-                {
-                    ScreenPosition = new Vector2(800, 400),
-                    Velocity = new Vector3(1, 0, 0),
-                    IsVisible = true,
-                    IsPriorityTarget = false
-                }
-            };
+            var buffer = new byte[4];
+            ReadBytes(address, buffer, out _);
+            return BitConverter.ToInt32(buffer, 0);
         }
+
+        public static float ReadFloat(IntPtr address)
+        {
+            var buffer = new byte[4];
+            ReadBytes(address, buffer, out _);
+            return BitConverter.ToSingle(buffer, 0);
+        }
+
+        public static bool WriteInt32(IntPtr address, int value)
+        {
+            var buffer = BitConverter.GetBytes(value);
+            return WriteBytes(address, buffer, out _);
+        }
+
+        public static bool WriteFloat(IntPtr address, float value)
+        {
+            var buffer = BitConverter.GetBytes(value);
+            return WriteBytes(address, buffer, out _);
+        }
+
+        public static bool IsAttached => _processHandle != IntPtr.Zero && _targetProcess != null && !_targetProcess.HasExited;
     }
 }

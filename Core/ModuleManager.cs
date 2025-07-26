@@ -1,77 +1,86 @@
-﻿// heavenly v3.0 – Central Module Lifecycle Handler
+﻿// neural v3.0
+using JaysAi.Finale.Features;
+using JaysAi.Finale.Modules;
+using JaysAi.Finale.Security;
+using JaysAi.Finale.SystemLogic;
 using System;
 using System.Collections.Generic;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.Utility;
-using JaysAi.Finale.SystemLogic;
 
 namespace JaysAi.Finale.Core
 {
-    public static class ModuleManager
+    public class ModuleManager
     {
-        private static readonly List<IModule> _modules = new();
+        private readonly Dictionary<string, IModule> _modules;
 
-        public static void Register(IModule module)
+        public ModuleManager()
         {
-            if (module == null)
-                throw new ArgumentNullException(nameof(module));
+            _modules = new Dictionary<string, IModule>();
+            RegisterModules();
+        }
 
-            if (!_modules.Contains(module))
+        private void RegisterModules()
+        {
+            LogManager.Info("ModuleManager: Registering core modules...");
+
+            AddModule("ESP", new ESPModule());
+            AddModule("AimAssist", new AimAssistModule());
+            AddModule("AntiRecoil", new RecoilCompensator());
+            AddModule("SnapAssist", new SnapAssistController());
+            AddModule("SilentAim", new SilentAim());
+            AddModule("TriggerBot", new TriggerBot());
+            AddModule("MovementAssist", new MovementAssist());
+            AddModule("StealthMode", new StealthMode());
+            AddModule("StickAssist", new StickInputBridge());
+
+            LogManager.Info($"ModuleManager: Registered {_modules.Count} modules.");
+        }
+
+        private void AddModule(string key, IModule module)
+        {
+            if (!_modules.ContainsKey(key))
             {
-                _modules.Add(module);
-                Logger.Debug($"Module registered: {module.GetType().Name}");
+                _modules.Add(key, module);
+                LogManager.Debug($"ModuleManager: [{key}] added.");
             }
         }
 
-        public static void InitializeAll()
+        public void UpdateAll()
         {
-            foreach (var module in _modules)
-            {
-                try
-                {
-                    module.Initialize();
-                    Logger.Info($"Initialized: {module.GetType().Name}");
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error($"Init failed for {module.GetType().Name}: {ex.Message}");
-                }
-            }
-        }
-
-        public static void UpdateAll()
-        {
-            foreach (var module in _modules)
-            {
-                try
-                {
-                    module.Update();
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warn($"Update failed for {module.GetType().Name}: {ex.Message}");
-                }
-            }
-        }
-
-        public static void ShutdownAll()
-        {
-            foreach (var module in _modules)
+            foreach (var module in _modules.Values)
             {
                 try
                 {
-                    module.Shutdown();
-                    Logger.Info($"Shutdown: {module.GetType().Name}");
+                    if (module.Enabled)
+                        module.Update();
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error($"Shutdown failed for {module.GetType().Name}: {ex.Message}");
+                    LogManager.Exception($"ModuleManager.Update: {module.GetType().Name}", ex);
                 }
             }
-
-            _modules.Clear();
         }
 
-        public static IReadOnlyList<IModule> GetAllModules() => _modules.AsReadOnly();
+        public void ToggleModule(string moduleName, bool enable)
+        {
+            if (_modules.TryGetValue(moduleName, out var module))
+            {
+                module.Enabled = enable;
+                LogManager.Info($"ModuleManager: [{moduleName}] toggled {(enable ? "ON" : "OFF")}");
+            }
+            else
+            {
+                LogManager.Warn($"ModuleManager: [{moduleName}] not found.");
+            }
+        }
+
+        public T GetModule<T>() where T : class, IModule
+        {
+            foreach (var module in _modules.Values)
+            {
+                if (module is T match)
+                    return match;
+            }
+            return null;
+        }
     }
 }

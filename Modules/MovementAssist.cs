@@ -1,77 +1,60 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
+﻿// neural v3.0
+using System;
 using JaysAi.Finale.Input;
+using JaysAi.Finale.Helpers;
+using JaysAi.Finale.Core;
 
 namespace JaysAi.Finale.Modules
 {
-    public static class MovementAssist
+    public class MovementAssist
     {
-        private static bool _enabled;
-        private static CancellationTokenSource? _cts;
+        private readonly IInputSource _inputSource;
+        private float _strafeBoostFactor = 1.15f;
+        private bool _isActive;
 
-        public static void Toggle(bool state)
+        public MovementAssist(IInputSource inputSource)
         {
-            if (_enabled == state)
-                return;
-
-            _enabled = state;
-
-            if (_enabled)
-                Start();
-            else
-                Stop();
+            _inputSource = inputSource;
         }
 
-        private static void Start()
+        public void Enable()
         {
-            _cts = new CancellationTokenSource();
-            Task.Run(() => Loop(_cts.Token));
-            Console.WriteLine("Movement Assist Enabled");
+            _isActive = true;
         }
 
-        private static void Stop()
+        public void Disable()
         {
-            _cts?.Cancel();
-            Console.WriteLine("Movement Assist Disabled");
+            _isActive = false;
         }
 
-        private static async Task Loop(CancellationToken token)
+        public void Update(MovementState currentState)
         {
-            while (!token.IsCancellationRequested)
+            if (!_isActive) return;
+
+            // Auto-strafe logic: boost lateral movement to aid dodge or movement-shoot mechanics
+            if (currentState.IsStrafingLeft)
             {
-                if (InputMonitor.IsKeyDown(System.Windows.Input.Key.Space))
-                {
-                    SimulateBunnyHop();
-                }
-
-                if (InputMonitor.IsKeyDown(System.Windows.Input.Key.LeftShift))
-                {
-                    SimulateAutoSprint();
-                }
-
-                await Task.Delay(30, token);
+                _inputSource.InjectAnalogMovement(-_strafeBoostFactor, 0);
             }
+            else if (currentState.IsStrafingRight)
+            {
+                _inputSource.InjectAnalogMovement(_strafeBoostFactor, 0);
+            }
+
+            // Future expansion could include adaptive sprint toggles or vault detection
         }
 
-        private static void SimulateBunnyHop()
+        public void SetStrafeBoostFactor(float boost)
         {
-            Console.WriteLine("[MovementAssist] Bunny hopping...");
-            // TODO: Replace with actual jump/spam key input via SendInput or HID
-        }
-
-        private static void SimulateAutoSprint()
-        {
-            Console.WriteLine("[MovementAssist] Auto-sprinting...");
-            // TODO: Trigger sprint key if not already running
+            _strafeBoostFactor = Math.Clamp(boost, 1.0f, 2.0f);
         }
     }
-}
 
-// ======================= MONARCH INTEGRATION =======================
-// ✅ To finalize this module:
-// - [ ] Use SendInput or HID emulation to trigger keys
-// - [x] Reads shift + space via InputMonitor
-// - [ ] Future: Add crouch spam, slide cancel patterns (per-game configs)
-// - [ ] Tier-lock via FeatureManager.CanUseMovementAssist()
-// ===================================================================
+    public class MovementState
+    {
+        public bool IsStrafingLeft { get; set; }
+        public bool IsStrafingRight { get; set; }
+
+        // Expand later to include sprint, crouch, vault, etc.
+    }
+}

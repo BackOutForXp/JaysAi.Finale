@@ -1,58 +1,65 @@
-﻿using System;
-using System.Diagnostics;
+﻿// neural v3.0
+using System;
+using System.Runtime.InteropServices;
 
 namespace JaysAi.Finale.Input
 {
     public static class InterceptionHelper
     {
-        // Placeholder for real Interception logic — future driver support
-        private static bool _interceptionActive = false;
+        private const string InterceptionDll = "interception.dll";
 
-        public static void Initialize()
+        [DllImport(InterceptionDll, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr interception_create_context();
+
+        [DllImport(InterceptionDll, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void interception_destroy_context(IntPtr context);
+
+        [DllImport(InterceptionDll, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void interception_set_filter(IntPtr context, Predicate predicate, ushort filter);
+
+        [DllImport(InterceptionDll, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int interception_receive(IntPtr context, int device, ref Stroke stroke, uint n);
+
+        [DllImport(InterceptionDll, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int interception_send(IntPtr context, int device, ref Stroke stroke, uint n);
+
+        [DllImport(InterceptionDll, CallingConvention = CallingConvention.Cdecl)]
+        public static extern ushort interception_get_hardware_id(IntPtr context, int device, byte[] hardwareIdBuffer, uint bufferSize);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate int Predicate(int device);
+
+        [StructLayout(LayoutKind.Explicit)]
+        public struct Stroke
         {
-            if (_interceptionActive)
-                return;
-
-            // TODO: Hook into Interception DLL
-            Debug.WriteLine("[Interception] Initialized");
-            _interceptionActive = true;
+            [FieldOffset(0)] public MouseStroke Mouse;
+            [FieldOffset(0)] public KeyStroke Key;
         }
 
-        public static void SendMouseMovement(int dx, int dy)
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MouseStroke
         {
-            if (!_interceptionActive)
-                return;
-
-            // TODO: Interception driver send mouse
-            Debug.WriteLine($"[Interception] Mouse moved dx:{dx}, dy:{dy}");
+            public ushort State;
+            public ushort Flags;
+            public short Rolling;
+            public short X;
+            public short Y;
+            public uint Information;
         }
 
-        public static void SendKeyPress(ushort keyCode)
+        [StructLayout(LayoutKind.Sequential)]
+        public struct KeyStroke
         {
-            if (!_interceptionActive)
-                return;
-
-            // TODO: Interception driver send key
-            Debug.WriteLine($"[Interception] Key pressed: {keyCode}");
+            public ushort Code;
+            public ushort State;
+            public uint Information;
         }
 
-        public static void Shutdown()
+        public enum InterceptionFilter : ushort
         {
-            if (!_interceptionActive)
-                return;
-
-            // TODO: Unload driver hook
-            Debug.WriteLine("[Interception] Shutdown");
-            _interceptionActive = false;
+            None = 0,
+            Mouse = 1,
+            Keyboard = 2
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Placeholder for low-level driver injection (raw input)
-// ✅ Enables stealth movement + key simulation
-// ✅ Required for future controller emulation
-// - [ ] Add native DLL import for Interception DLL
-// - [ ] Hook this into AimAssist and AntiRecoil later
-// - [ ] Build installer for Interception driver
-// ===================================================================

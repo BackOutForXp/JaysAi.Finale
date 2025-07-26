@@ -1,72 +1,81 @@
-﻿//monarch v2.1
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Settings;
-using SkiaSharp;
+﻿// Neural v3.0 — VisualEsp.cs
 using System.Collections.Generic;
+using JaysAi.Finale.Data;
+using JaysAi.Finale.Helpers;
+using JaysAi.Finale.Overlay;
+using SkiaSharp;
 
 namespace JaysAi.Finale.Visuals
 {
-    public class VisualESP
+    public class VisualEsp : IOverlayRenderer
     {
-        private readonly ESPSettings settings;
+        public bool IsActive { get; set; } = true;
+        public List<TargetData> Targets { get; set; } = new();
 
-        public VisualESP(ESPSettings settings)
+        public void Draw(SKCanvas canvas, int screenWidth, int screenHeight)
         {
-            this.settings = settings;
-        }
+            if (!IsActive || canvas == null || Targets == null)
+                return;
 
-        public void Draw(SKCanvas canvas, List<FrameSnapshot> entities)
-        {
-            foreach (var entity in entities)
+            foreach (var target in Targets)
             {
-                if (!settings.ShouldDisplay(entity.Type))
+                if (!target.IsVisible || target.ScreenBox == null)
                     continue;
 
-                var color = settings.GetColorForType(entity.Type);
+                var box = target.ScreenBox.Value;
 
-                // Draw bounding box
-                if (settings.ShowBoxes)
+                // Draw Box
+                OverlayShape.DrawBox(
+                    canvas,
+                    box.X,
+                    box.Y,
+                    box.Width,
+                    box.Height,
+                    OverlayColor.EspBox,
+                    DrawConfig.EspBoxThickness
+                );
+
+                // Draw Health Bar
+                if (target.Health > 0 && target.MaxHealth > 0 && DrawConfig.EnableBoxFill)
                 {
-                    using var paint = new SKPaint
-                    {
-                        Color = color,
-                        StrokeWidth = 2,
-                        IsStroke = true,
-                        IsAntialias = true
-                    };
-                    var rect = new SKRect(entity.X - 25, entity.Y - 50, entity.X + 25, entity.Y + 50);
-                    canvas.DrawRect(rect, paint);
+                    float ratio = target.Health / target.MaxHealth;
+                    float barHeight = box.Height * ratio;
+                    float barTop = box.Bottom - barHeight;
+
+                    canvas.DrawRect(
+                        box.X - 5,
+                        barTop,
+                        3,
+                        barHeight,
+                        new SKPaint
+                        {
+                            Color = OverlayColor.EspHealth,
+                            Style = SKPaintStyle.Fill,
+                            IsAntialias = true
+                        });
                 }
 
-                // Draw snapline
-                if (settings.ShowSnaplines)
+                // Draw Name
+                if (!string.IsNullOrWhiteSpace(target.Name) && DrawConfig.UseRoundedCorners)
                 {
-                    using var snapPaint = new SKPaint
-                    {
-                        Color = color.WithAlpha(128),
-                        StrokeWidth = 1.5f,
-                        IsStroke = true,
-                        IsAntialias = true
-                    };
-                    canvas.DrawLine(settings.ScreenCenterX, settings.ScreenCenterY, entity.X, entity.Y, snapPaint);
-                }
-
-                // Draw health bar
-                if (settings.ShowHealthBars && entity.Health >= 0)
-                {
-                    float barHeight = 40;
-                    float filled = barHeight * (entity.Health / 100f);
-                    using var healthPaint = new SKPaint
-                    {
-                        Color = SKColors.LimeGreen,
-                        IsAntialias = true
-                    };
-                    var barX = entity.X - 30;
-                    var barY = entity.Y - 50;
-                    canvas.DrawRect(barX, barY, 4, barHeight, SKPaints.Gray);
-                    canvas.DrawRect(barX, barY + (barHeight - filled), 4, filled, healthPaint);
+                    LabelTextHelper.DrawCenteredText(
+                        canvas,
+                        target.Name,
+                        box.X + box.Width / 2,
+                        box.Y - 5,
+                        OverlayColor.Text,
+                        13
+                    );
                 }
             }
+        }
+
+        /// <summary>
+        /// Updates the current target list.
+        /// </summary>
+        public void SetTargets(List<TargetData> detectedTargets)
+        {
+            Targets = detectedTargets ?? new();
         }
     }
 }

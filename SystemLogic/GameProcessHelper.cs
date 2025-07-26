@@ -1,41 +1,70 @@
-﻿//monarch v2.1 – Process checker and handle grabber
+﻿// neural v3.0
 using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
+using System.Linq;
 
-namespace JaysAi.Finale.Utility
+namespace JaysAi.Finale.SystemLogic
 {
     public static class GameProcessHelper
     {
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetForegroundWindow();
+        private static Process? _cachedProcess;
+        private static string _cachedProcessName = string.Empty;
+        private static readonly object _lock = new();
 
-        [DllImport("user32.dll")]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
-        public static Process GetTargetProcess(string processName)
+        public static Process? GetProcess(string processName, bool forceRefresh = false)
         {
-            foreach (var process in Process.GetProcessesByName(processName))
+            lock (_lock)
             {
-                if (!process.HasExited)
-                    return process;
+                if (!forceRefresh && _cachedProcess != null &&
+                    !_cachedProcess.HasExited &&
+                    string.Equals(_cachedProcessName, processName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return _cachedProcess;
+                }
+
+                var processes = Process.GetProcessesByName(processName);
+                _cachedProcess = processes.FirstOrDefault();
+                _cachedProcessName = processName;
+
+                return _cachedProcess;
             }
-            return null;
         }
 
-        public static IntPtr GetWindowHandle(string processName)
+        public static bool IsRunning(string processName)
         {
-            var process = GetTargetProcess(processName);
-            return process?.MainWindowHandle ?? IntPtr.Zero;
+            var process = GetProcess(processName);
+            return process != null && !process.HasExited;
         }
 
-        public static bool IsTargetProcessActive(string processName)
+        public static int? GetProcessId(string processName)
         {
-            var foregroundWindow = GetForegroundWindow();
-            GetWindowThreadProcessId(foregroundWindow, out uint processId);
+            var process = GetProcess(processName);
+            return process?.Id;
+        }
 
-            var target = GetTargetProcess(processName);
-            return target != null && target.Id == processId;
+        public static IntPtr? GetMainModuleBaseAddress(string processName)
+        {
+            var process = GetProcess(processName);
+            return process?.MainModule?.BaseAddress;
+        }
+
+        public static string? GetProcessPath(string processName)
+        {
+            try
+            {
+                var process = GetProcess(processName);
+                return process?.MainModule?.FileName;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public static string? GetWindowTitle(string processName)
+        {
+            var process = GetProcess(processName);
+            return process?.MainWindowTitle;
         }
     }
 }

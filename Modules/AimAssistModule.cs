@@ -1,54 +1,19 @@
-﻿// File: Modules/AimAssistModule.cs
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Data;
-using JaysAi.Finale.Helpers;
+﻿// Neural v3.0 — AimAssistModule.cs
 using JaysAi.Finale.Input;
-using JaysAi.Finale.Settings;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
+using JaysAi.Finale.AI;
 
 namespace JaysAi.Finale.Modules
 {
-    public class AimAssistModule : IModule
+    /// <summary>
+    /// Defines the contract for an aim assist module that can be plugged into the aim system.
+    /// </summary>
+    public interface IAimAssistModule
     {
-        public bool IsEnabled { get; private set; }
-
-        private AppSettings _settings => SettingsManager<AppSettings>.Current;
-
-        public void Enable() => IsEnabled = true;
-        public void Disable() => IsEnabled = false;
-
-        public void Update(Vector2 playerScreenPos, IEnumerable<Enemy> enemies)
-        {
-            if (!IsEnabled || !_settings.AimAssistEnabled || enemies == null)
-                return;
-
-            var validTargets = enemies
-                .Where(e => e.IsVisible && e.IsEnemy && e.ScreenPosition != Vector2.Zero)
-                .ToList();
-
-            if (!validTargets.Any())
-                return;
-
-            var bestTarget = TargetSelector.GetBestTarget(validTargets, playerScreenPos, _settings.AimAssistFov);
-
-            if (bestTarget == null)
-                return;
-
-            var predictedPos = PredictionHelper.Predict2D(
-                bestTarget.ScreenPosition,
-                bestTarget.ScreenVelocity,
-                playerScreenPos,
-                _settings.AimAssistBulletSpeed
-            );
-
-            if (!MonarchAimAI.IsTargetWithinFov(playerScreenPos, predictedPos))
-                return;
-
-            var aimPoint = MonarchAimAI.GetCorrectedAim(playerScreenPos, predictedPos);
-
-            InputEmulator.MoveMouseTo(aimPoint, playerScreenPos, _settings.AimAssistSmoothing);
-        }
+        /// <summary>
+        /// Applies the aim adjustment logic based on current input and prediction data.
+        /// </summary>
+        /// <param name="input">The current input state of the player/controller.</param>
+        /// <param name="prediction">Predicted target movement or aim vector.</param>
+        void Apply(InputState input, FramePrediction prediction);
     }
 }

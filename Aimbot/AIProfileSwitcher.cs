@@ -1,37 +1,52 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
+using System;
+using JaysAi.Finale.Aimbot;
 using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Utility;
-using System.Collections.Generic;
+using JaysAi.Finale.Settings;
+using JaysAi.Finale.Input;
 
 namespace JaysAi.Finale.Aimbot
 {
-    public static class AIProfileSwitcher
+    public class AIProfileSwitcher
     {
-        private static readonly Dictionary<string, string> _profileMap = new()
-        {
-            { "Sniper", "LongRangeAI" },
-            { "SMG", "CloseCombatAI" },
-            { "AR", "BalancedAI" }
-        };
+        private readonly WeaponProfile defaultProfile;
+        private WeaponProfile currentProfile;
+        private readonly ProfileManager profileManager;
+        private string currentWeapon = string.Empty;
 
-        private static string _activeProfile = "BalancedAI";
-
-        public static void UpdateProfile(string weaponType)
+        public AIProfileSwitcher(ProfileManager profileManager)
         {
-            if (_profileMap.ContainsKey(weaponType))
+            this.profileManager = profileManager;
+            this.defaultProfile = profileManager.GetDefaultProfile();
+            this.currentProfile = defaultProfile;
+        }
+
+        public WeaponProfile GetActiveProfile() => currentProfile;
+
+        public void UpdateProfile(string weaponName)
+        {
+            if (string.IsNullOrWhiteSpace(weaponName) || weaponName == currentWeapon)
+                return;
+
+            currentWeapon = weaponName;
+
+            var profile = profileManager.GetProfileForWeapon(weaponName);
+            if (profile != null)
             {
-                _activeProfile = _profileMap[weaponType];
-                Logger.LogInfo($"[AIProfileSwitcher] Switched to profile: {_activeProfile}");
-                LoadProfile(_activeProfile);
+                currentProfile = profile;
+                LogManager.Log($"[ProfileSwitcher] Switched to profile: {weaponName}");
+            }
+            else
+            {
+                currentProfile = defaultProfile;
+                LogManager.Log($"[ProfileSwitcher] No match found, using default profile.");
             }
         }
 
-        private static void LoadProfile(string profileName)
+        public void ResetToDefault()
         {
-            // This would tie into ModelLoader or behavior pipelines later
-            FeatureToggleManager.EnableOnlyForProfile(profileName);
+            currentProfile = defaultProfile;
+            LogManager.Log("[ProfileSwitcher] Reset to default profile.");
         }
-
-        public static string GetActiveProfile() => _activeProfile;
     }
 }

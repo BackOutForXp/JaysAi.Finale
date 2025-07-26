@@ -1,40 +1,52 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
+using System;
 using JaysAi.Finale.AI;
+using JaysAi.Finale.Aimbot;
 using JaysAi.Finale.Aim;
 using JaysAi.Finale.Input;
-using JaysAi.Finale.Modules;
 using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Utility;
-using System;
+using JaysAi.Finale.Data;
 
 namespace JaysAi.Finale.Aimbot
 {
-    public static class AimAssist
+    public class AimAssist
     {
-        private static SnapTarget _currentTarget;
-        private static float _smoothingFactor = 0.15f;
+        private readonly PredictionEngine predictionEngine;
+        private readonly PIDController aimSmoother;
+        private readonly TargetSelector targetSelector;
+        private readonly InputInjector inputInjector;
+        private SnapTarget? currentTarget;
+        private bool isActive;
 
-        public static void Update(Vector2 crosshairPosition)
+        public AimAssist(PredictionEngine predictionEngine, TargetSelector targetSelector, InputInjector injector)
         {
-            if (!FeatureToggleManager.IsEnabled("AimAssist"))
-                return;
-
-            var potentialTargets = TargetingSystem.GetVisibleTargets();
-            _currentTarget = TargetEvaluator.EvaluateBestTarget(potentialTargets, crosshairPosition, maxSnapDistance: 250f);
-
-            if (_currentTarget != null)
-            {
-                Vector2 direction = _currentTarget.ScreenPosition - crosshairPosition;
-                Vector2 movement = direction * _smoothingFactor;
-
-                InputDispatcher.MoveMouseBy(movement.X, movement.Y);
-                Logger.LogDebug($"[AimAssist] Adjusted by {movement}");
-            }
+            this.predictionEngine = predictionEngine;
+            this.targetSelector = targetSelector;
+            this.inputInjector = injector;
+            this.aimSmoother = new PIDController(0.6f, 0.01f, 0.05f);
+            this.isActive = true;
         }
 
-        public static void SetSmoothing(float factor)
+        public void Toggle(bool state)
         {
-            _smoothingFactor = Math.Clamp(factor, 0.01f, 1f);
+            isActive = state;
+        }
+
+        public void Update()
+        {
+            if (!isActive)
+                return;
+
+            currentTarget = targetSelector.GetBestTarget();
+
+            if (currentTarget == null || !currentTarget.Value.IsValid())
+                return;
+
+            Vector2 predictedPosition = predictionEngine.PredictTargetPosition(currentTarget.Value);
+            Vector2 aimOffset = predictionEngine.CalculateAimOffset(predictedPosition);
+
+            Vector2 smoothOffset = aimSmoother.Smooth(aimOffset);
+            inputInjector.MoveCursor(smoothOffset);
         }
     }
 }

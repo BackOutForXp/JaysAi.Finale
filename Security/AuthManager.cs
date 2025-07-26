@@ -1,66 +1,74 @@
-﻿// File: Security/AuthManager.cs
+﻿// neural v3.0
 using System;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
+using JaysAi.Finale.Models;
 using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.Security
 {
-    public static class AuthManager
+    public sealed class AuthManager
     {
-        private static readonly HttpClient _httpClient = new();
+        private static readonly Lazy<AuthManager> _instance = new(() => new AuthManager());
+        public static AuthManager Instance => _instance.Value;
 
-        public static bool IsAuthenticated { get; private set; } = false;
-        public static string? CurrentUsername { get; private set; }
+        private string? _authToken;
+        private UserProfile? _currentUser;
+        private readonly HttpClient _httpClient;
 
-        /// <summary>
-        /// Initiates authentication via API or token check.
-        /// </summary>
-        public static async Task<bool> AuthenticateAsync(string username, string token)
+        private AuthManager()
         {
-            Logger.Log("Authenticating user...");
+            _httpClient = new HttpClient();
+        }
 
+        public async Task<bool> LoginAsync(string username, string password)
+        {
             try
             {
-                // Placeholder logic — replace with real auth check
-                var response = await _httpClient.GetAsync($"https://your-auth-endpoint.com/validate?user={username}&token={token}");
-
-                if (response.IsSuccessStatusCode)
+                var payload = new
                 {
-                    IsAuthenticated = true;
-                    CurrentUsername = username;
-                    Logger.Log($"Authentication successful for {username}");
-                    return true;
-                }
+                    user = username,
+                    pass = password
+                };
 
-                Logger.Log("Authentication failed.");
-                return false;
+                var content = new StringContent(JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync("https://api.jaysai.io/auth", content);
+
+                if (!response.IsSuccessStatusCode)
+                    return false;
+
+                var result = await response.Content.ReadAsStringAsync();
+                var data = JsonSerializer.Deserialize<AuthResponse>(result);
+
+                if (data == null || string.IsNullOrWhiteSpace(data.Token))
+                    return false;
+
+                _authToken = data.Token;
+                _currentUser = data.Profile;
+                return true;
             }
             catch (Exception ex)
             {
-                Logger.Log($"Auth error: {ex.Message}");
+                Logger.Log($"[AuthManager] Login failed: {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
 
-        /// <summary>
-        /// Logs out the current user and resets state.
-        /// </summary>
-        public static void Logout()
+        public string? GetToken() => _authToken;
+
+        public UserProfile? GetUser() => _currentUser;
+
+        public void Logout()
         {
-            IsAuthenticated = false;
-            CurrentUsername = null;
-            Logger.Log("User logged out.");
+            _authToken = null;
+            _currentUser = null;
         }
 
-        /// <summary>
-        /// Bypasses online check (for debug or offline testing).
-        /// </summary>
-        public static void DebugBypass(string fakeUser = "DEV_MODE")
+        private class AuthResponse
         {
-            IsAuthenticated = true;
-            CurrentUsername = fakeUser;
-            Logger.Log($"Bypass mode active as {fakeUser}");
+            public string Token { get; set; } = string.Empty;
+            public UserProfile Profile { get; set; } = new();
         }
     }
 }

@@ -1,36 +1,53 @@
-﻿// File: System\OffsetMap.cs
-
+﻿// neural v3.0
+using System;
 using System.Collections.Generic;
 
 namespace JaysAi.Finale.SystemLogic
 {
-    /// <summary>
-    /// Represents a set of memory offsets for one game or engine version.
-    /// This allows switching profiles easily if needed for updates or multi-game support.
-    /// </summary>
     public static class OffsetMap
     {
-        public static readonly Dictionary<string, int> Current = new()
-        {
-            // Example offsets – replace with real game offsets if using memory reading
-            { "EntityList", 0x18AC7B8 },
-            { "LocalPlayer", 0x18C52D8 },
-            { "Team", 0xF4 },
-            { "Health", 0x100 },
-            { "Position", 0x138 },
-            { "ViewAngles", 0x4D90 },
-            { "BoneMatrix", 0x26A8 },
-            { "Velocity", 0x140 },
-            { "IsDormant", 0xED },
-            { "Flags", 0x104 }
-        };
+        private static readonly Dictionary<string, IntPtr> Offsets = new();
 
-        // Optional: Define per-profile if supporting more games
-        public static Dictionary<string, Dictionary<string, int>> Profiles = new()
+        public static void SetOffset(string key, IntPtr value)
         {
-            ["Default"] = Current,
-            // ["CSGO"] = new Dictionary<string, int> { ... },
-            // ["Valorant"] = new Dictionary<string, int> { ... }
-        };
+            if (string.IsNullOrWhiteSpace(key))
+                return;
+
+            Offsets[key] = value;
+        }
+
+        public static IntPtr GetOffset(string key)
+        {
+            if (Offsets.TryGetValue(key, out var value))
+                return value;
+
+            throw new KeyNotFoundException($"Offset not found for key: {key}");
+        }
+
+        public static bool TryGetOffset(string key, out IntPtr offset)
+        {
+            return Offsets.TryGetValue(key, out offset);
+        }
+
+        public static void Clear()
+        {
+            Offsets.Clear();
+        }
+
+        public static IReadOnlyDictionary<string, IntPtr> GetAllOffsets()
+        {
+            return Offsets;
+        }
+
+        public static void InitializeDefaultOffsets()
+        {
+            Offsets.Clear();
+
+            // Example placeholders – customize these per game memory structure
+            Offsets["PlayerBase"] = new IntPtr(0x01A2B3C4);
+            Offsets["ViewMatrix"] = new IntPtr(0x02F4D1E8);
+            Offsets["EntityList"] = new IntPtr(0x03C1F780);
+            Offsets["LocalPlayer"] = new IntPtr(0x0198F0DC);
+        }
     }
 }

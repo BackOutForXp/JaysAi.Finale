@@ -1,61 +1,84 @@
-﻿//heavenly v3.0 – Motion Estimation & Smoothing
+﻿// neural v3.0
 using System;
 using System.Collections.Generic;
-using JaysAi.Finale.AI;
+using System.Numerics;
+using JaysAi.Finale.Data;
 using JaysAi.Finale.SystemLogic;
 
 namespace JaysAi.Finale.AI
 {
     public class MotionTracker
     {
-        private readonly Dictionary<int, Queue<(float X, float Y, long Timestamp)>> _motionHistory = new();
-        private const int MaxSamples = 10;
-        private const float SmoothingFactor = 0.6f;
+        private readonly Dictionary<int, List<MotionSample>> _targetHistory = new();
+        private const int MaxHistory = 20;
 
-        public void RecordPosition(int id, float x, float y)
+        public void Track(int targetId, Vector2 position)
         {
-            var timestamp = DateTime.UtcNow.Ticks;
+            if (!_targetHistory.ContainsKey(targetId))
+                _targetHistory[targetId] = new List<MotionSample>();
 
-            if (!_motionHistory.ContainsKey(id))
-                _motionHistory[id] = new Queue<(float, float, long)>();
+            var history = _targetHistory[targetId];
+            var now = TimeUtils.Now();
 
-            var history = _motionHistory[id];
-            history.Enqueue((x, y, timestamp));
+            history.Add(new MotionSample { Time = now, Position = position });
 
-            while (history.Count > MaxSamples)
-                history.Dequeue();
+            if (history.Count > MaxHistory)
+                history.RemoveAt(0);
         }
 
-        public (float X, float Y)? GetSmoothedPosition(int id)
+        public MotionStats GetMotionStats(int targetId)
         {
-            if (!_motionHistory.TryGetValue(id, out var history) || history.Count == 0)
-                return null;
+            if (!_targetHistory.ContainsKey(targetId)) return new MotionStats();
 
-            float smoothedX = 0;
-            float smoothedY = 0;
-            float weight = 1;
-            float totalWeight = 0;
+            var history = _targetHistory[targetId];
+            if (history.Count < 2) return new MotionStats();
 
-            foreach (var (x, y, _) in history)
+            var first = history[0];
+            var last = history[^1];
+
+            var deltaTime = (float)(last.Time - first.Time).TotalSeconds;
+            if (deltaTime <= 0) return new MotionStats();
+
+            var deltaPos = last.Position - first.Position;
+            var velocity = deltaPos / deltaTime;
+
+            var acceleration = Vector2.Zero;
+            if (history.Count >= 3)
             {
-                smoothedX += x * weight;
-                smoothedY += y * weight;
-                totalWeight += weight;
-                weight *= SmoothingFactor;
+                var mid = history[^2];
+                var dtMid = (float)(last.Time - mid.Time).TotalSeconds;
+                var vMid = (last.Position - mid.Position) / dtMid;
+
+                acceleration = (velocity - vMid) / dtMid;
             }
 
-            return (smoothedX / totalWeight, smoothedY / totalWeight);
+            return new MotionStats
+            {
+                Velocity = velocity,
+                Acceleration = acceleration,
+                DirectionAngle = MathF.Atan2(velocity.Y, velocity.X) * (180f / MathF.PI),
+                SampleCount = history.Count
+            };
         }
 
-        public void Reset(int id)
+        public void Reset(int targetId)
         {
-            if (_motionHistory.ContainsKey(id))
-                _motionHistory[id].Clear();
+            if (_targetHistory.ContainsKey(targetId))
+                _targetHistory[targetId].Clear();
         }
 
-        public void Clear()
+        private class MotionSample
         {
-            _motionHistory.Clear();
+            public DateTime Time { get; set; }
+            public Vector2 Position { get; set; }
         }
+    }
+
+    public class MotionStats
+    {
+        public Vector2 Velocity { get; set; } = Vector2.Zero;
+        public Vector2 Acceleration { get; set; } = Vector2.Zero;
+        public float DirectionAngle { get; set; } = 0f;
+        public int SampleCount { get; set; } = 0;
     }
 }

@@ -1,43 +1,59 @@
-﻿using System.Collections.Generic;
+﻿// neural v3.0
+using System;
+using JaysAi.Finale.Security;
+using JaysAi.Finale.Settings;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.SystemLogic
 {
-    public static class LicenseValidator
+    public static class LicenseManager
     {
-        public static string CurrentTier { get; private set; } = "Public";
+        private static string? _cachedLicenseKey;
+        private static DateTime _lastValidationAttempt = DateTime.MinValue;
+        private static bool _isLicenseValid = false;
+        private const int ValidationCooldownSeconds = 10;
 
-        private static readonly Dictionary<string, string> LicenseTiers = new()
+        public static bool IsLicenseValid
         {
-            { "FREE-ESP-1234", "Public" },
-            { "ELITE-KEY-5678", "Elite" },
-            { "OWNER-MODE-9999", "Owner" }
-        };
-
-        public static bool ValidateKey(string key)
-        {
-            if (LicenseTiers.TryGetValue(key.Trim(), out string tier))
+            get
             {
-                CurrentTier = tier;
-                SystemConfig.LastLicenseKey = key.Trim();
-                return true;
-            }
+                if ((DateTime.UtcNow - _lastValidationAttempt).TotalSeconds < ValidationCooldownSeconds)
+                    return _isLicenseValid;
 
-            return false;
+                _lastValidationAttempt = DateTime.UtcNow;
+                _cachedLicenseKey = UserSettings.Current?.LicenseKey;
+
+                if (string.IsNullOrWhiteSpace(_cachedLicenseKey))
+                {
+                    Logger.Warn("License key missing.");
+                    _isLicenseValid = false;
+                    return false;
+                }
+
+                _isLicenseValid = LicenseValidator.Validate(_cachedLicenseKey);
+                Logger.Info($"License validation result: {_isLicenseValid}");
+                return _isLicenseValid;
+            }
         }
 
-        // Optional reuse after restart
-        public static bool Validate()
+        public static void RefreshLicenseKey(string newKey)
         {
-            string? cached = SystemConfig.LastLicenseKey;
-            return !string.IsNullOrEmpty(cached) && ValidateKey(cached);
+            if (!string.IsNullOrWhiteSpace(newKey))
+            {
+                _cachedLicenseKey = newKey;
+                UserSettings.Current.LicenseKey = newKey;
+                SettingsManager.Save();
+                Logger.Info("License key updated and saved.");
+            }
+            else
+            {
+                Logger.Warn("Attempted to refresh with empty license key.");
+            }
+        }
+
+        public static string? GetLicenseKey()
+        {
+            return _cachedLicenseKey ?? UserSettings.Current?.LicenseKey;
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ 3-tier system with offline test keys
-// ✅ Cache-friendly reuse via ConfigManager
-// ✅ All tier logic routed through FeatureManager
-// - [ ] Future: Replace with API call to online key database
-// - [ ] Future: Add hardware ID bind or IP check
-// ===================================================================

@@ -1,75 +1,70 @@
-﻿//heavenly v3.0 – AI Memory Log for Target Tracking
+﻿// neural v3.0
+using JaysAi.Finale.Data;
+using JaysAi.Finale.SystemLogic;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
+using System.Linq;
 
 namespace JaysAi.Finale.AI
 {
-    public class AiMemoryEntry
+    public class AiMemory
     {
-        public int TargetId { get; set; }
-        public Vector2 Position { get; set; }
-        public float Timestamp { get; set; }
-        public Vector2 Velocity { get; set; }
-    }
+        private readonly Dictionary<int, TrackedTarget> _targetCache = new();
+        private readonly Queue<FrameSnapshot> _frameHistory = new();
+        private readonly object _lock = new();
 
-    public static class AiMemory
-    {
-        private static readonly Dictionary<int, List<AiMemoryEntry>> memoryLog = new();
-        private const int MaxEntriesPerTarget = 60;
+        public int MaxSnapshots { get; set; } = 60;
 
-        public static void Log(int targetId, Vector2 position, float timestamp)
+        public void UpdateTargetMemory(List<TrackedTarget> currentTargets)
         {
-            if (!memoryLog.ContainsKey(targetId))
-                memoryLog[targetId] = new List<AiMemoryEntry>();
-
-            var entries = memoryLog[targetId];
-
-            if (entries.Count > 0)
+            lock (_lock)
             {
-                var last = entries[^1];
-                var velocity = (position - last.Position) / (timestamp - last.Timestamp);
-                entries.Add(new AiMemoryEntry
+                foreach (var target in currentTargets)
                 {
-                    TargetId = targetId,
-                    Position = position,
-                    Timestamp = timestamp,
-                    Velocity = velocity
-                });
+                    if (_targetCache.ContainsKey(target.ID))
+                        _targetCache[target.ID].UpdateFrom(target);
+                    else
+                        _targetCache[target.ID] = target.Clone();
+                }
             }
-            else
-            {
-                entries.Add(new AiMemoryEntry
-                {
-                    TargetId = targetId,
-                    Position = position,
-                    Timestamp = timestamp,
-                    Velocity = Vector2.Zero
-                });
-            }
-
-            if (entries.Count > MaxEntriesPerTarget)
-                entries.RemoveAt(0);
         }
 
-        public static Vector2? GetSmoothedVelocity(int targetId)
+        public TrackedTarget? GetTargetById(int id)
         {
-            if (!memoryLog.ContainsKey(targetId) || memoryLog[targetId].Count < 2)
-                return null;
-
-            var entries = memoryLog[targetId];
-            Vector2 total = Vector2.Zero;
-            int count = 0;
-
-            for (int i = Math.Max(0, entries.Count - 5); i < entries.Count; i++)
+            lock (_lock)
             {
-                total += entries[i].Velocity;
-                count++;
+                _targetCache.TryGetValue(id, out var target);
+                return target;
             }
-
-            return count > 0 ? total / count : null;
         }
 
-        public static void Clear() => memoryLog.Clear();
+        public void PushFrameSnapshot(FrameSnapshot snapshot)
+        {
+            lock (_lock)
+            {
+                _frameHistory.Enqueue(snapshot);
+                if (_frameHistory.Count > MaxSnapshots)
+                    _frameHistory.Dequeue();
+            }
+        }
+
+        public FrameSnapshot[] GetRecentSnapshots(int count)
+        {
+            lock (_lock)
+            {
+                return _frameHistory.Reverse().Take(count).ToArray();
+            }
+        }
+
+        public void ClearMemory()
+        {
+            lock (_lock)
+            {
+                _targetCache.Clear();
+                _frameHistory.Clear();
+            }
+        }
+
+        public IReadOnlyDictionary<int, TrackedTarget> AllCachedTargets => _targetCache;
     }
 }

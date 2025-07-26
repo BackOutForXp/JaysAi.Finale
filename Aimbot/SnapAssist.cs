@@ -1,67 +1,47 @@
-﻿//heavenly v3.0
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Config;
-using JaysAi.Finale.Input;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.Utility;
+﻿// neural v3.0
 using System;
-using System.Numerics;
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Aim;
+using JaysAi.Finale.Input;
+using JaysAi.Finale.SystemLogic;
 
 namespace JaysAi.Finale.Aimbot
 {
     public class SnapAssist
     {
-        private static TargetInfo? _currentTarget;
-        private static DateTime _lastSnapTime;
-        private static bool _isSnapping;
+        private readonly SnapConfig config;
+        private readonly InputInjector injector;
+        private readonly TargetSelector selector;
 
-        public static bool IsSnapping => _isSnapping;
-
-        public static void Update()
+        public SnapAssist(SnapConfig config, InputInjector injector, TargetSelector selector)
         {
-            if (!SnapConfig.Enabled || !InputManager.IsAiming)
-            {
-                _isSnapping = false;
-                _currentTarget = null;
-                return;
-            }
-
-            var target = TargetSelector.SelectBestTarget();
-
-            if (target == null)
-            {
-                _isSnapping = false;
-                return;
-            }
-
-            _currentTarget = target;
-            SnapToTarget(target);
+            this.config = config;
+            this.injector = injector;
+            this.selector = selector;
         }
 
-        private static void SnapToTarget(TargetInfo target)
+        public void Execute(TargetInfo target, bool isFiring)
         {
-            Vector2 screenTargetPos = ScreenUtils.WorldToScreen(target.Position3D);
-
-            if (!ScreenUtils.IsOnScreen(screenTargetPos))
-            {
-                Logger.LogDebug("[SnapAssist] Target off-screen, skipping snap.");
+            if (target == null || !target.IsValid || !isFiring || !config.IsEnabled)
                 return;
-            }
 
-            Vector2 aimOffset = screenTargetPos - InputManager.CurrentAimPosition;
+            var (dx, dy) = CalculateSnapOffset(target);
+            injector.MoveMouse(dx * config.Sensitivity, dy * config.Sensitivity);
+        }
 
-            if (aimOffset.Length() < SnapConfig.SnapRadius)
-            {
-                InputEmulator.MoveAimBy(aimOffset * SnapConfig.SnapStrength);
-                _isSnapping = true;
-                _lastSnapTime = DateTime.UtcNow;
+        private (float dx, float dy) CalculateSnapOffset(TargetInfo target)
+        {
+            var screenCenter = ScreenManager.GetScreenCenter();
+            float deltaX = target.ScreenPosition.X - screenCenter.X;
+            float deltaY = target.ScreenPosition.Y - screenCenter.Y;
 
-                Logger.LogDebug($"[SnapAssist] Snapped to target: {target.Id} at {target.Position3D}");
-            }
-            else
-            {
-                _isSnapping = false;
-            }
+            return (deltaX, deltaY);
+        }
+
+        public void AutoSnapIfReady(bool isFiring)
+        {
+            var bestTarget = selector.GetBestTarget();
+            Execute(bestTarget, isFiring);
         }
     }
 }

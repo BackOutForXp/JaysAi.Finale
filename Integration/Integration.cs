@@ -1,47 +1,58 @@
-﻿using JaysAi.Finale.SystemLogic;
+﻿//neural v3.0
+using System;
+using JaysAi.Finale.Integration.Modules;
+using JaysAi.Finale.Integration.Signals;
+using JaysAi.Finale.Input;
+using JaysAi.Finale.Security;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.Integration
 {
-    public static class AutoIntegrationManager
+    public static class Integration
     {
-        public static void RunFullScan()
+        private static bool _initialized = false;
+
+        public static void Initialize()
         {
-            System.Console.WriteLine("[Integration] Running full system scan...");
+            if (_initialized)
+                return;
 
-            // 1. Load all offset profiles
-            var profiles = OffsetProfileLoader.LoadAllProfiles();
+            Console.WriteLine("[Integration] Initializing all subsystems...");
 
-            // 2. Detect game and apply matching profile
-            GameDetector.AutoApplyOffsetProfile(profiles);
+            // System Setup
+            AntiTamper.Initialize();
+            ProcessValidator.EnforceWhitelist();
+            GameDetector.LogDetectedGame();
 
-            // 3. Check for Zen and Titan hardware
-            if (ZenHelper.IsConnected())
-                ZenHelper.Initialize();
+            // Input Setup
+            ControllerBridge.Instance.Attach();  // Assumes extension pattern
+            ControllerSignalBus.Initialize();
 
-            if (TitanHelper.IsConnected())
-                TitanHelper.Initialize();
+            // Integration Modules
+            OverlaySyncBridge.Initialize();
+            AutoDetectionHelper.StartMonitoring();
+            CaptureCardHelper.Initialize();
 
-            // 4. Check for capture cards
-            var captureCards = CaptureCardHelper.GetConnectedCaptureDevices();
-            if (captureCards.Count > 0)
-            {
-                System.Console.WriteLine($"[Integration] Detected capture devices: {string.Join(", ", captureCards)}");
-            }
-            else
-            {
-                System.Console.WriteLine("[Integration] No capture card found.");
-            }
+            // Diagnostics and Logging
+            TelemetryLogger.StartSession();
+            HealthMonitor.RegisterCallbacks();
 
-            System.Console.WriteLine("[Integration] System scan complete.");
+            _initialized = true;
+            Console.WriteLine("[Integration] Initialization complete.");
+        }
+
+        public static void Shutdown()
+        {
+            if (!_initialized)
+                return;
+
+            Console.WriteLine("[Integration] Shutting down subsystems...");
+
+            HealthMonitor.Cleanup();
+            TelemetryLogger.EndSession();
+            ControllerBridge.Instance.Detach();
+
+            _initialized = false;
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Ties together all integration helpers into one unified call
-// ✅ Scans game, hardware, and capture devices
-// ✅ Ready for GUI binding and Auto Mode toggle
-// - [ ] Add async/parallel logic for faster scans
-// - [ ] Link to GUI auto-scan checkbox or launch sequence
-// - [ ] Allow user to disable specific scan types (e.g. "Skip Zen")
-// ===================================================================

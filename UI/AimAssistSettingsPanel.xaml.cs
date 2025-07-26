@@ -1,36 +1,58 @@
-﻿using System.Windows;
+﻿// Neural v3.0
+using System.Windows;
 using System.Windows.Controls;
-using JaysAi.Finale.Core;
+using JaysAi.Finale.Settings;
 
 namespace JaysAi.Finale.UI
 {
     public partial class AimAssistSettingsPanel : UserControl
     {
-        private readonly AppSettings _settings;
+        private readonly UserSettings _userSettings;
 
-        // 👇 Required for XAML
-        public AimAssistSettingsPanel() : this(new AppSettings()) { }
-
-        public AimAssistSettingsPanel(AppSettings settings)
+        public AimAssistSettingsPanel()
         {
             InitializeComponent();
-            _settings = settings;
-
-            SmoothingSlider.Value = _settings.AimSmoothing;
-            BulletSpeedSlider.Value = _settings.BulletSpeed;
-            SnapDistanceSlider.Value = _settings.SnapDistance;
+            _userSettings = SettingsManager.Instance.CurrentUserSettings;
+            LoadSettings();
+            RegisterEvents();
         }
 
-        private void Apply_Click(object sender, RoutedEventArgs e)
+        private void LoadSettings()
         {
-            _settings.AimSmoothing = SmoothingSlider.Value;
-            _settings.BulletSpeed = BulletSpeedSlider.Value;
-            _settings.SnapDistance = SnapDistanceSlider.Value;
+            EnableAimAssistCheckBox.IsChecked = _userSettings.AimAssistEnabled;
+            StrengthSlider.Value = _userSettings.AimAssistStrength;
+            FovSlider.Value = _userSettings.AimAssistFov;
+            SmoothingSlider.Value = _userSettings.AimAssistSmoothing;
+        }
 
-            var manager = new SettingsManager<AppSettings>("config.json");
-            manager.Save();
+        private void RegisterEvents()
+        {
+            EnableAimAssistCheckBox.Checked += (s, e) => UpdateSetting(true);
+            EnableAimAssistCheckBox.Unchecked += (s, e) => UpdateSetting(false);
 
-            MessageBox.Show("AimAssist settings saved.");
+            StrengthSlider.ValueChanged += (s, e) =>
+            {
+                _userSettings.AimAssistStrength = (int)StrengthSlider.Value;
+                SettingsManager.Instance.Save();
+            };
+
+            FovSlider.ValueChanged += (s, e) =>
+            {
+                _userSettings.AimAssistFov = (int)FovSlider.Value;
+                SettingsManager.Instance.Save();
+            };
+
+            SmoothingSlider.ValueChanged += (s, e) =>
+            {
+                _userSettings.AimAssistSmoothing = (int)SmoothingSlider.Value;
+                SettingsManager.Instance.Save();
+            };
+        }
+
+        private void UpdateSetting(bool enabled)
+        {
+            _userSettings.AimAssistEnabled = enabled;
+            SettingsManager.Instance.Save();
         }
     }
 }

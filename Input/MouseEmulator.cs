@@ -1,52 +1,43 @@
-﻿//monarch v2.0
+﻿//heavenly v3.0
 using System;
+using System.Runtime.InteropServices;
 
 namespace JaysAi.Finale.Input
 {
-    /// <summary>
-    /// Handles smooth, relative mouse movement based on AI or controller input.
-    /// This is used to emulate natural aim shifts without snapping.
-    /// </summary>
-    public class MouseEmulator
+    public static class MouseEmulator
     {
-        public float SmoothingFactor { get; set; } = 0.25f;
-        public float AimSpeedMultiplier { get; set; } = 1.0f;
+        [DllImport("user32.dll")]
+        private static extern bool SetCursorPos(int X, int Y);
 
-        private float _accumulatedX;
-        private float _accumulatedY;
+        [DllImport("user32.dll")]
+        private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
 
-        /// <summary>
-        /// Applies an aim delta to be smoothed and injected as real mouse movement.
-        /// </summary>
-        /// <param name="deltaX">Raw X aim adjustment.</param>
-        /// <param name="deltaY">Raw Y aim adjustment.</param>
-        public void ApplyAim(float deltaX, float deltaY)
+        private const uint MOUSEEVENTF_MOVE = 0x0001;
+
+        public static void MoveMouse(int deltaX, int deltaY)
         {
-            _accumulatedX += deltaX * AimSpeedMultiplier;
-            _accumulatedY += deltaY * AimSpeedMultiplier;
-
-            var smoothedX = _accumulatedX * SmoothingFactor;
-            var smoothedY = _accumulatedY * SmoothingFactor;
-
-            if (Math.Abs(smoothedX) >= 1 || Math.Abs(smoothedY) >= 1)
-            {
-                int moveX = (int)Math.Round(smoothedX);
-                int moveY = (int)Math.Round(smoothedY);
-
-                InputInjector.MoveMouseRelative(moveX, moveY);
-
-                _accumulatedX -= moveX;
-                _accumulatedY -= moveY;
-            }
+            mouse_event(MOUSEEVENTF_MOVE, (uint)deltaX, (uint)deltaY, 0, UIntPtr.Zero);
         }
 
-        /// <summary>
-        /// Resets the internal aim accumulators.
-        /// </summary>
-        public void Reset()
+        public static void SetPosition(int x, int y)
         {
-            _accumulatedX = 0;
-            _accumulatedY = 0;
+            SetCursorPos(x, y);
+        }
+
+        public static void MoveSmooth(int targetX, int targetY, int durationMs = 100)
+        {
+            var startX = System.Windows.Forms.Cursor.Position.X;
+            var startY = System.Windows.Forms.Cursor.Position.Y;
+            int steps = Math.Max(durationMs / 10, 1);
+
+            for (int i = 1; i <= steps; i++)
+            {
+                double t = (double)i / steps;
+                int newX = (int)(startX + t * (targetX - startX));
+                int newY = (int)(startY + t * (targetY - startY));
+                SetCursorPos(newX, newY);
+                System.Threading.Thread.Sleep(10);
+            }
         }
     }
 }

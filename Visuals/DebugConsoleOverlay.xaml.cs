@@ -1,24 +1,50 @@
-﻿using System.Text;
+﻿// Neural v3.0 — DebugConsoleOverlay.xaml.cs
+using System;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
-namespace JaysAi.Finale.Visuals
+namespace JaysAi.Finale.Overlay
 {
     public partial class DebugConsoleOverlay : UserControl
     {
-        private readonly StringBuilder _logBuilder = new();
-
         public DebugConsoleOverlay()
         {
             InitializeComponent();
+            SetVisibility(true);
+            AppendText(">> Debug Console Initialized");
         }
 
-        public void Log(string message)
+        public void AppendText(string message)
         {
-            if (_logBuilder.Length > 2000)
-                _logBuilder.Clear(); // prevent overflow
+            if (string.IsNullOrWhiteSpace(message)) return;
 
-            _logBuilder.AppendLine($"[{System.DateTime.Now:HH:mm:ss}] {message}");
-            LogText.Text = _logBuilder.ToString();
+            string timestamp = $"[{DateTime.Now:HH:mm:ss}] ";
+            DebugText.Text += $"{timestamp}{message}\n";
+
+            ScrollToBottom();
         }
+
+        private void ScrollToBottom()
+        {
+            if (VisualTreeHelper.GetChild(this, 0) is Grid grid &&
+                grid.Children[0] is Border border &&
+                border.Child is ScrollViewer scrollViewer)
+            {
+                scrollViewer.ScrollToEnd();
+            }
+        }
+
+        public void SetVisibility(bool visible)
+        {
+            this.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public void ClearLog()
+        {
+            DebugText.Text = string.Empty;
+        }
+
+        public bool IsVisible => this.Visibility == Visibility.Visible;
     }
 }

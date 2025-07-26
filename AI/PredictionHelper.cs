@@ -1,69 +1,75 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
 using System;
-using System.Collections.Generic;
+using System.Numerics;
 
 namespace JaysAi.Finale.AI
 {
     public static class PredictionHelper
     {
+        /// <summary>
+        /// Predicts the future position of a moving target based on current velocity and delay.
+        /// </summary>
+        public static Vector3 PredictFuturePosition(Vector3 currentPosition, Vector3 velocity, float delaySeconds)
+        {
+            return currentPosition + velocity * delaySeconds;
+        }
+
+        /// <summary>
+        /// Calculates linear velocity between two positions and time delta.
+        /// </summary>
+        public static Vector3 CalculateVelocity(Vector3 start, Vector3 end, float deltaTime)
+        {
+            if (deltaTime <= 0.0001f) return Vector3.Zero;
+            return (end - start) / deltaTime;
+        }
+
+        /// <summary>
+        /// Calculates distance between two 3D points.
+        /// </summary>
+        public static float Distance(Vector3 a, Vector3 b)
+        {
+            return Vector3.Distance(a, b);
+        }
+
+        /// <summary>
+        /// Calculates 2D screen space distance between two vectors.
+        /// </summary>
+        public static float Distance2D(Vector2 a, Vector2 b)
+        {
+            return Vector2.Distance(a, b);
+        }
+
+        /// <summary>
+        /// Determines if a velocity vector is negligible (target is mostly stationary).
+        /// </summary>
+        public static bool IsNearlyStatic(Vector3 velocity, float threshold = 0.1f)
+        {
+            return velocity.LengthSquared() < threshold * threshold;
+        }
+
+        /// <summary>
+        /// Clamps a float value within a specified min and max range.
+        /// </summary>
         public static float Clamp(float value, float min, float max)
         {
-            return Math.Max(min, Math.Min(max, value));
+            return MathF.Max(min, MathF.Min(max, value));
         }
 
-        public static float Lerp(float a, float b, float t)
+        /// <summary>
+        /// Predicts time to reach a target based on distance and projectile speed.
+        /// </summary>
+        public static float CalculateFlightTime(float distance, float projectileSpeed)
         {
-            return a + (b - a) * Clamp(t, 0f, 1f);
+            return projectileSpeed > 0f ? distance / projectileSpeed : 0f;
         }
 
-        public static float Distance(float x1, float y1, float x2, float y2)
+        /// <summary>
+        /// Predicts target position with bullet travel time and movement velocity.
+        /// </summary>
+        public static Vector3 PredictBulletLead(Vector3 targetPos, Vector3 targetVelocity, float distance, float projectileSpeed)
         {
-            float dx = x2 - x1;
-            float dy = y2 - y1;
-            return MathF.Sqrt(dx * dx + dy * dy);
+            float flightTime = CalculateFlightTime(distance, projectileSpeed);
+            return PredictFuturePosition(targetPos, targetVelocity, flightTime);
         }
-
-        public static float AngleBetween(Vector2 from, Vector2 to)
-        {
-            float dx = to.X - from.X;
-            float dy = to.Y - from.Y;
-            return MathF.Atan2(dy, dx) * (180f / MathF.PI);
-        }
-
-        public static Vector2 SmoothPredict(Vector2 previous, Vector2 current, float smoothing)
-        {
-            return new Vector2(
-                Lerp(previous.X, current.X, smoothing),
-                Lerp(previous.Y, current.Y, smoothing)
-            );
-        }
-
-        public static Vector2 Average(IList<Vector2> samples)
-        {
-            if (samples == null || samples.Count == 0)
-                return new Vector2(0, 0);
-
-            float sumX = 0, sumY = 0;
-            foreach (var sample in samples)
-            {
-                sumX += sample.X;
-                sumY += sample.Y;
-            }
-
-            return new Vector2(sumX / samples.Count, sumY / samples.Count);
-        }
-    }
-
-    public struct Vector2
-    {
-        public float X, Y;
-
-        public Vector2(float x, float y)
-        {
-            X = x;
-            Y = y;
-        }
-
-        public override string ToString() => $"({X:F2}, {Y:F2})";
     }
 }

@@ -1,39 +1,72 @@
-﻿//monarch v2.1
-using System.Numerics;
+﻿// neural v3.0
+using System;
+using System.Linq;
+using System.Windows;
+using System.Windows.Forms;
+using System.Drawing;
 
 namespace JaysAi.Finale.Utility
 {
     public static class ScreenUtils
     {
-        public static int ScreenWidth { get; set; } = 1920;
-        public static int ScreenHeight { get; set; } = 1080;
-
-        public static Vector2 ScreenCenter => new(ScreenWidth / 2f, ScreenHeight / 2f);
-
-        public static Vector2 Normalize(Vector2 position)
+        /// <summary>
+        /// Gets the primary screen resolution in DPI-aware pixels.
+        /// </summary>
+        public static Size GetPrimaryScreenResolution()
         {
-            return new Vector2(position.X / ScreenWidth, position.Y / ScreenHeight);
+            var screen = Screen.PrimaryScreen;
+            return new Size(screen.Bounds.Width, screen.Bounds.Height);
         }
 
-        public static Vector2 Denormalize(Vector2 normalized)
+        /// <summary>
+        /// Gets the working area (excluding taskbar) of the primary screen.
+        /// </summary>
+        public static Rectangle GetPrimaryWorkingArea()
         {
-            return new Vector2(normalized.X * ScreenWidth, normalized.Y * ScreenHeight);
+            return Screen.PrimaryScreen.WorkingArea;
         }
 
-        public static float DistanceFromCenter(Vector2 point)
+        /// <summary>
+        /// Gets the screen that contains the specified window.
+        /// </summary>
+        public static Screen GetScreenFromWindow(Window window)
         {
-            return Vector2.Distance(point, ScreenCenter);
+            var interop = new System.Windows.Interop.WindowInteropHelper(window);
+            return Screen.FromHandle(interop.Handle);
         }
 
-        public static bool IsOnScreen(Vector2 point)
+        /// <summary>
+        /// Gets the screen that contains the specified point.
+        /// </summary>
+        public static Screen GetScreenFromPoint(System.Drawing.Point point)
         {
-            return point.X >= 0 && point.X <= ScreenWidth && point.Y >= 0 && point.Y <= ScreenHeight;
+            return Screen.AllScreens.FirstOrDefault(s => s.Bounds.Contains(point))
+                ?? Screen.PrimaryScreen;
         }
 
-        public static void SetResolution(int width, int height)
+        /// <summary>
+        /// Returns the screen DPI scaling factor.
+        /// </summary>
+        public static double GetDpiScale()
         {
-            ScreenWidth = width;
-            ScreenHeight = height;
+            using var g = Graphics.FromHwnd(IntPtr.Zero);
+            return g.DpiX / 96.0; // 96 DPI is standard
+        }
+
+        /// <summary>
+        /// Converts a value from device-independent units (WPF) to screen pixels.
+        /// </summary>
+        public static int DipToPixels(double dip)
+        {
+            return (int)(dip * GetDpiScale());
+        }
+
+        /// <summary>
+        /// Converts screen pixels to WPF units (DIP).
+        /// </summary>
+        public static double PixelsToDip(int pixels)
+        {
+            return pixels / GetDpiScale();
         }
     }
 }

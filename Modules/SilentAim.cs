@@ -1,76 +1,52 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
+﻿// neural v3.0
 using JaysAi.Finale.AI;
+using JaysAi.Finale.Aimbot;
+using JaysAi.Finale.Helpers;
 using JaysAi.Finale.Input;
+using JaysAi.Finale.Settings;
+using JaysAi.Finale.Utility;
+using System;
+using System.Numerics;
 
 namespace JaysAi.Finale.Modules
 {
-    public static class SilentAim
+    public class SilentAim
     {
-        private static bool _enabled;
-        private static CancellationTokenSource? _cts;
+        private readonly IInputSource _inputSource;
+        private readonly IAimTargetProvider _targetProvider;
 
-        public static void Toggle(bool state)
+        public bool Enabled { get; set; } = false;
+        public float ActivationFOV { get; set; } = 5f;
+        public bool RequireADS { get; set; } = true;
+
+        public SilentAim(IInputSource inputSource, IAimTargetProvider targetProvider)
         {
-            if (_enabled == state)
+            _inputSource = inputSource;
+            _targetProvider = targetProvider;
+        }
+
+        public void Update(PlayerState playerState)
+        {
+            if (!Enabled || (RequireADS && !playerState.IsAiming))
                 return;
 
-            _enabled = state;
+            var closestTarget = _targetProvider.GetClosestTargetWithinFOV(ActivationFOV);
+            if (closestTarget == null || !closestTarget.IsVisible)
+                return;
 
-            if (_enabled)
-                Start();
-            else
-                Stop();
+            Vector2 adjustedAim = CalculateSilentAngle(playerState.ViewAngles, closestTarget.Position);
+            ApplySilentAim(adjustedAim);
         }
 
-        private static void Start()
+        private Vector2 CalculateSilentAngle(Vector2 currentView, Vector3 targetPos)
         {
-            _cts = new CancellationTokenSource();
-            Task.Run(() => Loop(_cts.Token));
-            Console.WriteLine("Silent Aim Enabled");
+            Vector2 desiredAngle = AngleMath.CalculateAngleFromPosition(currentView, targetPos);
+            return AngleMath.ClampAngle(desiredAngle);
         }
 
-        private static void Stop()
+        private void ApplySilentAim(Vector2 newViewAngle)
         {
-            _cts?.Cancel();
-            Console.WriteLine("Silent Aim Disabled");
+            _inputSource.OverrideViewAngle(newViewAngle); // Silent aim injection
         }
-
-        private static async Task Loop(CancellationToken token)
-        {
-            while (!token.IsCancellationRequested)
-            {
-                if (InputMonitor.IsLeftClickHeld())
-                {
-                    var fakeCrosshair = new System.Numerics.Vector2(960, 540); // center of 1920x1080 screen
-
-                    // TODO: Pull real enemy position from memory or vision scan
-                    var enemyPosition = new System.Numerics.Vector2(1000, 500); // dummy for now
-
-                    var corrected = MonarchAimAI.GetCorrectedAim(fakeCrosshair, enemyPosition);
-
-                    if (IsWithinFOV(fakeCrosshair, corrected))
-                    {
-                        // TODO: Inject angle spoof or fire redirection here
-                        MouseClicker.LeftClick(); // simulated for now
-                    }
-                }
-
-                await Task.Delay(16, token);
-            }
-        }
-
-        private static bool IsWithinFOV(System.Numerics.Vector2 center, System.Numerics.Vector2 target)
-        {
-            float
-
-               // ======================= MONARCH INTEGRATION =======================
-                // ✅ To finalize this module:
-                // - [ ] Replace fake enemy data with:
-                //       • memory read OR
-                //       • real-time capture vector from YOLO overlay
-                // - [ ] Spoof controller stick OR angle packets
-                // - [ ] Use corrected = MonarchAimAI.GetCorrectedAim() for AI logic
-                // - [ ] Tier-lock to Owner only via FeatureManager
-                // ===================================================================
+    }
+}

@@ -1,35 +1,44 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿//neural v3.0
+using System;
+using JaysAi.Finale.Integration;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.Integration
 {
     public static class IntegrationBootstrapper
     {
-        public static async Task InitializeAllAsync()
+        private static bool _bootstrapped = false;
+
+        public static void Bootstrap()
         {
-            Console.WriteLine("[Bootstrapper] Beginning async integration sequence...");
+            if (_bootstrapped)
+                return;
 
-            await Task.Run(() =>
+            Console.WriteLine("[Bootstrapper] Bootstrapping integration layer...");
+
+            try
             {
-                try
-                {
-                    AutoIntegrationManager.RunFullScan();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[Bootstrapper] Error during integration scan: {ex.Message}");
-                }
-            });
+                Logger.Initialize(); // Optional, but good for global logging first
+                Integration.Initialize();
+                Console.WriteLine("[Bootstrapper] Integration successfully bootstrapped.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Bootstrapper Error] Failed to bootstrap: {ex.Message}");
+                // Consider fallback logic or crash-safe state here
+            }
 
-            Console.WriteLine("[Bootstrapper] All integrations initialized.");
+            _bootstrapped = true;
+        }
+
+        public static void Shutdown()
+        {
+            if (!_bootstrapped)
+                return;
+
+            Console.WriteLine("[Bootstrapper] Shutting down integration layer...");
+            Integration.Shutdown();
+            _bootstrapped = false;
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Final async wrapper for all hardware/game profile integration
-// ✅ Can be launched after GUI init to reduce delay
-// ✅ Handles AutoIntegrationManager internally
-// - [ ] Tie into GUI “Launch” or “Auto Mode” toggle
-// - [ ] Eventually monitor device disconnects (Zen, Titan, etc.)
-// ===================================================================

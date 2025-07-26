@@ -1,57 +1,57 @@
-﻿using System;
+﻿//neural v3.0
+using OpenCvSharp;
+using OpenCvSharp.Extensions;
+using System;
 using System.Collections.Generic;
-using DirectShowLib;
+using System.Drawing;
+using System.Linq;
 
 namespace JaysAi.Finale.Integration
 {
-    public static class CaptureCardHelper
+    public class CaptureCardHelper : IDisposable
     {
-        public static List<string> GetConnectedCaptureDevices()
+        private VideoCapture? _capture;
+        private bool _isInitialized;
+
+        public bool Initialize(int captureIndex = 0, int width = 1920, int height = 1080, int fps = 60)
         {
-            var devices = new List<string>();
+            _capture = new VideoCapture(captureIndex, VideoCaptureAPIs.ANY);
 
-            try
+            if (!_capture.IsOpened())
             {
-                DsDevice[] videoDevices = DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice);
-
-                foreach (DsDevice device in videoDevices)
-                {
-                    if (IsCaptureCard(device.Name))
-                    {
-                        Console.WriteLine($"[CaptureCardHelper] Found capture device: {device.Name}");
-                        devices.Add(device.Name);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[CaptureCardHelper] Error detecting capture cards: {ex.Message}");
+                _isInitialized = false;
+                return false;
             }
 
-            return devices;
+            _capture.Set(VideoCaptureProperties.FrameWidth, width);
+            _capture.Set(VideoCaptureProperties.FrameHeight, height);
+            _capture.Set(VideoCaptureProperties.Fps, fps);
+
+            _isInitialized = true;
+            return true;
         }
 
-        private static bool IsCaptureCard(string deviceName)
+        public Mat? GetFrame()
         {
-            // Basic match; can expand with known vendor list
-            string[] knownCaptureBrands = { "Elgato", "AVerMedia", "Game Capture", "Live Gamer" };
+            if (!_isInitialized || _capture == null)
+                return null;
 
-            foreach (var brand in knownCaptureBrands)
-            {
-                if (deviceName.ToLower().Contains(brand.ToLower()))
-                    return true;
-            }
+            var frame = new Mat();
+            return _capture.Read(frame) && !frame.Empty() ? frame : null;
+        }
 
-            return false;
+        public Bitmap? GetBitmapFrame()
+        {
+            var mat = GetFrame();
+            return mat != null ? BitmapConverter.ToBitmap(mat) : null;
+        }
+
+        public void Dispose()
+        {
+            _capture?.Release();
+            _capture?.Dispose();
+            _capture = null;
+            _isInitialized = false;
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Detects capture cards using DirectShow (Elgato, AVerMedia)
-// ✅ Logs connected devices
-// ✅ Future-ready for visual ESP or overlay stream injection
-// - [ ] Add capture preview or scene parsing via Skia or AI
-// - [ ] Link detection to AutoDetectionHelper.cs
-// - [ ] Filter out webcams and virtual cams
-// ===================================================================

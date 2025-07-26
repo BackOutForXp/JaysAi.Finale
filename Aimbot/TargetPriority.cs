@@ -1,54 +1,47 @@
-﻿//heavenly v3.0
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.SystemLogic;
+﻿// neural v3.0
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using JaysAi.Finale.AI;
 
 namespace JaysAi.Finale.Aimbot
 {
     public static class TargetPriority
     {
-        public static TrackedTarget? SelectBestTarget(List<TrackedTarget> candidates, TargetingMode mode)
+        public static TargetInfo GetHighestPriorityTarget(List<TargetInfo> targets, TargetingMode mode)
         {
-            if (candidates == null || candidates.Count == 0)
-                return null;
+            TargetInfo bestTarget = null;
+            float bestScore = float.MinValue;
 
-            switch (mode)
+            foreach (var target in targets)
             {
-                case TargetingMode.Closest:
-                    return candidates.OrderBy(t => t.Distance).FirstOrDefault();
+                if (target == null || !target.IsValid || target.Distance > 300f)
+                    continue;
 
-                case TargetingMode.CenterFOV:
-                    return candidates.OrderBy(t => t.AngleFromCrosshair).FirstOrDefault();
+                float score = mode switch
+                {
+                    TargetingMode.Closest => -target.Distance,
+                    TargetingMode.LowestHealth => -target.Health,
+                    TargetingMode.CenterFOV => -target.FovOffset,
+                    TargetingMode.HighThreat => target.ThreatLevel,
+                    _ => 0f
+                };
 
-                case TargetingMode.LeastMovement:
-                    return candidates.OrderBy(t => t.Velocity.Magnitude()).FirstOrDefault();
-
-                case TargetingMode.MostVisible:
-                    return candidates.OrderByDescending(t => t.VisibilityScore).FirstOrDefault();
-
-                case TargetingMode.Dynamic:
-                    return candidates
-                        .OrderBy(t =>
-                            t.AngleFromCrosshair * 0.5f +
-                            t.Distance * 0.3f -
-                            t.VisibilityScore * 0.2f)
-                        .FirstOrDefault();
-
-                default:
-                    return candidates.OrderBy(t => t.Distance).FirstOrDefault();
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestTarget = target;
+                }
             }
+
+            return bestTarget;
         }
     }
 
     public enum TargetingMode
     {
         Closest,
+        LowestHealth,
         CenterFOV,
-        LeastMovement,
-        MostVisible,
-        Dynamic
+        HighThreat
     }
 }

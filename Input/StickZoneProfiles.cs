@@ -1,37 +1,64 @@
-﻿//monarch v2.1
+﻿// neural v3.0
 using System;
+using System.Collections.Generic;
+using System.Numerics;
 
 namespace JaysAi.Finale.Input
 {
+    public enum StickZoneType
+    {
+        Deadzone,
+        Active,
+        Outer
+    }
+
+    public class StickZone
+    {
+        public StickZoneType Type { get; }
+        public float Radius { get; }
+
+        public StickZone(StickZoneType type, float radius)
+        {
+            Type = type;
+            Radius = radius;
+        }
+
+        public bool Contains(Vector2 position)
+        {
+            return position.Length() <= Radius;
+        }
+    }
+
     public class StickZoneProfile
     {
-        public float Deadzone { get; set; } = 0.1f;
-        public float Sensitivity { get; set; } = 1.0f;
-        public CurveType Curve { get; set; } = CurveType.Linear;
+        public string ProfileName { get; set; }
+        public List<StickZone> Zones { get; set; }
 
-        public float ApplyCurve(float input)
+        public StickZoneProfile(string profileName)
         {
-            float absInput = Math.Abs(input);
-            if (absInput < Deadzone)
-                return 0f;
+            ProfileName = profileName;
+            Zones = new List<StickZone>();
+        }
 
-            float scaled = (absInput - Deadzone) / (1f - Deadzone);
-            float curved = Curve switch
+        public StickZoneType EvaluatePosition(Vector2 stickInput)
+        {
+            foreach (var zone in Zones)
             {
-                CurveType.Linear => scaled,
-                CurveType.Exponential => scaled * scaled,
-                CurveType.Logarithmic => (float)Math.Log10(9 * scaled + 1),
-                _ => scaled
-            };
+                if (zone.Contains(stickInput))
+                    return zone.Type;
+            }
 
-            return Math.Sign(input) * curved * Sensitivity;
+            return StickZoneType.Outer;
         }
 
-        public enum CurveType
+        public static StickZoneProfile Default => new StickZoneProfile("Default")
         {
-            Linear,
-            Exponential,
-            Logarithmic
-        }
+            Zones = new List<StickZone>
+            {
+                new StickZone(StickZoneType.Deadzone, 0.1f),
+                new StickZone(StickZoneType.Active, 0.85f),
+                new StickZone(StickZoneType.Outer, 1.0f)
+            }
+        };
     }
 }

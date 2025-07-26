@@ -1,114 +1,83 @@
-﻿// File: Visuals/CrosshairOverlay.cs
-using JaysAi.Finale.Settings;
-using SkiaSharp;
-using SkiaSharp.Views.Desktop;
-using SkiaSharp.Views.WPF;
+﻿// Neural v3.0 — CrosshairOverlay.xaml.cs
 using System.Windows;
-using System.Windows.Interop;
-using System.Windows.Media.Media3D;
-using System.Windows.Threading;
+using System.Windows.Controls;
+using System.Windows.Media;
 
-namespace JaysAi.Finale.Visuals
+namespace JaysAi.Finale.Overlay
 {
-    public class CrosshairOverlay : Window
+    public partial class CrosshairOverlay : UserControl
     {
-        private readonly SettingsManager<AppSettings> _settingsManager;
-        private readonly DispatcherTimer _drawTimer;
-        private readonly SKElement _skElement;
+        private Rectangle _horizontalLine;
+        private Rectangle _verticalLine;
 
-        public bool IsEnabled { get; set; } = true;
-
-        public CrosshairOverlay(SettingsManager<AppSettings> settingsManager)
+        public bool IsCrosshairVisible
         {
-            _settingsManager = settingsManager;
-
-            Width = SystemParameters.PrimaryScreenWidth;
-            Height = SystemParameters.PrimaryScreenHeight;
-            Top = 0;
-            Left = 0;
-            WindowStyle = WindowStyle.None;
-            AllowsTransparency = true;
-            Background = null;
-            Topmost = true;
-            ShowInTaskbar = false;
-            ResizeMode = ResizeMode.NoResize;
-
-            _skElement = new SKElement();
-            _skElement.PaintSurface += OnPaintSurface;
-            Content = _skElement;
-
-            _drawTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(16)
-            };
-            _drawTimer.Tick += (s, e) => _skElement.InvalidateVisual();
-
-            Loaded += (_, _) => MakeClickthrough();
+            get => this.Visibility == Visibility.Visible;
+            set => this.Visibility = value ? Visibility.Visible : Visibility.Hidden;
         }
 
-        public void UpdateSettings(AppSettings settings)
+        public Brush CrosshairColor
         {
-            // Called when user updates the crosshair settings in UI
-            _skElement.InvalidateVisual();
-        }
-
-        protected override void OnSourceInitialized(EventArgs e)
-        {
-            base.OnSourceInitialized(e);
-            MakeClickthrough();
-        }
-
-        private void OnPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
-        {
-            if (!IsEnabled) return;
-
-            var settings = _settingsManager.Settings;
-            var surface = e.Surface;
-            var canvas = surface.Canvas;
-            canvas.Clear(SKColors.Transparent);
-
-            float centerX = e.Info.Width / 2f;
-            float centerY = e.Info.Height / 2f;
-            float length = settings.CrosshairLength;
-            float thickness = settings.CrosshairThickness;
-            var color = SKColor.Parse(settings.CrosshairColorHex);
-
-            using var paint = new SKPaint
+            get => _horizontalLine?.Fill;
+            set
             {
-                Color = color,
-                IsAntialias = true,
-                StrokeWidth = thickness,
-                Style = SKPaintStyle.Stroke
-            };
-
-            // Horizontal line
-            canvas.DrawLine(centerX - length, centerY, centerX + length, centerY, paint);
-            // Vertical line
-            canvas.DrawLine(centerX, centerY - length, centerX, centerY + length, paint);
-
-            if (settings.ShowCenterDot)
-            {
-                canvas.DrawCircle(centerX, centerY, thickness * 1.5f, paint);
+                if (_horizontalLine != null) _horizontalLine.Fill = value;
+                if (_verticalLine != null) _verticalLine.Fill = value;
             }
         }
 
-        public new void Show()
+        public double CrosshairLength
         {
-            base.Show();
-            _drawTimer.Start();
+            get => _horizontalLine?.Width ?? 40;
+            set
+            {
+                if (_horizontalLine != null) _horizontalLine.Width = value;
+                if (_verticalLine != null) _verticalLine.Height = value;
+            }
         }
 
-        public new void Hide()
+        public double CrosshairThickness
         {
-            _drawTimer.Stop();
-            base.Hide();
+            get => _horizontalLine?.Height ?? 2;
+            set
+            {
+                if (_horizontalLine != null) _horizontalLine.Height = value;
+                if (_verticalLine != null) _verticalLine.Width = value;
+            }
         }
 
-        private void MakeClickthrough()
+        public CrosshairOverlay()
         {
-            var hwnd = new WindowInteropHelper(this).Handle;
-            int extendedStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
-            NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, extendedStyle | NativeMethods.WS_EX_TRANSPARENT | NativeMethods.WS_EX_LAYERED);
+            InitializeComponent();
+            InitializeCrosshairElements();
+        }
+
+        private void InitializeCrosshairElements()
+        {
+            _horizontalLine = FindName("HorizontalLine") as Rectangle;
+            _verticalLine = FindName("VerticalLine") as Rectangle;
+
+            // Set default values
+            CrosshairColor = Brushes.Red;
+            CrosshairLength = 40;
+            CrosshairThickness = 2;
+            IsCrosshairVisible = true;
+        }
+
+        public void ToggleVisibility()
+        {
+            IsCrosshairVisible = !IsCrosshairVisible;
+        }
+
+        public void SetColor(Color color)
+        {
+            CrosshairColor = new SolidColorBrush(color);
+        }
+
+        public void SetSize(double length, double thickness)
+        {
+            CrosshairLength = length;
+            CrosshairThickness = thickness;
         }
     }
 }

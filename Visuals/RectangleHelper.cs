@@ -1,42 +1,51 @@
-﻿using System.Windows;
-using System.Windows.Media;
-using System.Windows.Shapes;
+﻿// Heavenly-tier v3.0
+using SkiaSharp;
 
 namespace JaysAi.Finale.Visuals
 {
     public static class RectangleHelper
     {
-        public static Rectangle CreateTargetBox(double x, double y, double width, double height, Brush color, double thickness = 2.0)
+        public static SKRect Create(float x, float y, float width, float height)
         {
-            return new Rectangle
-            {
-                Width = width,
-                Height = height,
-                Stroke = color,
-                StrokeThickness = thickness,
-                Fill = Brushes.Transparent,
-                RadiusX = 0,
-                RadiusY = 0,
-                Margin = new Thickness(x, y, 0, 0),
-                HorizontalAlignment = HorizontalAlignment.Left,
-                VerticalAlignment = VerticalAlignment.Top
-            };
+            return new SKRect(x, y, x + width, y + height);
         }
 
-        public static Rectangle CreateLabelBox(double x, double y, string label, Brush color, double fontSize = 12.0)
+        public static SKRect Inflate(SKRect rect, float amount)
         {
-            // Placeholder for label rendering – WPF typically uses TextBlock, but returning a dummy shape for modular use
-            return new Rectangle
-            {
-                Width = label.Length * fontSize * 0.6,
-                Height = fontSize * 1.5,
-                Stroke = color,
-                StrokeThickness = 1,
-                Fill = Brushes.Transparent,
-                Margin = new Thickness(x, y, 0, 0),
-                HorizontalAlignment = HorizontalAlignment.Left,
-                VerticalAlignment = VerticalAlignment.Top
-            };
+            return new SKRect(
+                rect.Left - amount,
+                rect.Top - amount,
+                rect.Right + amount,
+                rect.Bottom + amount
+            );
+        }
+
+        public static SKRect ClampToScreen(SKRect rect, float screenWidth, float screenHeight)
+        {
+            float left = Clamp(rect.Left, 0, screenWidth);
+            float top = Clamp(rect.Top, 0, screenHeight);
+            float right = Clamp(rect.Right, 0, screenWidth);
+            float bottom = Clamp(rect.Bottom, 0, screenHeight);
+
+            return new SKRect(left, top, right, bottom);
+        }
+
+        public static bool IsInside(SKPoint point, SKRect rect)
+        {
+            return rect.Contains(point);
+        }
+
+        public static SKPoint GetCenter(SKRect rect)
+        {
+            return new SKPoint(
+                rect.Left + rect.Width / 2f,
+                rect.Top + rect.Height / 2f
+            );
+        }
+
+        private static float Clamp(float value, float min, float max)
+        {
+            return value < min ? min : (value > max ? max : value);
         }
     }
 }

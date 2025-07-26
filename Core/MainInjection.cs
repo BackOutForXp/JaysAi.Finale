@@ -1,34 +1,76 @@
-﻿// heavenly v3.0 – EntryPoint Injection and Init Sequence
+﻿// neural v3.0
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Modules;
 using JaysAi.Finale.Security;
 using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Core;
-using JaysAi.Finale.Utility;
+using JaysAi.Finale.Input;
+using JaysAi.Finale.Data;
+using System;
 
 namespace JaysAi.Finale.Core
 {
-    public static class MainInjection
+    public class MainInjection
     {
-        private static bool _hasInjected = false;
+        private ModuleManager moduleManager;
+        private TargetingSystem targetingSystem;
+        private PredictionEngine predictionEngine;
+        private BehaviorTrigger behaviorTrigger;
+        private AiOrchestrator orchestrator;
+        private InputManager inputManager;
+        private GameProcessHelper processHelper;
 
-        public static void Initialize()
+        public void Initialize()
         {
-            if (_hasInjected) return;
+            try
+            {
+                LogManager.Info("MainInjection: Initialization started.");
 
-            LogManager.Initialize("JaysAi.Finale");
-            CrashLogger.AttachGlobalHandler();
+                // Scan and validate target process
+                processHelper = new GameProcessHelper();
+                if (!processHelper.AttachToGame())
+                {
+                    LogManager.Error("MainInjection: Failed to attach to game process.");
+                    return;
+                }
 
-            StealthScanner.ScanForThreats();
-            AntiDebug.ApplyPatches();
-            HardwareScanner.VerifySystem();
+                LogManager.Info("Game process attached.");
 
-            GameProcessHelper.LocateTargetGame();
-            AiOrchestrator.Start();
+                // Build AI components
+                moduleManager = new ModuleManager();
+                targetingSystem = new TargetingSystem();
+                predictionEngine = new PredictionEngine();
+                behaviorTrigger = new BehaviorTrigger();
+                inputManager = new InputManager();
 
-            FeatureToggleManager.ApplyFeatureToggles();
-            LicenseValidator.Validate();
+                orchestrator = new AiOrchestrator(
+                    targetingSystem,
+                    predictionEngine,
+                    behaviorTrigger,
+                    moduleManager
+                );
 
-            Logger.Info("MainInjection complete. System is now active.");
-            _hasInjected = true;
+                LogManager.Info("All systems initialized successfully.");
+            }
+            catch (Exception ex)
+            {
+                LogManager.Exception("MainInjection.Initialize", ex);
+            }
+        }
+
+        public void Tick()
+        {
+            if (!processHelper?.IsProcessActive() ?? true) return;
+
+            var currentFrame = FrameSnapshot.Capture();
+            var input = inputManager.CaptureSnapshot();
+
+            orchestrator?.RunCycle(currentFrame, input);
+        }
+
+        public void Shutdown()
+        {
+            LogManager.Info("MainInjection: Shutting down...");
+            orchestrator?.ResetState();
         }
     }
 }

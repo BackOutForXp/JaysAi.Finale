@@ -1,46 +1,46 @@
-﻿//heavenly v3.0 – Aim Path Prediction Logic
+﻿// neural v3.0
+using JaysAi.Finale.Data;
+using JaysAi.Finale.Utility;
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 namespace JaysAi.Finale.AI
 {
-    public static class AimPathPredicator
+    public class AimPathPredicator
     {
-        /// <summary>
-        /// Predicts where the target will be after a delay (in seconds)
-        /// </summary>
-        /// <param name="currentPosition">The current 2D position of the target</param>
-        /// <param name="velocity">The current 2D velocity vector of the target</param>
-        /// <param name="latencyCompensation">Optional latency delay in seconds</param>
-        /// <returns>Predicted position</returns>
-        public static Vector2 Predict(Vector2 currentPosition, Vector2 velocity, float latencyCompensation = 0.05f)
+        private readonly Dictionary<int, Vector2> _velocityCache = new();
+        private readonly float _smoothingFactor = 0.15f;
+
+        public Vector2 PredictNextPosition(int targetId, Vector2 currentPosition)
         {
-            return currentPosition + velocity * latencyCompensation;
+            if (_velocityCache.TryGetValue(targetId, out var previousVelocity))
+            {
+                var predicted = currentPosition + previousVelocity;
+                return Vector2.Lerp(currentPosition, predicted, _smoothingFactor);
+            }
+
+            return currentPosition;
         }
 
-        /// <summary>
-        /// Performs curved prediction using a quadratic approximation
-        /// </summary>
-        /// <param name="current">Current position</param>
-        /// <param name="previous">Previous position</param>
-        /// <param name="older">Older position</param>
-        /// <param name="latencyCompensation">Delay in seconds</param>
-        /// <returns>Predicted position using acceleration curve</returns>
-        public static Vector2 PredictCurved(Vector2 current, Vector2 previous, Vector2 older, float latencyCompensation = 0.05f)
+        public void UpdateVelocity(int targetId, Vector2 oldPosition, Vector2 newPosition)
         {
-            var v1 = current - previous;
-            var v2 = previous - older;
-            var acceleration = v1 - v2;
-            var predictedVelocity = v1 + acceleration * latencyCompensation;
-            return current + predictedVelocity * latencyCompensation;
+            var velocity = newPosition - oldPosition;
+            _velocityCache[targetId] = velocity;
         }
 
-        /// <summary>
-        /// Checks if the target is slowing down to adjust aim
-        /// </summary>
-        public static bool IsTargetDecelerating(Vector2 velocityNow, Vector2 velocityBefore)
+        public void Clear()
         {
-            return velocityNow.LengthSquared() < velocityBefore.LengthSquared();
+            _velocityCache.Clear();
+        }
+
+        public bool HasVelocity(int targetId) => _velocityCache.ContainsKey(targetId);
+
+        public Vector2? GetVelocity(int targetId)
+        {
+            return _velocityCache.TryGetValue(targetId, out var velocity)
+                ? velocity
+                : null;
         }
     }
 }

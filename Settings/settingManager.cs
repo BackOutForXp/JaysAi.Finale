@@ -1,76 +1,79 @@
-﻿// File: Settings/SettingsManager.cs
+﻿//neural v3.0
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace JaysAi.Finale.Settings
 {
-    public class SettingsManager<T> where T : new()
+    public sealed class SettingsManager
     {
-        private static readonly string AppDataPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "JaysAi", "Finale", "Profiles");
+        private static readonly Lazy<SettingsManager> _instance = new(() => new SettingsManager());
+        public static SettingsManager Instance => _instance.Value;
 
-        private readonly Dictionary<string, T> _loadedProfiles = new();
-        private string _currentProfile = "default";
+        private readonly string _settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "global-settings.json");
+        private AppSettings _settings;
 
-        public string CurrentProfile => _currentProfile;
-        public T Settings { get; private set; } = new();
+        public AppSettings Settings => _settings;
 
-        public SettingsManager()
+        private SettingsManager()
         {
-            Directory.CreateDirectory(AppDataPath);
-            LoadProfile("default");
+            Load();
+        }
+
+        public void Load()
+        {
+            try
+            {
+                if (File.Exists(_settingsPath))
+                {
+                    var json = File.ReadAllText(_settingsPath);
+                    _settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+                }
+                else
+                {
+                    _settings = new AppSettings();
+                    Save();
+                }
+            }
+            catch
+            {
+                _settings = new AppSettings(); // fallback to defaults on error
+            }
         }
 
         public void Save()
         {
-            string filePath = GetProfilePath(_currentProfile);
-            var json = JsonSerializer.Serialize(Settings, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(filePath, json);
-        }
-
-        public void LoadProfile(string profileName)
-        {
-            _currentProfile = profileName;
-            string filePath = GetProfilePath(profileName);
-
-            if (File.Exists(filePath))
+            try
             {
-                string json = File.ReadAllText(filePath);
-                Settings = JsonSerializer.Deserialize<T>(json) ?? new T();
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                var json = JsonSerializer.Serialize(_settings, options);
+                Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath)!);
+                File.WriteAllText(_settingsPath, json);
             }
-            else
+            catch
             {
-                Settings = new T();
-                Save(); // auto-create profile if missing
-            }
-
-            if (!_loadedProfiles.ContainsKey(profileName))
-                _loadedProfiles.Add(profileName, Settings);
-        }
-
-        public void DeleteProfile(string profileName)
-        {
-            string filePath = GetProfilePath(profileName);
-            if (File.Exists(filePath)) File.Delete(filePath);
-            if (_loadedProfiles.ContainsKey(profileName)) _loadedProfiles.Remove(profileName);
-        }
-
-        public IEnumerable<string> GetAvailableProfiles()
-        {
-            if (!Directory.Exists(AppDataPath)) yield break;
-
-            foreach (var file in Directory.GetFiles(AppDataPath, "*.json"))
-            {
-                yield return Path.GetFileNameWithoutExtension(file);
+                // handle save errors if needed
             }
         }
 
-        private string GetProfilePath(string profileName)
+        public void Reset()
         {
-            return Path.Combine(AppDataPath, $"{profileName}.json");
+            _settings = new AppSettings();
+            Save();
         }
+    }
+
+    public class AppSettings
+    {
+        public bool EnableOverlay { get; set; } = true;
+        public string Theme { get; set; } = "Dark";
+        public string Language { get; set; } = "en-US";
+        public float MasterVolume { get; set; } = 0.8f;
+
+        // Custom fields can be added as needed
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement> AdditionalData { get; set; } = new();
     }
 }

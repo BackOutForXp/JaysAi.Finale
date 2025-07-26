@@ -1,44 +1,55 @@
-﻿//heavenly v3.0 – InputInjector Module
-using System.Runtime.InteropServices;
-using System.Windows.Input;
+﻿// neural v3.0
+using JaysAi.Finale.Input.Models;
+using JaysAi.Finale.SystemLogic.Handlers;
+using JaysAi.Finale.SystemLogic.Logging;
 using JaysAi.Finale.Utility;
+using System;
 
 namespace JaysAi.Finale.Input
 {
-    public static class InputInjector
+    public sealed class InputInjector
     {
-        [DllImport("user32.dll")]
-        private static extern void mouse_event(uint flags, int dx, int dy, uint data, UIntPtr extraInfo);
+        private readonly IInputDispatcher _dispatcher;
+        private readonly IInputValidator _validator;
 
-        private const uint MOUSEEVENTF_MOVE = 0x0001;
-        private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
-        private const uint MOUSEEVENTF_LEFTUP = 0x0004;
-
-        public static void MoveMouse(int deltaX, int deltaY)
+        public InputInjector(IInputDispatcher dispatcher, IInputValidator validator)
         {
-            mouse_event(MOUSEEVENTF_MOVE, deltaX, deltaY, 0, UIntPtr.Zero);
+            _dispatcher = dispatcher;
+            _validator = validator;
         }
 
-        public static void LeftClick()
+        public bool Inject(ControllerInputState state)
         {
-            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
-            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
+            if (!_validator.Validate(state))
+            {
+                Logger.Warn("Invalid input rejected by validator.");
+                return false;
+            }
+
+            try
+            {
+                _dispatcher.Dispatch(state);
+                Logger.Trace("Input successfully dispatched.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Inject failed: " + ex.Message);
+                return false;
+            }
         }
 
-        public static void PressKey(Key key)
+        public void ForceInject(ControllerInputState state)
         {
-            KeyboardSimulator.PressKey(key);
-        }
-
-        public static void ReleaseKey(Key key)
-        {
-            KeyboardSimulator.ReleaseKey(key);
-        }
-
-        public static void PressAndReleaseKey(Key key)
-        {
-            KeyboardSimulator.PressKey(key);
-            KeyboardSimulator.ReleaseKey(key);
+            try
+            {
+                _dispatcher.Dispatch(state);
+                Logger.Trace("Force-injected input without validation.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("ForceInject failed: " + ex.Message);
+            }
         }
     }
 }

@@ -1,67 +1,92 @@
-﻿using System;
-using System.IO.Ports;
+﻿//neural v3.0
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Management;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.Integration
 {
     public static class ZenHelper
     {
-        public static bool IsConnected()
+        private const string ZenVid = "1A86"; // Example: USB Vendor ID for Zen
+        private const string ZenPid = "7523"; // Example: USB Product ID for Zen
+        private const string ZenIdentifier = $"VID_{ZenVid}&PID_{ZenPid}";
+
+        public static event Action? ZenConnected;
+        public static event Action? ZenDisconnected;
+
+        private static bool _zenPreviouslyConnected;
+
+        public static void Initialize()
+        {
+            Logger.Info("[ZenHelper] Starting Zen device monitoring...");
+
+            USBHelper.DeviceConnected += HandleUsbConnected;
+            USBHelper.DeviceDisconnected += HandleUsbDisconnected;
+
+            var currentDevices = USBHelper.GetCurrentlyConnectedDevices();
+            foreach (var deviceId in currentDevices)
+            {
+                if (IsZenDevice(deviceId))
+                {
+                    _zenPreviouslyConnected = true;
+                    Logger.Info("[ZenHelper] Zen device detected on startup.");
+                    ZenConnected?.Invoke();
+                    break;
+                }
+            }
+        }
+
+        private static void HandleUsbConnected(string deviceId)
+        {
+            if (!_zenPreviouslyConnected && IsZenDevice(deviceId))
+            {
+                _zenPreviouslyConnected = true;
+                Logger.Info($"[ZenHelper] Zen device connected: {deviceId}");
+                ZenConnected?.Invoke();
+            }
+        }
+
+        private static void HandleUsbDisconnected(string deviceId)
+        {
+            if (_zenPreviouslyConnected && IsZenDevice(deviceId))
+            {
+                _zenPreviouslyConnected = false;
+                Logger.Info($"[ZenHelper] Zen device disconnected: {deviceId}");
+                ZenDisconnected?.Invoke();
+            }
+        }
+
+        private static bool IsZenDevice(string deviceId)
+        {
+            return deviceId.Contains(ZenIdentifier, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsZenCurrentlyConnected()
+        {
+            return USBHelper.GetCurrentlyConnectedDevices()
+                .Any(IsZenDevice);
+        }
+
+        public static string? GetZenPortName()
         {
             try
             {
-                string[] ports = SerialPort.GetPortNames();
-
-                foreach (var port in ports)
+                using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_SerialPort");
+                foreach (var port in searcher.Get().Cast<ManagementObject>())
                 {
-                    if (port.ToLower().Contains("com"))
-                    {
-                        // NOTE: In a real scenario, you’d probe for device identity here
-                        Console.WriteLine($"[ZenHelper] Found port: {port}");
-
-                        // Placeholder for actual detection logic
-                        if (IsLikelyZenDevice(port))
-                        {
-                            Console.WriteLine("[ZenHelper] Cronus Zen likely connected.");
-                            return true;
-                        }
-                    }
+                    var deviceId = port["PNPDeviceID"]?.ToString() ?? "";
+                    if (IsZenDevice(deviceId))
+                        return port["DeviceID"]?.ToString(); // e.g., "COM5"
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ZenHelper] Detection failed: {ex.Message}");
+                Logger.Warn($"[ZenHelper] Failed to locate Zen COM port: {ex.Message}");
             }
 
-            return false;
-        }
-
-        private static bool IsLikelyZenDevice(string port)
-        {
-            // TODO: Identify Zen by known VID/PID or serial descriptor
-            return port.Contains("3") || port.Contains("Zen"); // Placeholder
-        }
-
-        public static void Initialize()
-        {
-            if (IsConnected())
-            {
-                Console.WriteLine("[ZenHelper] Initializing Zen integration...");
-                // TODO: Add real initialization logic here
-            }
-            else
-            {
-                Console.WriteLine("[ZenHelper] No Zen detected. Skipping init.");
-            }
+            return null;
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Prepares Cronus Zen detection via COM port scan
-// ✅ Detects and logs connected ports
-// ✅ Future-safe placeholder logic to avoid crashes
-// - [ ] Implement VID/PID scan for true Zen identification
-// - [ ] Add GPC profile loader or macro injector
-// - [ ] Link to AutoDetectionHelper → DetectHardwareIntegration()
-// ===================================================================

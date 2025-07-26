@@ -1,47 +1,57 @@
-﻿//heavenly v3.0 – Overlay Queue Handler
+﻿// neural v3.0
+using JaysAi.Finale.AI;
 using JaysAi.Finale.Visuals;
+using JaysAi.Finale.Data;
+using JaysAi.Finale.SystemLogic;
+using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace JaysAi.Finale.AI
 {
-    public static class AiOverlay
+    public class AiOverlay
     {
-        private static readonly List<OverlayRectangle> _queuedOverlays = new();
+        private readonly OverlaySignal _overlaySignal;
+        private readonly List<Vector2> _drawnPaths = new();
 
-        public static void QueueRectangle(float x, float y, float width, float height, string label, OverlayColor color)
+        public bool ShowPredictionLines { get; set; } = true;
+        public bool ShowTargetInfo { get; set; } = true;
+        public bool ShowVelocityVector { get; set; } = false;
+
+        public AiOverlay(OverlaySignal overlaySignal)
         {
-            _queuedOverlays.Add(new OverlayRectangle
-            {
-                X = x,
-                Y = y,
-                Width = width,
-                Height = height,
-                Label = label,
-                Color = color
-            });
+            _overlaySignal = overlaySignal;
         }
 
-        public static void QueueCrosshair(float x, float y, float radius, OverlayColor color)
+        public void DrawTrackedTargetInfo(TrackedTarget target)
         {
-            _queuedOverlays.Add(new OverlayRectangle
-            {
-                X = x - radius,
-                Y = y - radius,
-                Width = radius * 2,
-                Height = radius * 2,
-                Label = "LOCK",
-                Color = color,
-                IsCrosshair = true
-            });
+            if (!ShowTargetInfo) return;
+
+            string label = $"ID: {target.ID} | HP: {target.Health} | Dist: {Math.Round(target.Distance)}m";
+            _overlaySignal.DrawText(target.ScreenPosition, label, OverlayColor.White, size: 12);
         }
 
-        public static List<OverlayRectangle> GetAndFlushQueue()
+        public void DrawPredictionPath(TrackedTarget target, Vector2 predictedPosition)
         {
-            var copy = new List<OverlayRectangle>(_queuedOverlays);
-            _queuedOverlays.Clear();
-            return copy;
+            if (!ShowPredictionLines) return;
+
+            _overlaySignal.DrawLine(target.ScreenPosition, predictedPosition, OverlayColor.Green);
+            _drawnPaths.Add(predictedPosition);
         }
 
-        public static bool HasPendingOverlays => _queuedOverlays.Count > 0;
+        public void DrawVelocity(TrackedTarget target, Vector2 velocity)
+        {
+            if (!ShowVelocityVector) return;
+
+            Vector2 endPoint = target.ScreenPosition + velocity * 10f;
+            _overlaySignal.DrawArrow(target.ScreenPosition, endPoint, OverlayColor.Red);
+        }
+
+        public void Clear()
+        {
+            _drawnPaths.Clear();
+        }
+
+        public IReadOnlyList<Vector2> GetDrawnPaths() => _drawnPaths.AsReadOnly();
     }
 }

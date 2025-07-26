@@ -1,40 +1,54 @@
-﻿//heavenly v3.0.0 – Adaptive Behavior Trigger Logic
-using JaysAi.Finale.Modules;
+﻿// neural v3.0
+using JaysAi.Finale.Data;
 using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Modules;
 using System;
 
 namespace JaysAi.Finale.AI
 {
-    public static class BehaviorTrigger
+    public enum BehaviorCondition
     {
-        public static bool ShouldActivateSnap(DetectedObject obj)
+        Always,
+        EnemyInSight,
+        CloseRange,
+        LowHealth,
+        Firing,
+        Zoomed
+    }
+
+    public class BehaviorTrigger
+    {
+        public BehaviorCondition Condition { get; set; }
+        public float RangeThreshold { get; set; } = 25f;
+
+        public bool Evaluate(TargetInfo target, PlayerState player)
         {
-            return obj.IsEnemy && obj.Distance < 750f && obj.VisibilityScore > 0.7f;
+            return Condition switch
+            {
+                BehaviorCondition.Always => true,
+                BehaviorCondition.EnemyInSight => target != null && target.IsVisible,
+                BehaviorCondition.CloseRange => target != null && target.Distance <= RangeThreshold,
+                BehaviorCondition.LowHealth => player.Health <= 25,
+                BehaviorCondition.Firing => player.IsFiring,
+                BehaviorCondition.Zoomed => player.IsZoomed,
+                _ => false
+            };
         }
 
-        public static bool ShouldEnableSilentAim(TargetInfo info)
+        public static BehaviorTrigger Create(BehaviorCondition condition, float range = 25f)
         {
-            return info.IsMoving && info.Speed > 1.2f && info.IsInsideFov;
+            return new BehaviorTrigger
+            {
+                Condition = condition,
+                RangeThreshold = range
+            };
         }
+    }
 
-        public static bool ShouldFire(TargetInfo info)
-        {
-            return info.IsEnemy && info.IsVisible && info.TimeSinceSpotted < 0.25f;
-        }
-
-        public static bool IsThreatLevelHigh(TargetInfo info)
-        {
-            return info.IsEnemy && info.Aggression > 0.8f && info.Distance < 500f;
-        }
-
-        public static string GetReactionLabel(TargetInfo info)
-        {
-            if (IsThreatLevelHigh(info))
-                return "HIGH THREAT";
-            if (info.IsMoving)
-                return "TRACKING";
-            return "PASSIVE";
-        }
+    public class PlayerState
+    {
+        public bool IsFiring { get; set; }
+        public bool IsZoomed { get; set; }
+        public float Health { get; set; }
     }
 }

@@ -1,54 +1,62 @@
-﻿//heavenly v3.0
-using OpenCvSharp;
+﻿// neural v3.0
 using System;
+using System.Collections.Generic;
+using JaysAi.Finale.Data;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.AI
 {
     public class TrackedTarget
     {
-        public int Id { get; set; }
-        public Rect BoundingBox { get; set; }
-        public float Confidence { get; set; }
-        public float ThreatLevel { get; set; }
-        public Point2f LastKnownCenter { get; private set; }
+        public Enemy Enemy { get; private set; }
+        public Queue<Vector3> PositionHistory { get; private set; }
         public DateTime LastSeen { get; private set; }
-        public bool IsEnemy { get; set; }
+        public Vector3 SmoothedPosition { get; private set; }
+        public bool IsVisible { get; private set; }
 
-        public TrackedTarget(int id, Rect bbox, float confidence, bool isEnemy)
+        private const int HistoryLimit = 10;
+
+        public TrackedTarget(Enemy enemy)
         {
-            Id = id;
-            BoundingBox = bbox;
-            Confidence = confidence;
-            IsEnemy = isEnemy;
-            Update(bbox);
+            Enemy = enemy;
+            PositionHistory = new Queue<Vector3>();
+            Update(enemy.Position, enemy.IsVisible);
         }
 
-        public void Update(Rect newBox)
+        public void Update(Vector3 newPosition, bool isVisible)
         {
-            BoundingBox = newBox;
-            LastKnownCenter = new Point2f(
-                BoundingBox.X + BoundingBox.Width / 2f,
-                BoundingBox.Y + BoundingBox.Height / 2f
-            );
+            IsVisible = isVisible;
             LastSeen = DateTime.UtcNow;
+
+            if (PositionHistory.Count >= HistoryLimit)
+                PositionHistory.Dequeue();
+
+            PositionHistory.Enqueue(newPosition);
+            SmoothedPosition = CalculateSmoothedPosition();
         }
 
-        public bool IsExpired(TimeSpan timeout)
+        private Vector3 CalculateSmoothedPosition()
+        {
+            Vector3 sum = new(0, 0, 0);
+            foreach (var pos in PositionHistory)
+                sum += pos;
+
+            return sum / PositionHistory.Count;
+        }
+
+        public bool IsLost(TimeSpan timeout)
         {
             return DateTime.UtcNow - LastSeen > timeout;
         }
 
-        public float DistanceTo(Point2f point)
+        public Vector3 PredictNextPosition()
         {
-            return (float)Math.Sqrt(
-                Math.Pow(point.X - LastKnownCenter.X, 2) +
-                Math.Pow(point.Y - LastKnownCenter.Y, 2)
-            );
-        }
+            if (PositionHistory.Count < 2)
+                return SmoothedPosition;
 
-        public override string ToString()
-        {
-            return $"TrackedTarget #{Id} | Pos: {LastKnownCenter} | Enemy: {IsEnemy}";
+            var history = PositionHistory.ToArray();
+            var velocity = history[^1] - history[^2];
+            return SmoothedPosition + velocity;
         }
     }
 }

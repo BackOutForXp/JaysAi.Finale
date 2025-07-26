@@ -1,38 +1,39 @@
-﻿//monarch v2.0
-using System.Windows.Media;
-using System.Windows;
+﻿// Neural v3.0 — CrosshairRenderer.cs
+using SkiaSharp;
+using SkiaSharp.Views.Desktop;
+using System;
 
-namespace JaysAi.Finale.Visuals
+namespace JaysAi.Finale.Overlay
 {
-    public static class CrosshairRenderer
+    public class CrosshairRenderer
     {
-        public static void Draw(DrawingContext context, double screenWidth, double screenHeight)
+        private readonly CrosshairDrawer _drawer;
+        public bool IsEnabled { get; private set; } = true;
+
+        public CrosshairRenderer()
         {
-            var center = new Point(screenWidth / 2, screenHeight / 2);
-            double length = 8;
-            double thickness = 1.5;
-            Brush brush = GetBrush();
-
-            // Horizontal Line
-            context.DrawLine(new Pen(brush, thickness),
-                new Point(center.X - length, center.Y),
-                new Point(center.X + length, center.Y));
-
-            // Vertical Line
-            context.DrawLine(new Pen(brush, thickness),
-                new Point(center.X, center.Y - length),
-                new Point(center.X, center.Y + length));
+            _drawer = new CrosshairDrawer();
         }
 
-        private static Brush GetBrush()
+        public void Enable() => IsEnabled = true;
+
+        public void Disable() => IsEnabled = false;
+
+        public void Toggle() => IsEnabled = !IsEnabled;
+
+        public void SetColor(SKColor color) => _drawer.Color = color;
+
+        public void SetSize(float size) => _drawer.Size = size;
+
+        public void SetThickness(float thickness) => _drawer.Thickness = thickness;
+
+        public void SetStyle(CrosshairStyle style) => _drawer.Style = style;
+
+        public void Render(SKCanvas canvas, int screenWidth, int screenHeight)
         {
-            return OverlaySignal.CurrentSignal switch
-            {
-                OverlaySignal.SignalType.TargetAcquired => Brushes.LimeGreen,
-                OverlaySignal.SignalType.AlertFlash => Brushes.Red,
-                OverlaySignal.SignalType.TargetLost => Brushes.Gray,
-                _ => Brushes.White
-            };
+            if (!IsEnabled || canvas == null) return;
+
+            _drawer.Draw(canvas, screenWidth, screenHeight);
         }
     }
 }

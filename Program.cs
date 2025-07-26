@@ -1,38 +1,30 @@
-﻿// Monarch v1.0 – Program.cs
-// ✅ Verified for Visual Studio 2022/2025 + .NET 8 WPF
-
+﻿// Neural v3.0 — Program.cs
 using System;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 using System.Windows;
+using JaysAi.Finale.UI;
 
 namespace JaysAi.Finale
 {
-    [SupportedOSPlatform("windows")]
     public static class Program
     {
         [STAThread]
-        public static void Main()
+        public static void Main(string[] args)
         {
-#if DEBUG
-            ShowConsoleWindow();
-#endif
-            var app = new App();
-            app.InitializeComponent();
-            app.Run();
-        }
+            try
+            {
+                var app = new Application();
 
-#if DEBUG
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool AllocConsole();
+                // Optional: Dark theme mode, app styling
+                app.ShutdownMode = ShutdownMode.OnMainWindowClose;
 
-        private static void ShowConsoleWindow()
-        {
-            AllocConsole();
-            Console.Title = "JaysAi Debug Console";
-            Console.WriteLine("Debug Console Initialized...");
+                var mainWindow = new MainWindow();
+                app.Run(mainWindow);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Fatal Error] {ex.Message}");
+                Environment.Exit(1);
+            }
         }
-#endif
     }
 }

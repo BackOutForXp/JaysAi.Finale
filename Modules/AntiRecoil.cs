@@ -1,67 +1,53 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using JaysAi.Finale.Config;
+﻿// Neural v3.0 — AntiRecoil.cs
+using System;
 using JaysAi.Finale.Input;
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Modules.Config;
 
 namespace JaysAi.Finale.Modules
 {
-    public static class AntiRecoil
+    public sealed class AntiRecoil : IAimAssistModule
     {
-        private static bool _enabled = false;
-        private static CancellationTokenSource? _recoilTokenSource;
+        private float _recoilOffsetX;
+        private float _recoilOffsetY;
 
-        public static void Toggle(bool state)
+        public AntiRecoil()
         {
-            _enabled = state;
-
-            if (_enabled)
-                Start();
-            else
-                Stop();
+            _recoilOffsetX = AntiRecoilConfig.DefaultOffsetX;
+            _recoilOffsetY = AntiRecoilConfig.DefaultOffsetY;
         }
 
-        private static void Start()
+        public void Apply(InputState input, FramePrediction prediction)
         {
-            _recoilTokenSource = new CancellationTokenSource();
-            var token = _recoilTokenSource.Token;
+            if (!AntiRecoilConfig.Enabled || !input.IsFiring)
+                return;
 
-            Task.Run(async () =>
+            float adjustedX = -_recoilOffsetX * AntiRecoilConfig.Strength;
+            float adjustedY = -_recoilOffsetY * AntiRecoilConfig.Strength;
+
+            input.AdjustStick(adjustedX, adjustedY);
+
+            if (AntiRecoilConfig.DynamicAdjustment && prediction.HasRecoilPattern)
             {
-                while (!token.IsCancellationRequested)
-                {
-                    ApplyRecoilCompensation();
-                    await Task.Delay(ConfigManager.Current.RecoilDelay);
-                }
-            }, token);
+                var dynamic = prediction.RecoilPattern;
+                input.AdjustStick(dynamic.X, dynamic.Y);
+            }
         }
 
-        private static void Stop()
+        public void UpdateOffsets(float x, float y)
         {
-            _recoilTokenSource?.Cancel();
-        }
-
-        private static void ApplyRecoilCompensation()
-        {
-            if (!IsFiring()) return;
-
-            int pullAmount = ConfigManager.Current.RecoilStrength;
-            InputHandler.MoveMouse(0, pullAmount); // Downward nudge
-        }
-
-        private static bool IsFiring()
-        {
-            // TODO: Replace with real fire detection (mouse down or trigger hold)
-            return true;
+            _recoilOffsetX = x;
+            _recoilOffsetY = y;
         }
     }
-}
 
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Provides recoil compensation using vertical nudge
-// ✅ Runs in background thread with delay config
-// ✅ Integrates with InputHandler and ConfigManager
-// - [ ] Replace IsFiring with real trigger detection
-// - [ ] Add XY patterns per weapon (COD, Apex, R6)
-// - [ ] Hook into Cronus or GPC output later
-// ===================================================================
+    public static class AntiRecoilConfig
+    {
+        public static bool Enabled { get; set; } = true;
+        public static float Strength { get; set; } = 1.0f;
+        public static bool DynamicAdjustment { get; set; } = true;
+
+        public static float DefaultOffsetX { get; set; } = 0.35f;
+        public static float DefaultOffsetY { get; set; } = 0.6f;
+    }
+}

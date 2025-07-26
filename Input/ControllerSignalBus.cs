@@ -1,68 +1,75 @@
-﻿//heavenly v3.0 – Input Signal Broadcaster
+﻿// neural v3.0
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace JaysAi.Finale.Input
 {
-    public static class ControllerSignalBus
+    public sealed class ControllerSignalBus
     {
-        private static readonly Dictionary<string, List<Action>> signalListeners = new();
-        private static readonly Dictionary<string, List<Action<object?>>> payloadListeners = new();
+        private static readonly Lazy<ControllerSignalBus> _instance = new(() => new ControllerSignalBus());
+        public static ControllerSignalBus Instance => _instance.Value;
 
-        public static void Subscribe(string signal, Action listener)
+        private readonly ConcurrentDictionary<string, List<Action<object?>>> _subscribers;
+
+        private ControllerSignalBus()
         {
-            if (!signalListeners.ContainsKey(signal))
-                signalListeners[signal] = new List<Action>();
-
-            signalListeners[signal].Add(listener);
+            _subscribers = new ConcurrentDictionary<string, List<Action<object?>>>();
         }
 
-        public static void Subscribe<T>(string signal, Action<T?> listener)
+        public void Subscribe(string signal, Action<object?> handler)
         {
-            if (!payloadListeners.ContainsKey(signal))
-                payloadListeners[signal] = new List<Action<object?>>();
-
-            payloadListeners[signal].Add(payload => listener((T?)payload));
-        }
-
-        public static void Unsubscribe(string signal, Action listener)
-        {
-            if (signalListeners.ContainsKey(signal))
-                signalListeners[signal].Remove(listener);
-        }
-
-        public static void Unsubscribe<T>(string signal, Action<T?> listener)
-        {
-            if (payloadListeners.ContainsKey(signal))
-                payloadListeners[signal].RemoveAll(l => l.Equals(listener));
-        }
-
-        public static void Emit(string signal)
-        {
-            if (signalListeners.ContainsKey(signal))
-            {
-                foreach (var listener in signalListeners[signal])
+            _subscribers.AddOrUpdate(
+                signal,
+                _ => new List<Action<object?>> { handler },
+                (_, handlers) =>
                 {
-                    listener?.Invoke();
+                    lock (handlers)
+                    {
+                        handlers.Add(handler);
+                        return handlers;
+                    }
+                });
+        }
+
+        public void Unsubscribe(string signal, Action<object?> handler)
+        {
+            if (_subscribers.TryGetValue(signal, out var handlers))
+            {
+                lock (handlers)
+                {
+                    handlers.Remove(handler);
+                    if (handlers.Count == 0)
+                        _subscribers.TryRemove(signal, out _);
                 }
             }
         }
 
-        public static void Emit<T>(string signal, T payload)
+        public void Publish(string signal, object? payload = null)
         {
-            if (payloadListeners.ContainsKey(signal))
+            if (_subscribers.TryGetValue(signal, out var handlers))
             {
-                foreach (var listener in payloadListeners[signal])
+                List<Action<object?>> snapshot;
+                lock (handlers)
+                    snapshot = new List<Action<object?>>(handlers);
+
+                foreach (var handler in snapshot)
                 {
-                    listener?.Invoke(payload);
+                    try
+                    {
+                        handler.Invoke(payload);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[ControllerSignalBus] Error invoking handler for '{signal}': {ex.Message}");
+                    }
                 }
             }
         }
 
-        public static void Clear()
+        public void ClearAll()
         {
-            signalListeners.Clear();
-            payloadListeners.Clear();
+            _subscribers.Clear();
         }
     }
 }

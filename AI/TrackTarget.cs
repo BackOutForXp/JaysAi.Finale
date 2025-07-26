@@ -1,37 +1,55 @@
-﻿//heavenly v3.0
-using OpenCvSharp;
+﻿// neural v3.0
+using System;
+using JaysAi.Finale.Data;
+using JaysAi.Finale.Utility;
 
 namespace JaysAi.Finale.AI
 {
     public class TrackTarget
     {
-        public int Id { get; set; }
-        public Rect BoundingBox { get; set; }
-        public float Confidence { get; set; }
-        public bool IsEnemy { get; set; }
-        public Point2f Center => new(
-            BoundingBox.X + BoundingBox.Width / 2f,
-            BoundingBox.Y + BoundingBox.Height / 2f
-        );
+        public TrackedTarget Tracked { get; private set; }
+        public bool IsLocked { get; private set; }
 
-        public TrackTarget(int id, Rect bbox, float confidence, bool isEnemy)
+        private readonly TimeSpan visibilityTimeout = TimeSpan.FromMilliseconds(1000);
+
+        public void LockOn(TrackedTarget target)
         {
-            Id = id;
-            BoundingBox = bbox;
-            Confidence = confidence;
-            IsEnemy = isEnemy;
+            Tracked = target;
+            IsLocked = true;
         }
 
-        public float GetDistanceTo(Point2f point)
+        public void Unlock()
         {
-            float dx = point.X - Center.X;
-            float dy = point.Y - Center.Y;
-            return (float)System.Math.Sqrt(dx * dx + dy * dy);
+            Tracked = null;
+            IsLocked = false;
         }
 
-        public override string ToString()
+        public void Update()
         {
-            return $"TrackTarget #{Id} | Pos: {Center} | Enemy: {IsEnemy} | Conf: {Confidence:F2}";
+            if (!IsLocked || Tracked == null)
+                return;
+
+            if (Tracked.IsLost(visibilityTimeout))
+            {
+                Unlock();
+                return;
+            }
+
+            // Maintain smoothing update
+            Tracked.Update(Tracked.Enemy.Position, Tracked.Enemy.IsVisible);
+        }
+
+        public Vector3 GetTargetPosition()
+        {
+            if (Tracked == null)
+                return Vector3.Zero;
+
+            return Tracked.PredictNextPosition();
+        }
+
+        public bool HasValidTarget()
+        {
+            return IsLocked && Tracked != null && !Tracked.IsLost(visibilityTimeout);
         }
     }
 }

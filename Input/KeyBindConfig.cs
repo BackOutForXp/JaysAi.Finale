@@ -1,20 +1,45 @@
-﻿//monarch v2.1 – Individual keybind config class
-
-using global::System.Windows.Input;
+﻿// neural v3.0
+using System.Collections.Generic;
 
 namespace JaysAi.Finale.Input
 {
-    public class KeyBindConfig
+    public class KeybindConfig
     {
-        public string Name { get; set; }
-        public Key Key { get; set; }
-        public bool ToggleMode { get; set; }
+        public Dictionary<string, InputBinding> Bindings { get; } = new();
 
-        public KeyBindConfig(string name, Key key, bool toggleMode = false)
+        public void SetBinding(string actionName, InputBinding binding)
         {
-            Name = name;
-            Key = key;
-            ToggleMode = toggleMode;
+            if (Bindings.ContainsKey(actionName))
+                Bindings[actionName] = binding;
+            else
+                Bindings.Add(actionName, binding);
+        }
+
+        public bool TryGetBinding(string actionName, out InputBinding binding)
+        {
+            return Bindings.TryGetValue(actionName, out binding);
+        }
+
+        public void Clear()
+        {
+            Bindings.Clear();
+        }
+
+        public IEnumerable<string> GetAllActions()
+        {
+            return Bindings.Keys;
+        }
+    }
+
+    public class InputBinding
+    {
+        public string Device { get; set; } = "Keyboard"; // or "Controller"
+        public string Key { get; set; } = string.Empty;
+        public bool IsToggle { get; set; } = false;
+
+        public override string ToString()
+        {
+            return $"{Device}:{Key}" + (IsToggle ? " [Toggle]" : "");
         }
     }
 }

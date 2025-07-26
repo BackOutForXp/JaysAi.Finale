@@ -1,43 +1,64 @@
-﻿//heavenly v3.0 – Aim Data Telemetry Logger
+﻿// Neural v3.0 — AimDataRecorder.cs
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using System.Windows;
-using JaysAi.Finale.AI;
+using JaysAi.Finale.Helpers;
+using JaysAi.Finale.Models;
+using JaysAi.Finale.Utility;
+using JaysAi.Finale.SystemLogic;
 
 namespace JaysAi.Finale.Input
 {
     public class AimDataRecorder
     {
-        private readonly List<string> _dataPoints = new();
-        private readonly string _logPath;
+        private readonly List<AimSnapshot> aimSnapshots;
+        private readonly object lockObj = new();
 
         public AimDataRecorder()
         {
-            _logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs", $"aim_data_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
-            Directory.CreateDirectory(Path.GetDirectoryName(_logPath)!);
-            _dataPoints.Add("Timestamp,TargetX,TargetY,CrosshairX,CrosshairY,DeltaX,DeltaY");
+            aimSnapshots = new List<AimSnapshot>();
         }
 
-        public void RecordFrame(Point target, Point crosshair)
+        public void RecordSnapshot(DateTime timestamp, Vector2 targetPosition, Vector2 aimPosition, float distance, float aimDelta)
         {
-            var deltaX = target.X - crosshair.X;
-            var deltaY = target.Y - crosshair.Y;
-            var logEntry = $"{DateTime.UtcNow:O},{target.X:F2},{target.Y:F2},{crosshair.X:F2},{crosshair.Y:F2},{deltaX:F2},{deltaY:F2}";
-            _dataPoints.Add(logEntry);
+            lock (lockObj)
+            {
+                aimSnapshots.Add(new AimSnapshot
+                {
+                    Timestamp = timestamp,
+                    TargetPosition = targetPosition,
+                    AimPosition = aimPosition,
+                    DistanceToTarget = distance,
+                    AimError = aimDelta
+                });
+
+                if (aimSnapshots.Count > 1000)
+                    aimSnapshots.RemoveAt(0); // Trim oldest
+            }
         }
 
-        public void Save()
+        public List<AimSnapshot> GetSnapshots()
         {
-            try
+            lock (lockObj)
             {
-                File.WriteAllLines(_logPath, _dataPoints, Encoding.UTF8);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[AimDataRecorder] Failed to write aim log: {ex.Message}");
+                return new List<AimSnapshot>(aimSnapshots);
             }
         }
+
+        public void Clear()
+        {
+            lock (lockObj)
+            {
+                aimSnapshots.Clear();
+            }
+        }
+    }
+
+    public class AimSnapshot
+    {
+        public DateTime Timestamp { get; set; }
+        public Vector2 TargetPosition { get; set; }
+        public Vector2 AimPosition { get; set; }
+        public float DistanceToTarget { get; set; }
+        public float AimError { get; set; }
     }
 }

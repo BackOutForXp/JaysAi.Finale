@@ -1,55 +1,72 @@
-﻿// File: Input/MouseClicker.cs
+﻿// neural v3.0
 using System;
-using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace JaysAi.Finale.Input
 {
-    public static class MouseClicker
+    public class MouseClicker : IDisposable
     {
-        private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
-        private const uint MOUSEEVENTF_LEFTUP = 0x0004;
-        private const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
-        private const uint MOUSEEVENTF_RIGHTUP = 0x0010;
+        private readonly CancellationTokenSource _cts = new();
+        private Task? _clickTask;
+        private bool _clicking;
+        private int _intervalMs = 100;
+        private MouseButton _button = MouseButton.Left;
 
-        [DllImport("user32.dll")]
-        private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, nuint dwExtraInfo);
-
-        public static void LeftClick()
+        public enum MouseButton
         {
-            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, nuint.Zero);
-            Thread.Sleep(15);
-            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, nuint.Zero);
+            Left,
+            Right,
+            Middle
         }
 
-        public static void RightClick()
+        public void StartClicking(MouseButton button, int intervalMs)
         {
-            mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, nuint.Zero);
-            Thread.Sleep(15);
-            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, nuint.Zero);
-        }
+            if (_clicking) return;
 
-        public static void HoldLeftClick(int durationMs)
-        {
-            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, nuint.Zero);
-            Thread.Sleep(durationMs);
-            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, nuint.Zero);
-        }
+            _button = button;
+            _intervalMs = intervalMs;
+            _clicking = true;
 
-        public static void SpamClick(int count, int delayMs = 50)
-        {
-            for (int i = 0; i < count; i++)
+            _clickTask = Task.Run(() =>
             {
-                LeftClick();
-                Thread.Sleep(delayMs);
+                while (!_cts.Token.IsCancellationRequested)
+                {
+                    PerformClick(_button);
+                    Task.Delay(_intervalMs, _cts.Token).Wait(_cts.Token);
+                }
+            }, _cts.Token);
+        }
+
+        public void StopClicking()
+        {
+            if (!_clicking) return;
+
+            _clicking = false;
+            _cts.Cancel();
+            _clickTask?.Wait();
+        }
+
+        private void PerformClick(MouseButton button)
+        {
+            switch (button)
+            {
+                case MouseButton.Left:
+                    MouseButtonHelper.ClickLeft();
+                    break;
+                case MouseButton.Right:
+                    MouseButtonHelper.ClickRight();
+                    break;
+                case MouseButton.Middle:
+                    MouseButtonHelper.ClickMiddle();
+                    break;
             }
+        }
+
+        public void Dispose()
+        {
+            StopClicking();
+            _cts.Dispose();
         }
     }
 }
-
-// ======================= MONARCH INTEGRATION =======================
-// ✅ Core click emulation for TriggerBot, AssistFire
-// ✅ Supports tap, hold, and spam clicks
-// ✅ Pure Win32: no Drawing/Forms dependencies
-// TODO: Add auto-fire rate tuning or lockout toggle
-// ===================================================================

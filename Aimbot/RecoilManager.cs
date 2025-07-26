@@ -1,56 +1,63 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
+using System;
+using JaysAi.Finale.Aim;
 using JaysAi.Finale.Input;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.Utility;
+using JaysAi.Finale.SystemLogic;
 
 namespace JaysAi.Finale.Aimbot
 {
-    public static class RecoilManager
+    public class RecoilManager
     {
-        private static float _horizontalCompensation;
-        private static float _verticalCompensation;
-        private static DateTime _lastShotTime;
-        private static bool _isRecoiling;
+        private RecoilPattern activePattern;
+        private int currentShotIndex;
+        private DateTime lastShotTime;
 
-        public static void UpdateRecoil(bool isFiring)
+        public bool IsRecoilActive => activePattern != null;
+
+        public void LoadPattern(RecoilPattern pattern)
         {
-            if (isFiring)
-            {
-                ApplyRecoilCompensation();
-                _isRecoiling = true;
-                _lastShotTime = DateTime.UtcNow;
-            }
-            else if (_isRecoiling && TimeSinceLastShot() > 0.15)
-            {
-                ResetRecoil();
-            }
+            activePattern = pattern;
+            currentShotIndex = 0;
+            lastShotTime = DateTime.MinValue;
+            LogManager.Log("[RecoilManager] Loaded recoil pattern.");
         }
 
-        private static void ApplyRecoilCompensation()
+        public void Reset()
         {
-            _horizontalCompensation = WeaponProfile.Active.HorizontalRecoil;
-            _verticalCompensation = WeaponProfile.Active.VerticalRecoil;
-
-            MouseEmulator.MoveMouseRelative(
-                x: (int)(-_horizontalCompensation),
-                y: (int)(-_verticalCompensation)
-            );
-
-            Logger.LogDebug($"[RecoilManager] Applied recoil compensation: H={_horizontalCompensation}, V={_verticalCompensation}");
+            currentShotIndex = 0;
+            lastShotTime = DateTime.MinValue;
         }
 
-        private static double TimeSinceLastShot()
+        public (float x, float y) GetRecoilOffset()
         {
-            return (DateTime.UtcNow - _lastShotTime).TotalSeconds;
+            if (activePattern == null || currentShotIndex >= activePattern.Steps.Count)
+                return (0, 0);
+
+            var (x, y) = activePattern.Steps[currentShotIndex];
+            return (x, y);
         }
 
-        private static void ResetRecoil()
+        public void AdvanceShot()
         {
-            _horizontalCompensation = 0;
-            _verticalCompensation = 0;
-            _isRecoiling = false;
+            if (activePattern == null)
+                return;
 
-            Logger.LogDebug("[RecoilManager] Recoil reset.");
+            lastShotTime = DateTime.UtcNow;
+            currentShotIndex = Math.Min(currentShotIndex + 1, activePattern.Steps.Count - 1);
+        }
+
+        public void ApplyRecoil(InputInjector injector)
+        {
+            var offset = GetRecoilOffset();
+            injector.MoveMouse(offset.x, offset.y);
+            AdvanceShot();
+        }
+
+        public void UnloadPattern()
+        {
+            activePattern = null;
+            Reset();
+            LogManager.Log("[RecoilManager] Recoil pattern unloaded.");
         }
     }
 }

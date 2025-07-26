@@ -1,47 +1,84 @@
-﻿//heavenly v3.0 – Controller Event Dispatcher
+﻿//neural v3.0
 using System;
+using System.Numerics;
 using JaysAi.Finale.Input;
-using JaysAi.Finale.Aimbot;
+using JaysAi.Finale.Settings;
+using JaysAi.Finale.Helpers;
 
 namespace JaysAi.Finale.Input
 {
-    public class ControllerBridge
+    public static class ControllerBridge
     {
-        public event Action<ControllerState>? OnStateChanged;
-        public ControllerState CurrentState { get; private set; } = new();
+        public static Vector2 LeftStick { get; private set; }
+        public static Vector2 RightStick { get; private set; }
+        public static bool IsControllerConnected { get; private set; }
 
-        private readonly ControllerInputPoller _poller;
+        public static float TriggerL { get; private set; }
+        public static float TriggerR { get; private set; }
 
-        public ControllerBridge()
+        public static bool ButtonA { get; private set; }
+        public static bool ButtonB { get; private set; }
+        public static bool ButtonX { get; private set; }
+        public static bool ButtonY { get; private set; }
+
+        public static bool BumperL { get; private set; }
+        public static bool BumperR { get; private set; }
+
+        public static bool DPadUp { get; private set; }
+        public static bool DPadDown { get; private set; }
+        public static bool DPadLeft { get; private set; }
+        public static bool DPadRight { get; private set; }
+
+        public static bool StartButton { get; private set; }
+        public static bool BackButton { get; private set; }
+
+        public static void Update(ControllerInputState inputState)
         {
-            _poller = new ControllerInputPoller();
-            _poller.OnInputUpdated += HandleInputUpdate;
+            if (inputState == null) return;
+
+            IsControllerConnected = inputState.IsConnected;
+
+            LeftStick = ApplyDeadzone(inputState.LeftStick);
+            RightStick = ApplyDeadzone(inputState.RightStick);
+
+            TriggerL = inputState.TriggerL;
+            TriggerR = inputState.TriggerR;
+
+            ButtonA = inputState.ButtonA;
+            ButtonB = inputState.ButtonB;
+            ButtonX = inputState.ButtonX;
+            ButtonY = inputState.ButtonY;
+
+            BumperL = inputState.BumperL;
+            BumperR = inputState.BumperR;
+
+            DPadUp = inputState.DPadUp;
+            DPadDown = inputState.DPadDown;
+            DPadLeft = inputState.DPadLeft;
+            DPadRight = inputState.DPadRight;
+
+            StartButton = inputState.Start;
+            BackButton = inputState.Back;
         }
 
-        private void HandleInputUpdate(ControllerState newState)
+        private static Vector2 ApplyDeadzone(Vector2 stickInput, float threshold = 0.08f)
         {
-            if (!newState.Equals(CurrentState))
-            {
-                CurrentState = newState;
-                OnStateChanged?.Invoke(CurrentState);
-            }
+            return stickInput.Length() < threshold ? Vector2.Zero : stickInput;
         }
 
-        public void StartListening()
+        public static bool IsADS()
         {
-            _poller.StartPolling();
+            return TriggerL > 0.6f;
         }
 
-        public void StopListening()
+        public static bool IsFiring()
         {
-            _poller.StopPolling();
+            return TriggerR > 0.6f;
         }
 
-        public void InjectVirtualInput(ControllerState simulatedState)
+        public static bool IsActivatingStickAssist()
         {
-            // Optional: inject a simulated state (e.g. AI-controlled logic)
-            CurrentState = simulatedState;
-            OnStateChanged?.Invoke(CurrentState);
+            return IsADS() && IsFiring();
         }
     }
 }

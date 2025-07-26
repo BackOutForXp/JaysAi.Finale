@@ -1,57 +1,51 @@
-﻿//monarch v2.1
+﻿// Neural v3.0 — TargetIcon.cs
 using SkiaSharp;
 
-namespace JaysAi.Finale.Visuals
+namespace JaysAi.Finale.Overlay
 {
     public class TargetIcon
     {
-        public float Size { get; set; } = 12f;
-        public float Stroke { get; set; } = 2f;
+        public bool IsVisible { get; set; } = true;
+        public float Size { get; set; } = 10f;
+        public SKColor Color { get; set; } = SKColors.Red;
+        public SKPoint Position { get; set; }
 
-        public void DrawDiamond(SKCanvas canvas, float x, float y, SKColor color)
+        /// <summary>
+        /// Draws a target marker icon (circle) at a given screen position.
+        /// </summary>
+        public void Draw(SKCanvas canvas)
         {
+            if (!IsVisible || canvas == null)
+                return;
+
             using var paint = new SKPaint
             {
-                Color = color,
-                StrokeWidth = Stroke,
-                IsAntialias = true,
-                IsStroke = true
-            };
-
-            var path = new SKPath();
-            path.MoveTo(x, y - Size);         // Top
-            path.LineTo(x + Size, y);         // Right
-            path.LineTo(x, y + Size);         // Bottom
-            path.LineTo(x - Size, y);         // Left
-            path.Close();
-
-            canvas.DrawPath(path, paint);
-        }
-
-        public void DrawCrosshair(SKCanvas canvas, float x, float y, SKColor color)
-        {
-            using var paint = new SKPaint
-            {
-                Color = color,
-                StrokeWidth = Stroke,
+                Color = Color,
+                Style = SKPaintStyle.Fill,
                 IsAntialias = true
             };
 
-            canvas.DrawLine(x - Size, y, x + Size, y, paint);
-            canvas.DrawLine(x, y - Size, x, y + Size, paint);
+            canvas.DrawCircle(Position, Size, paint);
         }
 
-        public void DrawRing(SKCanvas canvas, float x, float y, float radius, SKColor color)
+        /// <summary>
+        /// Updates icon location and appearance.
+        /// </summary>
+        public void Set(SKPoint position, float size, SKColor color)
         {
-            using var paint = new SKPaint
-            {
-                Color = color,
-                StrokeWidth = Stroke,
-                IsAntialias = true,
-                IsStroke = true
-            };
-
-            canvas.DrawCircle(x, y, radius, paint);
+            Position = position;
+            Size = size;
+            Color = color;
         }
+
+        /// <summary>
+        /// Hides the icon immediately.
+        /// </summary>
+        public void Hide() => IsVisible = false;
+
+        /// <summary>
+        /// Shows the icon with the current state.
+        /// </summary>
+        public void Show() => IsVisible = true;
     }
 }

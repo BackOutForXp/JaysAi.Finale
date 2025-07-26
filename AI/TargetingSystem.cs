@@ -1,43 +1,63 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using OpenCvSharp;
+using JaysAi.Finale.Data;
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Aim;
 
 namespace JaysAi.Finale.AI
 {
-    public static class TargetingSystem
+    public class TargetingSystem
     {
-        public static TargetInfo CurrentTarget { get; private set; }
-        public static List<TargetInfo> VisibleTargets { get; private set; } = new();
+        private readonly List<TargetInfo> _targets = new();
+        private readonly float _maxDistance = 150f;
+        private readonly float _visibilityBonus = 1.5f;
+        private readonly float _priorityDecay = 0.98f;
 
-        public static void UpdateTargets(IEnumerable<TargetInfo> detectedTargets)
+        public void UpdateTargets(List<Enemy> enemies, Vector3 playerPosition)
         {
-            // Filter only visible and enemy targets
-            VisibleTargets = detectedTargets
-                .Where(t => t.IsVisible && t.IsEnemy)
-                .OrderBy(t => t.Distance)
-                .ToList();
+            _targets.Clear();
 
-            CurrentTarget = SelectHighestPriorityTarget(VisibleTargets);
+            foreach (var enemy in enemies)
+            {
+                if (!enemy.IsAlive) continue;
+
+                var distance = Vector3.Distance(enemy.Position, playerPosition);
+                if (distance > _maxDistance) continue;
+
+                var targetInfo = new TargetInfo(enemy, enemy.Position)
+                {
+                    Distance = distance,
+                    IsVisible = enemy.IsVisible,
+                    IsAlive = enemy.IsAlive,
+                    AimWeightScore = CalculateScore(enemy, distance, enemy.IsVisible)
+                };
+
+                _targets.Add(targetInfo);
+            }
         }
 
-        private static TargetInfo SelectHighestPriorityTarget(List<TargetInfo> targets)
+        private float CalculateScore(Enemy enemy, float distance, bool isVisible)
         {
-            if (targets.Count == 0) return null;
+            float score = 100f - distance;
+            if (isVisible) score *= _visibilityBonus;
 
-            // Simple heuristic: closest + highest threat
-            return targets
-                .OrderByDescending(t => t.ThreatLevel)
+            score *= _priorityDecay;
+            return Math.Clamp(score, 0f, 100f);
+        }
+
+        public TargetInfo GetBestTarget()
+        {
+            if (_targets.Count == 0)
+                return null;
+
+            return _targets
+                .OrderByDescending(t => t.AimWeightScore)
                 .ThenBy(t => t.Distance)
                 .FirstOrDefault();
         }
 
-        public static void Reset()
-        {
-            CurrentTarget = null;
-            VisibleTargets.Clear();
-        }
-
-        public static bool HasLock => CurrentTarget != null;
+        public List<TargetInfo> GetAllTargets() => _targets;
     }
 }

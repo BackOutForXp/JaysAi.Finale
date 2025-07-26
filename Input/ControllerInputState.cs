@@ -1,44 +1,64 @@
-﻿//heavenly v3.0 – Controller Poller
-using JaysAi.Integration;
+﻿// Neural v3.0 — ControllerInputState.cs
 using System;
-using System.Timers;
+using System.Collections.Generic;
+using JaysAi.Finale.Enums;
+using JaysAi.Finale.Helpers;
 
 namespace JaysAi.Finale.Input
 {
-    public class ControllerInputPoller
+    public class ControllerInputState
     {
-        private readonly Timer _pollTimer;
-        private readonly IControllerBridge _bridge;
-        private ControllerState _lastState;
+        public Vector2 LeftStick { get; set; } = new Vector2(0, 0);
+        public Vector2 RightStick { get; set; } = new Vector2(0, 0);
+        public float LeftTrigger { get; set; }
+        public float RightTrigger { get; set; }
 
-        public event Action<ControllerState>? OnPoll;
+        public Dictionary<ControllerButton, bool> ButtonStates { get; private set; }
 
-        public ControllerInputPoller(IControllerBridge bridge, double pollIntervalMs = 10)
+        public ControllerInputState()
         {
-            _bridge = bridge;
-            _pollTimer = new Timer(pollIntervalMs);
-            _pollTimer.Elapsed += (s, e) => Poll();
+            ButtonStates = new Dictionary<ControllerButton, bool>();
+            InitializeDefaultButtons();
         }
 
-        public void Start()
+        private void InitializeDefaultButtons()
         {
-            _pollTimer.Start();
-        }
-
-        public void Stop()
-        {
-            _pollTimer.Stop();
-        }
-
-        private void Poll()
-        {
-            var currentState = _bridge.GetCurrentState();
-
-            if (!currentState.Equals(_lastState))
+            foreach (ControllerButton button in Enum.GetValues(typeof(ControllerButton)))
             {
-                _lastState = currentState;
-                OnPoll?.Invoke(currentState);
+                ButtonStates[button] = false;
             }
+        }
+
+        public void SetButtonState(ControllerButton button, bool isPressed)
+        {
+            if (ButtonStates.ContainsKey(button))
+            {
+                ButtonStates[button] = isPressed;
+            }
+        }
+
+        public bool IsButtonPressed(ControllerButton button)
+        {
+            return ButtonStates.TryGetValue(button, out var isPressed) && isPressed;
+        }
+
+        public void Reset()
+        {
+            LeftStick = new Vector2(0, 0);
+            RightStick = new Vector2(0, 0);
+            LeftTrigger = 0;
+            RightTrigger = 0;
+
+            var keys = new List<ControllerButton>(ButtonStates.Keys);
+            foreach (var key in keys)
+            {
+                ButtonStates[key] = false;
+            }
+        }
+
+        public override string ToString()
+        {
+            return $"LS: {LeftStick}, RS: {RightStick}, LT: {LeftTrigger:F2}, RT: {RightTrigger:F2}, Buttons: [{string.Join(", ", ButtonStates)}]";
         }
     }
 }

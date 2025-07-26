@@ -1,24 +1,29 @@
-﻿//monarch v2.0
+﻿// neural v3.0
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace JaysAi.Finale.Input
 {
-    /// <summary>
-    /// Sends simulated keypresses using the Windows SendInput API.
-    /// Used for macro triggers, recoil assists, or stealth controls.
-    /// </summary>
     public static class KeyboardPresser
     {
-        private const int INPUT_KEYBOARD = 1;
-        private const ushort KEYEVENTF_KEYUP = 0x0002;
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+        [DllImport("user32.dll")]
+        private static extern short VkKeyScan(char ch);
 
         [StructLayout(LayoutKind.Sequential)]
         private struct INPUT
         {
-            public int type;
-            public KEYBDINPUT ki;
+            public uint type;
+            public InputUnion u;
+        }
+
+        [StructLayout(LayoutKind.Explicit)]
+        private struct InputUnion
+        {
+            [FieldOffset(0)] public KEYBDINPUT ki;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -28,57 +33,81 @@ namespace JaysAi.Finale.Input
             public ushort wScan;
             public uint dwFlags;
             public uint time;
-            public nint dwExtraInfo;
+            public IntPtr dwExtraInfo;
         }
 
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint SendInput(uint nInputs, ref INPUT pInputs, int cbSize);
+        private const int INPUT_KEYBOARD = 1;
+        private const uint KEYEVENTF_KEYUP = 0x0002;
 
-        /// <summary>
-        /// Sends a full press + release of a virtual key.
-        /// </summary>
-        /// <param name="vk">The virtual key code.</param>
-        public static void TapKey(ushort vk)
+        public static void PressKey(char key)
         {
-            PressKey(vk);
-            Thread.Sleep(25); // Delay between press and release
-            ReleaseKey(vk);
-        }
-
-        /// <summary>
-        /// Sends a key press event.
-        /// </summary>
-        public static void PressKey(ushort vk)
-        {
-            var input = new INPUT
+            ushort virtualKey = (ushort)VkKeyScan(key);
+            var inputDown = new INPUT
             {
                 type = INPUT_KEYBOARD,
-                ki = new KEYBDINPUT
+                u = new InputUnion
                 {
-                    wVk = vk,
-                    dwFlags = 0,
-                    dwExtraInfo = nint.Zero
+                    ki = new KEYBDINPUT
+                    {
+                        wVk = virtualKey,
+                        dwFlags = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
                 }
             };
-            SendInput(1, ref input, Marshal.SizeOf(typeof(INPUT)));
-        }
 
-        /// <summary>
-        /// Sends a key release event.
-        /// </summary>
-        public static void ReleaseKey(ushort vk)
-        {
-            var input = new INPUT
+            var inputUp = new INPUT
             {
                 type = INPUT_KEYBOARD,
-                ki = new KEYBDINPUT
+                u = new InputUnion
                 {
-                    wVk = vk,
-                    dwFlags = KEYEVENTF_KEYUP,
-                    dwExtraInfo = nint.Zero
+                    ki = new KEYBDINPUT
+                    {
+                        wVk = virtualKey,
+                        dwFlags = KEYEVENTF_KEYUP,
+                        dwExtraInfo = IntPtr.Zero
+                    }
                 }
             };
-            SendInput(1, ref input, Marshal.SizeOf(typeof(INPUT)));
+
+            INPUT[] inputs = { inputDown, inputUp };
+            SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+        }
+
+        public static void HoldKey(char key, int durationMs)
+        {
+            ushort virtualKey = (ushort)VkKeyScan(key);
+            var inputDown = new INPUT
+            {
+                type = INPUT_KEYBOARD,
+                u = new InputUnion
+                {
+                    ki = new KEYBDINPUT
+                    {
+                        wVk = virtualKey,
+                        dwFlags = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+
+            var inputUp = new INPUT
+            {
+                type = INPUT_KEYBOARD,
+                u = new InputUnion
+                {
+                    ki = new KEYBDINPUT
+                    {
+                        wVk = virtualKey,
+                        dwFlags = KEYEVENTF_KEYUP,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+
+            SendInput(1, new[] { inputDown }, Marshal.SizeOf(typeof(INPUT)));
+            Thread.Sleep(durationMs);
+            SendInput(1, new[] { inputUp }, Marshal.SizeOf(typeof(INPUT)));
         }
     }
 }

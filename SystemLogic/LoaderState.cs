@@ -1,45 +1,43 @@
-﻿//monarch v2.1 – Global runtime status tracker
-using System;
-
+﻿// neural v3.0
 namespace JaysAi.Finale.SystemLogic
 {
     public static class LoaderState
     {
-        public static bool IsInitialized { get; set; } = false;
-        public static bool IsRunning { get; set; } = false;
-        public static bool IsGuiVisible { get; set; } = true;
-        public static bool IsInStealthMode { get; set; } = false;
+        private static bool _isInitialized = false;
+        private static bool _isInStealthMode = false;
+        private static bool _isAuthenticated = false;
+        private static string? _currentProfileName = null;
 
-        public static DateTime LastStartTime { get; private set; }
-        public static DateTime LastUpdateTime { get; private set; }
-
-        public static void MarkStarted()
+        public static bool IsInitialized
         {
-            IsInitialized = true;
-            IsRunning = true;
-            LastStartTime = DateTime.Now;
+            get => _isInitialized;
+            set => _isInitialized = value;
         }
 
-        public static void MarkUpdated()
+        public static bool IsInStealthMode
         {
-            LastUpdateTime = DateTime.Now;
+            get => _isInStealthMode;
+            set => _isInStealthMode = value;
         }
 
-        public static void ToggleGui()
+        public static bool IsAuthenticated
         {
-            IsGuiVisible = !IsGuiVisible;
+            get => _isAuthenticated;
+            set => _isAuthenticated = value;
         }
 
-        public static void EnterStealthMode()
+        public static string? CurrentProfileName
         {
-            IsInStealthMode = true;
-            IsGuiVisible = false;
+            get => _currentProfileName;
+            set => _currentProfileName = value;
         }
 
-        public static void ExitStealthMode()
+        public static void Reset()
         {
-            IsInStealthMode = false;
-            IsGuiVisible = true;
+            _isInitialized = false;
+            _isInStealthMode = false;
+            _isAuthenticated = false;
+            _currentProfileName = null;
         }
     }
 }

@@ -1,53 +1,76 @@
-﻿//monarch v2.1 – Screen Dimension Utility
+﻿//heavenly v3.0
+
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Forms;
+using System.Windows.Interop;
+using JaysAi.Finale.SystemLogic;
 
 namespace JaysAi.Finale.SystemLogic
 {
     public static class ScreenManager
     {
-        private static int _width = 1920;
-        private static int _height = 1080;
+        [DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out POINT lpPoint);
 
-        public static void SetResolution(int width, int height)
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT
         {
-            _width = width;
-            _height = height;
+            public int X;
+            public int Y;
         }
 
-        public static int GetWidth() => _width;
-        public static int GetHeight() => _height;
+        public static Screen GetPrimaryScreen() => Screen.PrimaryScreen;
 
-        public static PointF GetScreenCenter()
+        public static IEnumerable<Screen> GetAllScreens() => Screen.AllScreens;
+
+        public static Screen GetScreenFromPoint(Point point)
         {
-            return new PointF(_width / 2f, _height / 2f);
+            var drawingPoint = new System.Drawing.Point((int)point.X, (int)point.Y);
+            return Screen.FromPoint(drawingPoint);
         }
 
-        public static Point ConvertToPoint(PointF pointF)
+        public static Screen GetScreenFromWindow(Window window)
         {
-            return new Point((int)pointF.X, (int)pointF.Y);
+            var helper = new WindowInteropHelper(window);
+            return Screen.FromHandle(helper.Handle);
         }
 
-        public static PointF ConvertToPointF(Point point)
+        public static Screen GetScreenFromCursor()
         {
-            return new PointF(point.X, point.Y);
-        }
-    }
-
-    public struct PointF
-    {
-        public float X;
-        public float Y;
-
-        public PointF(float x, float y)
-        {
-            X = x;
-            Y = y;
+            GetCursorPos(out POINT point);
+            var drawingPoint = new System.Drawing.Point(point.X, point.Y);
+            return Screen.FromPoint(drawingPoint);
         }
 
-        public static PointF operator -(PointF a, PointF b)
+        public static Rectangle GetScreenBounds(Screen screen)
         {
-            return new PointF(a.X - b.X, a.Y - b.Y);
+            return screen.Bounds;
+        }
+
+        public static Screen GetLargestScreen()
+        {
+            return Screen.AllScreens.OrderByDescending(s => s.Bounds.Width * s.Bounds.Height).FirstOrDefault();
+        }
+
+        public static bool IsPointOnAnyScreen(Point point)
+        {
+            var drawingPoint = new System.Drawing.Point((int)point.X, (int)point.Y);
+            return Screen.AllScreens.Any(screen => screen.Bounds.Contains(drawingPoint));
+        }
+
+        public static string GetScreenDebugInfo()
+        {
+            var info = new List<string>();
+            foreach (var screen in Screen.AllScreens)
+            {
+                info.Add($"[{screen.DeviceName}] {screen.Bounds.Width}x{screen.Bounds.Height} | Primary: {screen.Primary}");
+            }
+
+            return string.Join("\n", info);
         }
     }
 }

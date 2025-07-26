@@ -1,27 +1,33 @@
-﻿// File: Visuals/OverlayState.cs
-using System.Collections.Generic;
-using System.Numerics;
-
-namespace JaysAi.Finale.Visuals
+﻿// Neural v3.0 — OverlayState.cs
+namespace JaysAi.Finale.Overlay
 {
-    public class OverlayState
+    public static class OverlayState
     {
-        public bool IsActive { get; set; } = true;
+        // === Master State Switches ===
+        public static bool OverlaySystemEnabled { get; set; } = true;
+        public static bool IsInitialized { get; set; } = false;
 
-        public List<OverlayEnemyState> Enemies { get; set; } = new();
+        // === Individual Module States ===
+        public static bool EspEnabled { get; set; } = true;
+        public static bool CrosshairEnabled { get; set; } = true;
+        public static bool FovRingEnabled { get; set; } = true;
+        public static bool DebugConsoleVisible { get; set; } = false;
 
-        public Vector2 ScreenSize { get; set; }
+        // === Render Performance Flags ===
+        public static bool UseAntiAliasing { get; set; } = true;
+        public static bool UseSafeMode { get; set; } = false;
 
-        public bool ShowCrosshair { get; set; }
-        public bool ShowESP { get; set; }
-    }
+        // === Diagnostic + Update Info ===
+        public static int FrameCount { get; set; } = 0;
+        public static double LastRenderMs { get; set; } = 0;
+        public static string LastActiveOverlay { get; set; } = "";
 
-    public class OverlayEnemyState
-    {
-        public string Name { get; set; } = "Enemy";
-        public Vector2 ScreenPosition { get; set; }
-        public float Health { get; set; }
-        public bool IsVisible { get; set; }
-        public bool IsHighlighted { get; set; } = false;
+        // === Runtime Flag Controls (for hotkeys, GUI sync, etc.) ===
+        public static bool ShowOverlayBorders { get; set; } = false;
+        public static bool ShowOverlayLabels { get; set; } = false;
+
+        // === Reserved Future Flags ===
+        public static bool Reserved1 { get; set; } = false;
+        public static bool Reserved2 { get; set; } = false;
     }
 }

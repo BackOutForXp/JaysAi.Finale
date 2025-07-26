@@ -1,23 +1,53 @@
-﻿using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
+﻿// Neural v3.0 — LabelTextHelper.cs
+using SkiaSharp;
 
-namespace JaysAi.Finale.Visuals
+namespace JaysAi.Finale.Overlay
 {
     public static class LabelTextHelper
     {
-        public static TextBlock CreateOverlayLabel(string text, double x, double y, Brush color, double fontSize = 12.0)
+        /// <summary>
+        /// Draws text at a specific screen position with default style.
+        /// </summary>
+        public static void DrawText(SKCanvas canvas, string text, float x, float y, SKColor? color = null, float textSize = 14f)
         {
-            return new TextBlock
+            if (string.IsNullOrWhiteSpace(text) || canvas == null)
+                return;
+
+            using var paint = new SKPaint
             {
-                Text = text,
-                Foreground = color,
-                FontSize = fontSize,
-                FontWeight = FontWeights.Bold,
-                Margin = new System.Windows.Thickness(x, y, 0, 0),
-                HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
-                VerticalAlignment = System.Windows.VerticalAlignment.Top
+                Color = color ?? SKColors.White,
+                IsAntialias = true,
+                TextSize = textSize,
+                Typeface = SKTypeface.FromFamilyName("Consolas"),
+                IsStroke = false,
+                Style = SKPaintStyle.Fill
             };
+
+            canvas.DrawText(text, x, y, paint);
+        }
+
+        /// <summary>
+        /// Draws centered text above a box or object.
+        /// </summary>
+        public static void DrawCenteredText(SKCanvas canvas, string text, float centerX, float topY, SKColor? color = null, float textSize = 14f)
+        {
+            if (string.IsNullOrWhiteSpace(text) || canvas == null)
+                return;
+
+            using var paint = new SKPaint
+            {
+                Color = color ?? SKColors.White,
+                IsAntialias = true,
+                TextSize = textSize,
+                Typeface = SKTypeface.FromFamilyName("Consolas"),
+                IsStroke = false,
+                Style = SKPaintStyle.Fill
+            };
+
+            float textWidth = paint.MeasureText(text);
+            float x = centerX - (textWidth / 2);
+
+            canvas.DrawText(text, x, topY, paint);
         }
     }
 }

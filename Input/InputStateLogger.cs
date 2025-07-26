@@ -1,50 +1,50 @@
-﻿//monarch v2.1 – Input Logger Core
+﻿// neural v3.0
 using System;
-using System.Collections.Generic;
-using JaysAi.Finale.Utility;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using JaysAi.Finale.Input.Models;
 
 namespace JaysAi.Finale.Input
 {
-    public class InputStateLogger
+    public sealed class InputStateLogger
     {
-        private readonly List<InputSnapshot> _inputHistory = new();
-        private readonly int _maxSnapshots = 100;
+        private readonly ConcurrentQueue<LoggedInputState> _inputLog = new();
+        private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
 
-        public void LogCurrentState(InputSnapshot snapshot)
+        public event Action<LoggedInputState>? OnInputLogged;
+
+        public InputStateLogger()
         {
-            if (snapshot == null) return;
-
-            if (_inputHistory.Count >= _maxSnapshots)
-                _inputHistory.RemoveAt(0); // drop oldest
-
-            _inputHistory.Add(snapshot);
         }
 
-        public IReadOnlyList<InputSnapshot> GetHistory()
+        public void LogState(ControllerInputState inputState)
         {
-            return _inputHistory.AsReadOnly();
+            var timestamp = _stopwatch.Elapsed.TotalMilliseconds;
+
+            var logged = new LoggedInputState
+            {
+                TimestampMs = timestamp,
+                InputState = inputState.Clone()
+            };
+
+            _inputLog.Enqueue(logged);
+            OnInputLogged?.Invoke(logged);
+        }
+
+        public LoggedInputState[] GetSnapshot()
+        {
+            return _inputLog.ToArray();
         }
 
         public void Clear()
         {
-            _inputHistory.Clear();
-        }
-
-        public void PrintHistory()
-        {
-            foreach (var snap in _inputHistory)
-                Logger.Log($"[Input] {snap.Timestamp}: X={snap.X}, Y={snap.Y}, Fire={snap.FireButtonDown}, ADS={snap.ADSButtonDown}");
+            while (_inputLog.TryDequeue(out _)) { }
         }
     }
 
-    public class InputSnapshot
+    public class LoggedInputState
     {
-        public DateTime Timestamp { get; set; } = DateTime.Now;
-        public int X { get; set; }
-        public int Y { get; set; }
-        public bool FireButtonDown { get; set; }
-        public bool ADSButtonDown { get; set; }
-        public bool Reloading { get; set; }
-        public float StickInputAngle { get; set; } = 0f;
+        public double TimestampMs { get; set; }
+        public ControllerInputState? InputState { get; set; }
     }
 }

@@ -1,38 +1,76 @@
-﻿//monarch v2.1.11 – Central AI Execution Dispatcher 
-using JaysAi.Finale.Visuals;
+﻿// neural v3.0
+using JaysAi.Finale.AI;
 using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.Modules;
+using JaysAi.Finale.Data;
 using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Utility;
+using JaysAi.Finale.Helpers;
+using JaysAi.Finale.Features;
+using JaysAi.Finale.Input;
+using System;
+using System.Collections.Generic;
 
 namespace JaysAi.Finale.AI
 {
-    public static class AiManager
+    public class AiManager
     {
-        private static bool _initialized;
+        private readonly PredictionEngine _predictionEngine;
+        private readonly TargetingSystem _targetingSystem;
+        private readonly BehaviorTrigger _behaviorTrigger;
+        private readonly RuntimeBehaviorLog _runtimeLog;
+        private readonly TrackTarget _tracker;
+        private readonly MotionTracker _motionTracker;
+        private readonly AiOverlay _aiOverlay;
 
-        public static void Initialize()
+        public AiManager()
         {
-            if (_initialized) return;
-
-            PredictionEngine.Initialize();
-            AiMemory.Initialize(); // Ensures persistent memory tracking
-            OverlaySignal.Initialize(); // Prepares signaling bridge
-            _initialized = true;
+            _predictionEngine = new PredictionEngine();
+            _targetingSystem = new TargetingSystem();
+            _behaviorTrigger = new BehaviorTrigger();
+            _runtimeLog = new RuntimeBehaviorLog();
+            _tracker = new TrackTarget();
+            _motionTracker = new MotionTracker();
+            _aiOverlay = new AiOverlay();
         }
 
-        public static void Update()
+        public void Initialize()
         {
-            if (!_initialized)
-                Initialize();
+            _predictionEngine.Initialize();
+            _tracker.Initialize();
+            _targetingSystem.Initialize();
+            _motionTracker.Initialize();
+            _behaviorTrigger.RegisterTriggers();
+            _runtimeLog.StartSession();
+            _aiOverlay.BindToAI(this);
+            LogManager.Log("AiManager initialized successfully.");
+        }
 
-            var detectedObjects = YoloDetector.GetDetectedObjects();
-            AiOverlay.ProcessVisuals(detectedObjects);
-            var bestTarget = TargetSelector.GetBestTarget(detectedObjects);
+        public void Update()
+        {
+            _tracker.UpdateTracking();
+            _predictionEngine.UpdatePredictions(_tracker.GetTargets());
+            _motionTracker.ProcessMovementData();
+            _targetingSystem.EvaluateTargets(_tracker.GetTargets());
+            _behaviorTrigger.Evaluate(_tracker.GetTargets());
+            _runtimeLog.LogUpdate(_tracker.GetTargets(), _predictionEngine.LatestPredictions);
+            _aiOverlay.UpdateOverlayData(_tracker.GetTargets());
+        }
 
-            if (bestTarget != null)
-            {
-                SnapAssist.LockOn(bestTarget);
-            }
+        public void Shutdown()
+        {
+            _aiOverlay.Unbind();
+            _runtimeLog.EndSession();
+            LogManager.Log("AiManager shut down.");
+        }
+
+        public List<TrackedTarget> GetCurrentTargets()
+        {
+            return _tracker.GetTargets();
+        }
+
+        public TrackedTarget GetPrimaryTarget()
+        {
+            return _targetingSystem.GetPrimaryTarget();
         }
     }
 }

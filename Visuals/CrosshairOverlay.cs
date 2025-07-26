@@ -1,72 +1,77 @@
-﻿// File: Visuals/CrosshairOverlay.cs
-using JaysAi.Finale.Core;
+﻿// Heavenly-tier v3.0
 using JaysAi.Finale.Settings;
+using JaysAi.Finale.Utility;
+using SkiaSharp;
+using SkiaSharp.Views.Desktop;
+using System;
+using System.Threading;
 using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Shapes;
+using System.Windows.Forms;
+using System.Windows.Media.Media3D;
 
 namespace JaysAi.Finale.Visuals
 {
-    public class CrosshairOverlay
+    public class CrosshairOverlay : Form
     {
-        private readonly AppSettings _settings;
+        private SKControl skControl;
+        private Thread renderThread;
+        private bool running = true;
 
-        public bool IsEnabled { get; set; } = true;
-
-        public CrosshairOverlay(AppSettings settings)
+        public CrosshairOverlay()
         {
-            _settings = settings;
+            FormBorderStyle = FormBorderStyle.None;
+            TopMost = true;
+            ShowInTaskbar = false;
+            BackColor = System.Drawing.Color.Black;
+            TransparencyKey = System.Drawing.Color.Black;
+            Width = ScreenUtils.Width;
+            Height = ScreenUtils.Height;
+            StartPosition = FormStartPosition.Manual;
+            Location = new System.Drawing.Point(0, 0);
+
+            skControl = new SKControl
+            {
+                Dock = DockStyle.Fill
+            };
+            skControl.PaintSurface += OnPaintSurface;
+
+            Controls.Add(skControl);
+
+            renderThread = new Thread(RenderLoop)
+            {
+                IsBackground = true
+            };
+            renderThread.Start();
         }
 
-        public void Render(Canvas canvas)
+        private void RenderLoop()
         {
-            if (!IsEnabled) return;
-
-            double centerX = canvas.ActualWidth / 2;
-            double centerY = canvas.ActualHeight / 2;
-
-            var color = (Color)ColorConverter.ConvertFromString(_settings.CrosshairColorHex);
-            var brush = new SolidColorBrush(color);
-            double thickness = _settings.CrosshairThickness;
-            double length = _settings.CrosshairLength;
-
-            canvas.Children.Clear();
-
-            // Horizontal line
-            canvas.Children.Add(new Line
+            while (running)
             {
-                X1 = centerX - length,
-                Y1 = centerY,
-                X2 = centerX + length,
-                Y2 = centerY,
-                Stroke = brush,
-                StrokeThickness = thickness
-            });
-
-            // Vertical line
-            canvas.Children.Add(new Line
-            {
-                X1 = centerX,
-                Y1 = centerY - length,
-                X2 = centerX,
-                Y2 = centerY + length,
-                Stroke = brush,
-                StrokeThickness = thickness
-            });
-
-            // Center dot (optional)
-            if (_settings.ShowCenterDot)
-            {
-                var dot = new Ellipse
-                {
-                    Width = thickness * 2,
-                    Height = thickness * 2,
-                    Fill = brush
-                };
-                Canvas.SetLeft(dot, centerX - dot.Width / 2);
-                Canvas.SetTop(dot, centerY - dot.Height / 2);
-                canvas.Children.Add(dot);
+                skControl.Invalidate();
+                Thread.Sleep(16); // ~60fps
             }
+        }
+
+        private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
+        {
+            var canvas = e.Surface.Canvas;
+            canvas.Clear(SKColors.Transparent);
+
+            if (UserSettingsProvider.Current.EnableCrosshair)
+            {
+                CrosshairDrawer.Draw(canvas,
+                    UserSettingsProvider.Current.CrosshairType,
+                    UserSettingsProvider.Current.CrosshairSize,
+                    SKColors.Red);
+            }
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            running = false;
+            renderThread?.Join();
+            base.OnFormClosing(e);
         }
     }
 }

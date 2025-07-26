@@ -1,39 +1,31 @@
-﻿//heavenly v3.0
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Aim;
-using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.Modules;
-
+﻿// neural v3.0
 namespace JaysAi.Finale.Aimbot
 {
     public class WeaponProfile
     {
-        public string Name { get; set; }
-        public float AimSmoothing { get; set; }
-        public float AimFov { get; set; }
-        public bool UseRecoilCompensation { get; set; }
-        public RecoilPattern RecoilPattern { get; set; }
-        public float FireRate { get; set; } // Rounds per second
-        public bool AutoFire { get; set; }
-        public TriggerSettings TriggerConfig { get; set; }
-        public float PredictionFactor { get; set; }
+        public string WeaponName { get; set; } = "Default";
 
-        public WeaponProfile(string name)
+        public float AimFov { get; set; } = 12.0f;
+        public float AimSmoothness { get; set; } = 1.25f;
+        public float RecoilCompensation { get; set; } = 0.8f;
+        public float BulletDropCompensation { get; set; } = 1.0f;
+        public float FireRateMultiplier { get; set; } = 1.0f;
+
+        public bool UsePrediction { get; set; } = true;
+        public bool UseSnapAssist { get; set; } = false;
+        public bool EnableRecoilControl { get; set; } = true;
+
+        public int BurstCount { get; set; } = 0;
+        public int DelayBetweenBursts { get; set; } = 0;
+
+        public WeaponProfile Clone()
         {
-            Name = name;
-            AimSmoothing = 5.0f;
-            AimFov = 12.0f;
-            UseRecoilCompensation = true;
-            RecoilPattern = new RecoilPattern();
-            FireRate = 9.5f;
-            AutoFire = false;
-            TriggerConfig = new TriggerSettings();
-            PredictionFactor = 1.0f;
+            return (WeaponProfile)this.MemberwiseClone();
         }
 
-        public bool IsViableFor(TrackedTarget target)
+        public override string ToString()
         {
-            return target != null && target.IsAlive && target.Distance < 100f;
+            return $"{WeaponName} [FOV: {AimFov}, Smooth: {AimSmoothness}, Recoil: {RecoilCompensation}]";
         }
     }
 }

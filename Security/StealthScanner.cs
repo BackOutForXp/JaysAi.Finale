@@ -1,43 +1,65 @@
-﻿using System;
+﻿//neural v3.0
+using JaysAi.Finale.Security.Diagnostics;
+using JaysAi.Finale.Utility;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Timers;
 
 namespace JaysAi.Finale.Security
 {
-    public static class StealthScanner
+    public sealed class StealthScanner : IDisposable
     {
-        private static readonly string[] BlacklistedProcesses = new[]
-        {
-            "beservice",         // BattleEye
-            "EasyAntiCheat",     // EAC
-            "vgk",               // Vanguard (Valorant)
-            "FaceItClient",      // FaceIt
-            "Mhyprot2",          // Genshin anti-cheat
-            "steamwebhelper",    // Potential flag
-            "dwm",               // Desktop Window Manager (rare triggers)
-        };
+        private static readonly Lazy<StealthScanner> _instance = new(() => new StealthScanner());
+        private readonly Timer _scanTimer;
+        private readonly HashSet<string> _blacklistedProcessNames;
 
-        public static bool IsSafeEnvironment()
+        public static StealthScanner Instance => _instance.Value;
+
+        private StealthScanner()
         {
-            var processes = Process.GetProcesses();
-            return !processes.Any(p => BlacklistedProcesses.Contains(p.ProcessName, StringComparer.OrdinalIgnoreCase));
+            _blacklistedProcessNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "ollydbg", "x64dbg", "ida64", "ida32", "dnspy", "scylla", "procmon", "procexp",
+                "cheatengine", "charles", "httpdebugger", "wireshark", "processhacker"
+            };
+
+            _scanTimer = new Timer(5000); // scan every 5 seconds
+            _scanTimer.Elapsed += (_, _) => ScanProcesses();
+            _scanTimer.Start();
         }
 
-        public static void PrintScanReport()
+        private void ScanProcesses()
         {
-            Console.WriteLine("[MONARCH] Running environment scan...");
-
-            foreach (var process in Process.GetProcesses())
+            try
             {
-                if (BlacklistedProcesses.Contains(process.ProcessName, StringComparer.OrdinalIgnoreCase))
+                var processes = Process.GetProcesses();
+                foreach (var process in processes)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"⚠ Detected blacklisted process: {process.ProcessName}");
-                    Console.ResetColor();
+                    if (_blacklistedProcessNames.Contains(process.ProcessName))
+                    {
+                        Logger.LogCritical($"⚠️ Blacklisted process detected: {process.ProcessName}");
+                        SecurityManager.ForceLogout($"Unauthorized tool: {process.ProcessName}");
+                        break;
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                Logger.LogError("StealthScanner scan failed: " + ex.Message);
+            }
+        }
 
-            Console.WriteLine("[MONARCH] Scan complete.");
+        public void AddToBlacklist(string processName)
+        {
+            _blacklistedProcessNames.Add(processName);
+        }
+
+        public void Dispose()
+        {
+            _scanTimer?.Stop();
+            _scanTimer?.Dispose();
         }
     }
 }

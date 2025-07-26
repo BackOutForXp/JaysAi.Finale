@@ -1,27 +1,45 @@
-﻿//monarch v2.0
+﻿// neural v3.0
+using System;
+using System.Collections.Generic;
+using JaysAi.Finale.SystemLogic;
+
 namespace JaysAi.Finale.SystemLogic
 {
-    public static class FeatureToggleManager
+    public class FeatureToggleManager
     {
-        public static bool EspEnabled { get; set; } = true;
-        public static bool AimAssistEnabled { get; set; } = true;
-        public static bool SnapAssistEnabled { get; set; } = true;
-        public static bool OverlayVisible { get; set; } = true;
-        public static bool AutoFireEnabled { get; set; } = false;
+        private readonly Dictionary<string, Action<bool>> _onToggleCallbacks = new();
 
-        public static void ToggleEsp() => EspEnabled = !EspEnabled;
-        public static void ToggleAimAssist() => AimAssistEnabled = !AimAssistEnabled;
-        public static void ToggleSnapAssist() => SnapAssistEnabled = !SnapAssistEnabled;
-        public static void ToggleOverlay() => OverlayVisible = !OverlayVisible;
-        public static void ToggleAutoFire() => AutoFireEnabled = !AutoFireEnabled;
-
-        public static void ResetAll()
+        public FeatureToggleManager()
         {
-            EspEnabled = true;
-            AimAssistEnabled = true;
-            SnapAssistEnabled = true;
-            OverlayVisible = true;
-            AutoFireEnabled = false;
+            FeatureToggle.FeatureToggled += OnFeatureToggled;
+        }
+
+        private void OnFeatureToggled(string featureName, bool isEnabled)
+        {
+            if (_onToggleCallbacks.TryGetValue(featureName, out var callback))
+            {
+                callback?.Invoke(isEnabled);
+            }
+        }
+
+        public void RegisterCallback(string featureName, Action<bool> onToggle)
+        {
+            if (string.IsNullOrWhiteSpace(featureName)) return;
+
+            _onToggleCallbacks[featureName] = onToggle;
+
+            // Immediate invoke with current state
+            onToggle(FeatureToggle.IsEnabled(featureName));
+        }
+
+        public void UnregisterCallback(string featureName)
+        {
+            _onToggleCallbacks.Remove(featureName);
+        }
+
+        public void Dispose()
+        {
+            _onToggleCallbacks.Clear();
         }
     }
 }

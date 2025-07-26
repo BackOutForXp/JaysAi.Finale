@@ -1,29 +1,52 @@
-﻿// File: System\OffsetProfile.cs
-
+﻿// neural v3.0
+using System;
 using System.Collections.Generic;
 
 namespace JaysAi.Finale.SystemLogic
 {
-    /// <summary>
-    /// Represents a named offset profile used by the loader.
-    /// You can define multiple profiles for different games or patch versions.
-    /// </summary>
     public class OffsetProfile
     {
-        public string Name { get; set; } = string.Empty;
-        public Dictionary<string, int> Offsets { get; set; } = new();
+        public string GameName { get; set; } = string.Empty;
+        public Dictionary<string, IntPtr> Offsets { get; set; } = new();
 
-        public OffsetProfile() { }
-
-        public OffsetProfile(string name, Dictionary<string, int> offsets)
+        public OffsetProfile(string gameName)
         {
-            Name = name;
-            Offsets = offsets;
+            GameName = gameName;
         }
 
-        public int GetOffset(string key)
+        public void SetOffset(string key, IntPtr value)
         {
-            return Offsets.TryGetValue(key, out int value) ? value : -1;
+            if (string.IsNullOrWhiteSpace(key)) return;
+
+            Offsets[key] = value;
+        }
+
+        public IntPtr GetOffset(string key)
+        {
+            if (Offsets.TryGetValue(key, out var value))
+                return value;
+
+            throw new KeyNotFoundException($"Offset key '{key}' not found in profile: {GameName}");
+        }
+
+        public bool TryGetOffset(string key, out IntPtr value)
+        {
+            return Offsets.TryGetValue(key, out value);
+        }
+
+        public IReadOnlyDictionary<string, IntPtr> GetAll()
+        {
+            return Offsets;
+        }
+
+        public void Clear()
+        {
+            Offsets.Clear();
+        }
+
+        public override string ToString()
+        {
+            return $"OffsetProfile: {GameName} | {Offsets.Count} offsets";
         }
     }
 }

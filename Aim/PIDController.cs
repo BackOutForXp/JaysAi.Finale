@@ -1,51 +1,56 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
 using System;
 
 namespace JaysAi.Finale.Aim
 {
     public class PIDController
     {
-        private double _kp;
-        private double _ki;
-        private double _kd;
+        private float kp;
+        private float ki;
+        private float kd;
 
-        private double _previousError;
-        private double _integral;
-        private DateTime _lastUpdate;
+        private float previousError;
+        private float integral;
 
-        public PIDController(double kp = 0.2, double ki = 0.01, double kd = 0.04)
+        private float outputLimit;
+
+        public PIDController(float p = 1.0f, float i = 0.0f, float d = 0.0f, float outputLimit = 1.0f)
         {
-            _kp = kp;
-            _ki = ki;
-            _kd = kd;
-            _lastUpdate = DateTime.Now;
+            kp = p;
+            ki = i;
+            kd = d;
+            this.outputLimit = outputLimit;
         }
 
-        public double Update(double currentError)
+        public void SetGains(float p, float i, float d)
         {
-            var now = DateTime.Now;
-            var deltaTime = (now - _lastUpdate).TotalSeconds;
-            _lastUpdate = now;
+            kp = p;
+            ki = i;
+            kd = d;
+        }
 
-            _integral += currentError * deltaTime;
-            var derivative = (currentError - _previousError) / deltaTime;
-            _previousError = currentError;
+        public void SetOutputLimit(float limit)
+        {
+            outputLimit = Math.Clamp(limit, 0f, float.MaxValue);
+        }
 
-            return (_kp * currentError) + (_ki * _integral) + (_kd * derivative);
+        public float Update(float error, float deltaTime)
+        {
+            if (deltaTime <= 0f) return 0f;
+
+            integral += error * deltaTime;
+            float derivative = (error - previousError) / deltaTime;
+
+            float output = (kp * error) + (ki * integral) + (kd * derivative);
+            previousError = error;
+
+            return Math.Clamp(output, -outputLimit, outputLimit);
         }
 
         public void Reset()
         {
-            _previousError = 0;
-            _integral = 0;
-            _lastUpdate = DateTime.Now;
-        }
-
-        public void SetTunings(double kp, double ki, double kd)
-        {
-            _kp = kp;
-            _ki = ki;
-            _kd = kd;
+            previousError = 0f;
+            integral = 0f;
         }
     }
 }

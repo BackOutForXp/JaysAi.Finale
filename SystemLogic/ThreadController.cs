@@ -1,32 +1,55 @@
-﻿//monarch v2.1 – Thread registration + safe cleanup
-
-using global::System;
-using global::System.Collections.Generic;
-using global::System.Threading;
+﻿// neural v3.0
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace JaysAi.Finale.SystemLogic
 {
-    public static class ThreadController
+    public sealed class ThreadController : IDisposable
     {
-        private static readonly List<Thread> threads = new();
+        private readonly ConcurrentDictionary<string, CancellationTokenSource> _threads = new();
+        private bool _disposed;
 
-        public static void Register(Thread thread)
+        public void StartOrReplace(string name, Action<CancellationToken> taskAction)
         {
-            threads.Add(thread);
-            thread.Start();
+            Stop(name);
+
+            var cts = new CancellationTokenSource();
+            _threads[name] = cts;
+
+            Task.Factory.StartNew(() => taskAction(cts.Token),
+                cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
-        public static void StopAll()
+        public void Stop(string name)
         {
-            foreach (var t in threads)
+            if (_threads.TryRemove(name, out var cts))
             {
-                if (t.IsAlive)
-                {
-                    try { t.Abort(); } catch { }
-                }
+                cts.Cancel();
+                cts.Dispose();
             }
+        }
 
-            threads.Clear();
+        public void StopAll()
+        {
+            foreach (var key in _threads.Keys)
+            {
+                Stop(key);
+            }
+        }
+
+        public bool IsRunning(string name)
+        {
+            return _threads.ContainsKey(name);
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            StopAll();
         }
     }
 }

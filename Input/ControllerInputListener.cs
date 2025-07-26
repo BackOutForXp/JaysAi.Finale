@@ -1,34 +1,54 @@
-﻿//heavenly v3.0 – Raw Input Listener
+﻿//neural v3.0
 using System;
-using JaysAi.Finale.Input;
+using System.Collections.Concurrent;
+using System.Threading;
+using JaysAi.Finale.Input.Models;
+using JaysAi.Finale.Input.Events;
 
 namespace JaysAi.Finale.Input
 {
-    public class ControllerInputListener
+    public sealed class ControllerInputListener : IDisposable
     {
-        public event Action<ControllerState>? OnControllerStateChanged;
-        private ControllerInputPoller _poller;
+        private readonly Timer _pollingTimer;
+        private readonly IControllerInputSource _inputSource;
+        private readonly ConcurrentDictionary<int, ControllerInputState> _lastStates;
+        private readonly int _pollingIntervalMs;
 
-        public ControllerInputListener()
+        public event EventHandler<ControllerInputChangedEventArgs>? InputChanged;
+
+        public ControllerInputListener(IControllerInputSource inputSource, int pollingIntervalMs = 10)
         {
-            _poller = new ControllerInputPoller();
-            _poller.OnInputUpdated += HandlePollerInput;
+            _inputSource = inputSource ?? throw new ArgumentNullException(nameof(inputSource));
+            _pollingIntervalMs = pollingIntervalMs;
+            _lastStates = new ConcurrentDictionary<int, ControllerInputState>();
+
+            _pollingTimer = new Timer(PollInputs, null, 0, _pollingIntervalMs);
         }
 
-        private void HandlePollerInput(ControllerState state)
+        private void PollInputs(object? state)
         {
-            // Forward raw input updates
-            OnControllerStateChanged?.Invoke(state);
+            foreach (var controllerId in _inputSource.ConnectedControllerIds)
+            {
+                var currentState = _inputSource.GetState(controllerId);
+                if (_lastStates.TryGetValue(controllerId, out var previousState))
+                {
+                    if (!currentState.Equals(previousState))
+                    {
+                        _lastStates[controllerId] = currentState;
+                        InputChanged?.Invoke(this, new ControllerInputChangedEventArgs(controllerId, currentState));
+                    }
+                }
+                else
+                {
+                    _lastStates[controllerId] = currentState;
+                    InputChanged?.Invoke(this, new ControllerInputChangedEventArgs(controllerId, currentState));
+                }
+            }
         }
 
-        public void Begin()
+        public void Dispose()
         {
-            _poller.StartPolling();
-        }
-
-        public void End()
-        {
-            _poller.StopPolling();
+            _pollingTimer.Dispose();
         }
     }
 }

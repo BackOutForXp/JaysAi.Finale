@@ -1,0 +1,31 @@
+﻿<!-- neural v3.0 -->
+<UserControl x:Class="JaysAi.Finale.UI.Panels.UserControlPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" d:DesignHeight="360" d:DesignWidth="600"
+             Background="#1C1C1C">
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="User Controller Panel" FontSize="18" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+
+        <StackPanel Grid.Row="1" Spacing="10">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Controller ID:" Width="120" Foreground="White"/>
+                <TextBox x:Name="ControllerIdBox" Width="80"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Current State:" Width="120" Foreground="White"/>
+                <TextBlock x:Name="StateText" Width="300" Foreground="LightGreen"/>
+            </StackPanel>
+
+            <Button Content="Refresh Input" Width="140" HorizontalAlignment="Left" Click="RefreshInput_Click"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

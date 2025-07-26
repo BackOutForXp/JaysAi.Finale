@@ -1,70 +1,53 @@
-﻿//heavenly v3.0
+﻿// neural v3.0
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Data;
 
 namespace JaysAi.Finale.AI
 {
-    public static class RuntimeBehaviorLog
+    public class RuntimeBehaviorLog
     {
-        private static readonly List<string> LogEntries = new List<string>();
-        private static readonly object LockObj = new();
+        private readonly ConcurrentQueue<BehaviorEntry> _logQueue;
+        private readonly int _maxEntries;
 
-        public static void LogDecision(string module, string decision, string context = "")
+        public RuntimeBehaviorLog(int maxEntries = 250)
         {
-            var timestamp = DateTime.UtcNow.ToString("HH:mm:ss.fff");
-            var entry = $"[{timestamp}] [{module}] Decision: {decision} {context}".Trim();
-
-            lock (LockObj)
-            {
-                LogEntries.Add(entry);
-            }
-
-            DebugConsole?.WriteLine(entry);
+            _maxEntries = maxEntries;
+            _logQueue = new ConcurrentQueue<BehaviorEntry>();
         }
 
-        public static void LogWarning(string module, string warning)
+        public void Log(string behaviorType, string details, Enemy? target = null)
         {
-            var timestamp = DateTime.UtcNow.ToString("HH:mm:ss.fff");
-            var entry = $"[{timestamp}] [{module}] ⚠️ Warning: {warning}";
+            if (_logQueue.Count >= _maxEntries)
+                _logQueue.TryDequeue(out _);
 
-            lock (LockObj)
+            _logQueue.Enqueue(new BehaviorEntry
             {
-                LogEntries.Add(entry);
-            }
-
-            DebugConsole?.WriteLine(entry);
+                Timestamp = DateTime.UtcNow,
+                BehaviorType = behaviorType,
+                Details = details,
+                TargetId = target?.ID ?? -1
+            });
         }
 
-        public static void LogError(string module, string error)
+        public IEnumerable<BehaviorEntry> GetRecentEntries(int limit = 50)
         {
-            var timestamp = DateTime.UtcNow.ToString("HH:mm:ss.fff");
-            var entry = $"[{timestamp}] [{module}] ❌ Error: {error}";
-
-            lock (LockObj)
-            {
-                LogEntries.Add(entry);
-            }
-
-            DebugConsole?.WriteLine(entry);
+            var list = new List<BehaviorEntry>(_logQueue);
+            return list.Count > limit ? list.GetRange(list.Count - limit, limit) : list;
         }
 
-        public static IReadOnlyList<string> GetLogs()
+        public void Clear()
         {
-            lock (LockObj)
-            {
-                return LogEntries.AsReadOnly();
-            }
+            while (_logQueue.TryDequeue(out _)) { }
         }
 
-        public static void Clear()
+        public record BehaviorEntry
         {
-            lock (LockObj)
-            {
-                LogEntries.Clear();
-            }
+            public DateTime Timestamp { get; init; }
+            public string BehaviorType { get; init; } = string.Empty;
+            public string Details { get; init; } = string.Empty;
+            public int TargetId { get; init; }
         }
-
-        public static IDebugConsole DebugConsole { get; set; } // Optional console target
     }
 }

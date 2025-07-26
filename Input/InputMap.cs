@@ -1,71 +1,55 @@
-﻿//heavenly v3.0 – InputMap
+﻿// neural v3.0
+using JaysAi.Finale.Input.Models;
+using JaysAi.Finale.SystemLogic.Logging;
+using JaysAi.Finale.Utility;
+using System;
 using System.Collections.Generic;
-using System.Windows.Input;
 
 namespace JaysAi.Finale.Input
 {
-    public static class InputMap
+    public class InputMap
     {
-        public static Dictionary<string, Key> KeyboardBinds { get; private set; }
-        public static Dictionary<string, ControllerButton> ControllerBinds { get; private set; }
+        private readonly Dictionary<string, Func<ControllerInputState, bool>> _mappings;
 
-        static InputMap()
+        public InputMap()
         {
-            LoadDefaults();
+            _mappings = new Dictionary<string, Func<ControllerInputState, bool>>(StringComparer.OrdinalIgnoreCase);
         }
 
-        public static void LoadDefaults()
+        public void AddMapping(string action, Func<ControllerInputState, bool> predicate)
         {
-            KeyboardBinds = new Dictionary<string, Key>
+            if (string.IsNullOrWhiteSpace(action))
             {
-                { "ToggleESP", Key.F1 },
-                { "ToggleAimAssist", Key.F2 },
-                { "ToggleStickAssist", Key.F3 },
-                { "ToggleRecoil", Key.F4 },
-                { "ActivateTriggerBot", Key.LeftCtrl },
-                { "OverrideAim", Key.LeftShift }
-            };
+                Logger.Warn("InputMap: Attempted to add null or empty action.");
+                return;
+            }
 
-            ControllerBinds = new Dictionary<string, ControllerButton>
+            _mappings[action] = predicate ?? throw new ArgumentNullException(nameof(predicate));
+        }
+
+        public bool TryGetMappedAction(string action, ControllerInputState inputState, out bool result)
+        {
+            result = false;
+
+            if (_mappings.TryGetValue(action, out var predicate))
             {
-                { "ToggleESP", ControllerButton.DPadUp },
-                { "ToggleAimAssist", ControllerButton.DPadRight },
-                { "ToggleStickAssist", ControllerButton.DPadDown },
-                { "ActivateTriggerBot", ControllerButton.RightTrigger },
-                { "OverrideAim", ControllerButton.LeftTrigger }
-            };
+                result = predicate.Invoke(inputState);
+                return true;
+            }
+
+            Logger.Trace($"InputMap: No mapping found for action '{action}'.");
+            return false;
         }
 
-        public static void RemapKey(string action, Key newKey)
+        public IEnumerable<string> GetMappedActions()
         {
-            if (KeyboardBinds.ContainsKey(action))
-                KeyboardBinds[action] = newKey;
+            return _mappings.Keys;
         }
 
-        public static void RemapControllerButton(string action, ControllerButton newButton)
+        public void ClearMappings()
         {
-            if (ControllerBinds.ContainsKey(action))
-                ControllerBinds[action] = newButton;
+            _mappings.Clear();
+            Logger.Trace("InputMap: Cleared all mappings.");
         }
-    }
-
-    public enum ControllerButton
-    {
-        A,
-        B,
-        X,
-        Y,
-        LeftBumper,
-        RightBumper,
-        LeftTrigger,
-        RightTrigger,
-        DPadUp,
-        DPadDown,
-        DPadLeft,
-        DPadRight,
-        Start,
-        Select,
-        LeftStick,
-        RightStick
     }
 }

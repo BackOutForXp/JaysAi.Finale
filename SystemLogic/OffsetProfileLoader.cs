@@ -1,71 +1,52 @@
-﻿// File: System\OffsetProfileLoader.cs
-
+﻿// neural v3.0
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text.Json;
 
 namespace JaysAi.Finale.SystemLogic
 {
-    public static class OffsetProfileLoader
+    public class OffsetProfile
     {
-        private static readonly string ProfilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "JaysAi",
-            "Finale",
-            "Offsets.json");
+        public string GameName { get; set; } = string.Empty;
+        public Dictionary<string, IntPtr> Offsets { get; set; } = new();
 
-        public static List<OffsetProfile> LoadProfiles()
+        public OffsetProfile(string gameName)
         {
-            if (!File.Exists(ProfilePath))
-            {
-                Console.WriteLine($"[Offsets] No profile file found at {ProfilePath}. Creating default.");
-                SaveDefaultProfiles();
-                return LoadProfiles();
-            }
-
-            try
-            {
-                string json = File.ReadAllText(ProfilePath);
-                var profiles = JsonSerializer.Deserialize<List<OffsetProfile>>(json) ?? new List<OffsetProfile>();
-                Console.WriteLine($"[Offsets] Loaded {profiles.Count} offset profiles.");
-                return profiles;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[Offsets] Failed to load profiles: {ex.Message}");
-                return new List<OffsetProfile>();
-            }
+            GameName = gameName;
         }
 
-        public static void SaveDefaultProfiles()
+        public void SetOffset(string key, IntPtr value)
         {
-            var defaultProfiles = new List<OffsetProfile>
-            {
-                new OffsetProfile("DefaultGame", new Dictionary<string, int>
-                {
-                    { "Health", 0x100 },
-                    { "Team", 0xF4 },
-                    { "Position", 0x138 }
-                })
-            };
+            if (string.IsNullOrWhiteSpace(key)) return;
 
-            try
-            {
-                string json = JsonSerializer.Serialize(defaultProfiles, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
+            Offsets[key] = value;
+        }
 
-                Directory.CreateDirectory(Path.GetDirectoryName(ProfilePath)!);
-                File.WriteAllText(ProfilePath, json);
+        public IntPtr GetOffset(string key)
+        {
+            if (Offsets.TryGetValue(key, out var value))
+                return value;
 
-                Console.WriteLine("[Offsets] Default profile saved.");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[Offsets] Failed to save default: {ex.Message}");
-            }
+            throw new KeyNotFoundException($"Offset key '{key}' not found in profile: {GameName}");
+        }
+
+        public bool TryGetOffset(string key, out IntPtr value)
+        {
+            return Offsets.TryGetValue(key, out value);
+        }
+
+        public IReadOnlyDictionary<string, IntPtr> GetAll()
+        {
+            return Offsets;
+        }
+
+        public void Clear()
+        {
+            Offsets.Clear();
+        }
+
+        public override string ToString()
+        {
+            return $"OffsetProfile: {GameName} | {Offsets.Count} offsets";
         }
     }
 }
