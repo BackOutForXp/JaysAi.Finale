@@ -1,9 +1,10 @@
 ﻿// neural v3.0
 using System;
 using System.Linq;
-using System.Windows;
-using System.Windows.Forms;
-using System.Drawing;
+using System.Drawing;                     // For System.Drawing.Size and Point
+using System.Windows;                    // For WPF Window
+using System.Windows.Interop;            // For WindowInteropHelper
+using System.Windows.Forms;              // For Screen and Bounds
 
 namespace JaysAi.Finale.Utility
 {
@@ -12,37 +13,32 @@ namespace JaysAi.Finale.Utility
         /// <summary>
         /// Gets the primary screen resolution in DPI-aware pixels.
         /// </summary>
-        public static Size GetPrimaryScreenResolution()
+        public static System.Drawing.Size GetPrimaryScreenResolution()
         {
-            var screen = Screen.PrimaryScreen;
-            return new Size(screen.Bounds.Width, screen.Bounds.Height);
+            var screen = System.Windows.Forms.Screen.PrimaryScreen;
+            return new System.Drawing.Size(screen.Bounds.Width, screen.Bounds.Height);
         }
 
         /// <summary>
         /// Gets the working area (excluding taskbar) of the primary screen.
         /// </summary>
-        public static Rectangle GetPrimaryWorkingArea()
-        {
-            return Screen.PrimaryScreen.WorkingArea;
-        }
+        public static System.Drawing.Rectangle GetPrimaryWorkingArea() => System.Windows.Forms.Screen.PrimaryScreen.WorkingArea;
 
         /// <summary>
         /// Gets the screen that contains the specified window.
         /// </summary>
-        public static Screen GetScreenFromWindow(Window window)
+        public static System.Windows.Forms.Screen GetScreenFromWindow(Window window)
         {
-            var interop = new System.Windows.Interop.WindowInteropHelper(window);
-            return Screen.FromHandle(interop.Handle);
+            var interop = new WindowInteropHelper(window);
+            return System.Windows.Forms.Screen.FromHandle(interop.Handle);
         }
 
         /// <summary>
         /// Gets the screen that contains the specified point.
         /// </summary>
-        public static Screen GetScreenFromPoint(System.Drawing.Point point)
-        {
-            return Screen.AllScreens.FirstOrDefault(s => s.Bounds.Contains(point))
+        public static System.Windows.Forms.Screen GetScreenFromPoint(System.Drawing.Point point) => System.Windows.Forms.Screen.AllScreens
+                .FirstOrDefault(predicate: s => s.Bounds.Contains(point))
                 ?? Screen.PrimaryScreen;
-        }
 
         /// <summary>
         /// Returns the screen DPI scaling factor.

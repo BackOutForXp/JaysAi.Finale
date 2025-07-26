@@ -1,90 +1,75 @@
-﻿// Neural v3.0 — OverlayShape.cs
+﻿// Neural v3.0 — OverlayRenderer.cs
+using System;
+using System.Collections.Generic;
+using JaysAi.Finale.Visuals;          // for IOverlayRenderer, VisualEsp, etc.
 using SkiaSharp;
 
 namespace JaysAi.Finale.Overlay
 {
-    public static class OverlayShape
+    /// <summary>
+    ///  Central rendering coordinator for all overlay layers (ESP, FOV rings, crosshair, etc.).
+    /// </summary>
+    public sealed class OverlayRenderer : IDisposable
     {
-        /// <summary>
-        /// Draws a basic rectangle.
-        /// </summary>
-        public static void DrawBox(SKCanvas canvas, float x, float y, float width, float height, SKColor color, float stroke = 2f)
-        {
-            using var paint = new SKPaint
-            {
-                Color = color,
-                StrokeWidth = stroke,
-                Style = SKPaintStyle.Stroke,
-                IsAntialias = true
-            };
+        private readonly List<IOverlayRenderer> _renderers = new();
+        private SKSurface? _surface;          // off-screen target
+        private SKCanvas? _canvas;           // cached canvas
+        private bool _isDisposed;
 
-            canvas.DrawRect(x, y, width, height, paint);
+        public int ScreenWidth { get; private set; }
+        public int ScreenHeight { get; private set; }
+
+        public OverlayRenderer(int width, int height)
+        {
+            Resize(width, height);
+
+            // --- Register default layers here ---
+            _renderers.Add(new VisualEsp());
+            // You can add Crosshair, FOV rings, debug layers, etc. later
+        }
+
+        /// <summary>Call once per video-frame.</summary>
+        public void Render()
+        {
+            if (_surface == null || _canvas == null) return;
+
+            _canvas.Clear(OverlayColor.Transparent);
+
+            foreach (var r in _renderers)
+            {
+                if (r.IsActive)
+                    r.Draw(_canvas, ScreenWidth, ScreenHeight);
+            }
+
+            _canvas.Flush();   // push drawing commands
         }
 
         /// <summary>
-        /// Draws a filled rectangle behind other visuals.
+        ///  Resize back-buffer when the window or monitor resolution changes.
         /// </summary>
-        public static void DrawFilledBox(SKCanvas canvas, float x, float y, float width, float height, SKColor fillColor)
+        public void Resize(int width, int height)
         {
-            using var paint = new SKPaint
-            {
-                Color = fillColor,
-                Style = SKPaintStyle.Fill,
-                IsAntialias = true
-            };
+            ScreenWidth = width;
+            ScreenHeight = height;
 
-            canvas.DrawRect(x, y, width, height, paint);
+            _surface?.Dispose();
+            _surface = SKSurface.Create(new SKImageInfo(width, height, SKColorType.Bgra8888));
+            _canvas = _surface.Canvas;
         }
 
-        /// <summary>
-        /// Draws a circle or FOV ring.
-        /// </summary>
-        public static void DrawCircle(SKCanvas canvas, float centerX, float centerY, float radius, SKColor color, float stroke = 2f)
+        /// <summary>Add or remove overlay layers at runtime.</summary>
+        public void RegisterRenderer(IOverlayRenderer renderer) => _renderers.Add(renderer);
+        public void UnregisterRenderer(IOverlayRenderer renderer) => _renderers.Remove(renderer);
+
+        public SKImage Snapshot() => _surface!.Snapshot();
+
+        public void Dispose()
         {
-            using var paint = new SKPaint
-            {
-                Color = color,
-                StrokeWidth = stroke,
-                Style = SKPaintStyle.Stroke,
-                IsAntialias = true
-            };
+            if (_isDisposed) return;
+            _isDisposed = true;
 
-            canvas.DrawCircle(centerX, centerY, radius, paint);
-        }
-
-        /// <summary>
-        /// Draws a line from point A to B.
-        /// </summary>
-        public static void DrawLine(SKCanvas canvas, float x1, float y1, float x2, float y2, SKColor color, float thickness = 1f)
-        {
-            using var paint = new SKPaint
-            {
-                Color = color,
-                StrokeWidth = thickness,
-                Style = SKPaintStyle.Stroke,
-                IsAntialias = true
-            };
-
-            canvas.DrawLine(x1, y1, x2, y2, paint);
-        }
-
-        /// <summary>
-        /// Draws a text label near an object or inside a box.
-        /// </summary>
-        public static void DrawLabel(SKCanvas canvas, string text, float x, float y, SKColor color, float size = 14f)
-        {
-            if (string.IsNullOrWhiteSpace(text)) return;
-
-            using var paint = new SKPaint
-            {
-                Color = color,
-                TextSize = size,
-                IsAntialias = true,
-                Typeface = SKTypeface.FromFamilyName("Consolas"),
-                Style = SKPaintStyle.Fill
-            };
-
-            canvas.DrawText(text, x, y, paint);
+            _canvas?.Dispose();
+            _surface?.Dispose();
         }
     }
 }

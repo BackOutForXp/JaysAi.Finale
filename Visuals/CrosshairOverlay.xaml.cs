@@ -1,13 +1,16 @@
-﻿// Neural v3.0 — CrosshairOverlay.xaml.cs
+﻿// neural v3.0
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Shapes;
+using Color = System.Windows.Media.Color;
+using Rectangle = System.Windows.Shapes.Rectangle; // ✅ Correct Rectangle namespace
 
 namespace JaysAi.Finale.Overlay
 {
-    public partial class CrosshairOverlay : UserControl
+    public partial class CrosshairOverlay : System.Windows.Controls.UserControl
     {
-        private Rectangle _horizontalLine;
+        private System.Windows.Shapes.Rectangle _horizontalLine;
         private Rectangle _verticalLine;
 
         public bool IsCrosshairVisible
@@ -16,7 +19,7 @@ namespace JaysAi.Finale.Overlay
             set => this.Visibility = value ? Visibility.Visible : Visibility.Hidden;
         }
 
-        public Brush CrosshairColor
+        public System.Windows.Media.Brush CrosshairColor
         {
             get => _horizontalLine?.Fill;
             set
@@ -55,10 +58,9 @@ namespace JaysAi.Finale.Overlay
         private void InitializeCrosshairElements()
         {
             _horizontalLine = FindName("HorizontalLine") as Rectangle;
-            _verticalLine = FindName("VerticalLine") as Rectangle;
+            _verticalLine = FindName("VerticalLine") as System.Windows.Shapes.Rectangle;
 
-            // Set default values
-            CrosshairColor = Brushes.Red;
+            CrosshairColor = System.Windows.Media.Brushes.Red;
             CrosshairLength = 40;
             CrosshairThickness = 2;
             IsCrosshairVisible = true;
@@ -81,3 +83,4 @@ namespace JaysAi.Finale.Overlay
         }
     }
 }
+

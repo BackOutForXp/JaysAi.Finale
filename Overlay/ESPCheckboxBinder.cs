@@ -1,14 +1,12 @@
 ﻿// Neural v3.0 — EspCheckboxBinder.cs
 using JaysAi.Finale.Features;
-using JaysAi.Finale.Modules;
-using JaysAi.Finale.Settings;
 using System.Windows.Controls;
 
 namespace JaysAi.Finale.Overlay
 {
     public static class EspCheckboxBinder
     {
-        public static void BindToCheckbox(CheckBox checkbox, ESPModule espModule)
+        public static void BindToCheckbox(System.Windows.Controls.CheckBox checkbox, ESPModuleManager espModule)
         {
             if (checkbox == null || espModule == null)
                 return;

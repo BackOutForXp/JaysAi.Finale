@@ -13,14 +13,14 @@ namespace JaysAi.Finale.Overlay
 {
     public class EspOverlay : IDisposable
     {
-        private readonly ESPModule _espModule;
+        private readonly ESPModuleManager _espModule;
         private readonly EspDrawer _drawer;
         private readonly SKControl _skiaControl;
         private readonly Form _overlayForm;
 
         public bool IsActive { get; private set; }
 
-        public EspOverlay(Form overlayForm, ESPModule espModule)
+        public EspOverlay(Form overlayForm, ESPModuleManager espModule)
         {
             _overlayForm = overlayForm;
             _espModule = espModule;

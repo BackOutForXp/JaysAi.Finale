@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using InputKeyEventArgs = System.Windows.Input.KeyEventArgs; // ✅ Resolve ambiguity here
 
 namespace JaysAi.Finale.Utility
 {
@@ -12,7 +13,7 @@ namespace JaysAi.Finale.Utility
         private IntPtr _hookID = IntPtr.Zero;
         private NativeMethods.LowLevelKeyboardProc? _proc;
 
-        public event EventHandler<KeyEventArgs>? KeyPressed;
+        public event EventHandler<InputKeyEventArgs>? KeyPressed; // ✅ Now uses WPF-safe alias
 
         public void Install()
         {
@@ -35,7 +36,7 @@ namespace JaysAi.Finale.Utility
                 if (msg == NativeMethods.WM_KEYDOWN || msg == NativeMethods.WM_SYSKEYDOWN)
                 {
                     var key = KeyInterop.KeyFromVirtualKey((int)keyInfo.vkCode);
-                    KeyPressed?.Invoke(this, new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(App.Current.MainWindow), 0, key)
+                    KeyPressed?.Invoke(this, new InputKeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(App.Current.MainWindow), 0, key)
                     {
                         RoutedEvent = Keyboard.KeyDownEvent
                     });

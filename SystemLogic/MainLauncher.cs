@@ -47,7 +47,7 @@ namespace JaysAi.Finale.SystemLogic
                 });
 
                 // Initialize modules
-                ESPModule.Initialize();
+                ESPModuleManager.Initialize();
                 SnapAssistController.Initialize();
                 SignalDelay.Initialize();
                 PredictionEngine.Initialize();

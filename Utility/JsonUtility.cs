@@ -20,18 +20,18 @@ namespace JaysAi.Finale.Utility
             }
         }
 
-        public static T? GetValue<T>(JsonNode? node, string key)
+        public static T GetValue<T>(JsonNode? node, string key)
         {
             if (node == null || !node.AsObject().TryGetPropertyValue(key, out var value))
-                return default;
+                return default!;
 
             try
             {
-                return value?.GetValue<T>();
+                return value!.GetValue<T>();
             }
             catch
             {
-                return default;
+                return default!;
             }
         }
 
@@ -44,7 +44,6 @@ namespace JaysAi.Finale.Utility
                     targetObj[kvp.Key] = kvp.Value;
                 }
             }
-
             return target;
         }
 

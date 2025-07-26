@@ -1,5 +1,6 @@
 ﻿// Neural v3.0 — OverlayColor.cs
 using SkiaSharp;
+using MediaColor = System.Windows.Media.Color;
 using System.Windows.Media;
 
 namespace JaysAi.Finale.Overlay
@@ -18,10 +19,11 @@ namespace JaysAi.Finale.Overlay
         public static SKColor EspBox = new SKColor(0, 255, 255, 220); // Cyan
         public static SKColor EspHealth = new SKColor(0, 255, 0, 220); // Green
         public static SKColor EspSkeleton = new SKColor(255, 255, 255, 220); // White
+        public static SKColor Text = new SKColor(255, 255, 255); // ✅ Added to fix 'OverlayColor.Text'
 
         // === Debug Console ===
-        public static Color DebugText = Colors.Lime;
-        public static Color DebugBackground = Colors.Black;
+        public static MediaColor DebugText = Colors.Lime;
+        public static MediaColor DebugBackground = Colors.Black;
 
         // === Outlines & Highlights ===
         public static SKColor Outline = new SKColor(255, 255, 255, 60);

@@ -1,51 +1,42 @@
-﻿// neural v3.0
-using JaysAi.Finale.Overlay;
-using JaysAi.Finale.SystemLogic;
-using JaysAi.Finale.Visuals;
+﻿// Neural v3.0 — DetectedObject.cs
 using SkiaSharp;
-using SkiaSharp.Views.Desktop;
-using System;
-using System.Windows;
-using System.Windows.Interop;
-using System.Windows.Threading;
 
-namespace JaysAi.Finale.Overlay
+namespace JaysAi.Finale.Modules
 {
-    public partial class AIOverlay : Window
+    public class DetectedObject
     {
-        private readonly DispatcherTimer _renderTimer;
-        private readonly OverlayRenderCoordinator _renderCoordinator;
+        public string Label { get; set; } = "Unknown";
+        public float Confidence { get; set; } = 0f;
 
-        public AIOverlay()
+        // World space or local 3D positions (optional)
+        public float WorldX { get; set; }
+        public float WorldY { get; set; }
+        public float WorldZ { get; set; }
+
+        // 2D screen projection for drawing
+        public float ScreenPositionX { get; set; }
+        public float ScreenPositionY { get; set; }
+
+        public float Width { get; set; }
+        public float Height { get; set; }
+
+        public bool IsVisible { get; set; } = true;
+
+        public SKRect GetScreenRect()
         {
-            InitializeComponent();
-            _renderCoordinator = new OverlayRenderCoordinator(OverlayCanvas);
-            Loaded += OnLoaded;
-
-            _renderTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(1000 / 144) // match your capture FPS
-            };
-            _renderTimer.Tick += (s, e) => _renderCoordinator.DrawFrame();
+            return new SKRect(
+                ScreenPositionX,
+                ScreenPositionY,
+                ScreenPositionX + Width,
+                ScreenPositionY + Height
+            );
         }
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
-        {
-            MakeWindowTransparent();
-            _renderTimer.Start();
-        }
-
-        private void MakeWindowTransparent()
-        {
-            var hwnd = new WindowInteropHelper(this).Handle;
-            int extendedStyle = Win32.GetWindowLong(hwnd, Win32.GWL_EXSTYLE);
-            Win32.SetWindowLong(hwnd, Win32.GWL_EXSTYLE, extendedStyle | Win32.WS_EX_TRANSPARENT | Win32.WS_EX_LAYERED);
-        }
-
-        public void ShutdownOverlay()
-        {
-            _renderTimer.Stop();
-            Close();
-        }
+        public bool IsValid =>
+            IsVisible &&
+            Width > 1 &&
+            Height > 1 &&
+            ScreenPositionX >= 0 &&
+            ScreenPositionY >= 0;
     }
 }

@@ -1,10 +1,8 @@
-﻿// neural v3.0
+﻿// Neural v3.0 — BoxRenderer.cs
 using System;
 using System.Collections.Generic;
 using SkiaSharp;
-using JaysAi.Finale.Visuals;
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Utility;
+using JaysAi.Finale.Modules;
 
 namespace JaysAi.Finale.Overlay
 {
@@ -42,10 +40,10 @@ namespace JaysAi.Finale.Overlay
                 if (!target.IsValid) continue;
 
                 var rect = new SKRect(
-                    target.ScreenPosition.X,
-                    target.ScreenPosition.Y,
-                    target.ScreenPosition.X + target.ScreenSize.Width,
-                    target.ScreenPosition.Y + target.ScreenSize.Height
+                    target.ScreenPositionX,
+                    target.ScreenPositionY,
+                    target.ScreenPositionX + target.Width,
+                    target.ScreenPositionY + target.Height
                 );
 
                 // Draw outline for better visibility

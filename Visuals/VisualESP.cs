@@ -24,18 +24,18 @@ namespace JaysAi.Finale.Visuals
 
                 var box = target.ScreenBox.Value;
 
-                // Draw Box
-                OverlayShape.DrawBox(
+                // ✅ Force OverlayShape.DrawBox (avoid ambiguity)
+                JaysAi.Finale.Overlay.OverlayShape.DrawBox(
                     canvas,
-                    box.X,
-                    box.Y,
+                    box.Left,
+                    box.Top,
                     box.Width,
                     box.Height,
                     OverlayColor.EspBox,
                     DrawConfig.EspBoxThickness
                 );
 
-                // Draw Health Bar
+                // ✅ Health Bar (optional fill)
                 if (target.Health > 0 && target.MaxHealth > 0 && DrawConfig.EnableBoxFill)
                 {
                     float ratio = target.Health / target.MaxHealth;
@@ -43,7 +43,7 @@ namespace JaysAi.Finale.Visuals
                     float barTop = box.Bottom - barHeight;
 
                     canvas.DrawRect(
-                        box.X - 5,
+                        box.Left - 5,
                         barTop,
                         3,
                         barHeight,
@@ -55,14 +55,14 @@ namespace JaysAi.Finale.Visuals
                         });
                 }
 
-                // Draw Name
+                // ✅ Name Label
                 if (!string.IsNullOrWhiteSpace(target.Name) && DrawConfig.UseRoundedCorners)
                 {
                     LabelTextHelper.DrawCenteredText(
                         canvas,
                         target.Name,
-                        box.X + box.Width / 2,
-                        box.Y - 5,
+                        (box.Left + box.Right) / 2,
+                        box.Top - 5,
                         OverlayColor.Text,
                         13
                     );
@@ -70,9 +70,6 @@ namespace JaysAi.Finale.Visuals
             }
         }
 
-        /// <summary>
-        /// Updates the current target list.
-        /// </summary>
         public void SetTargets(List<TargetData> detectedTargets)
         {
             Targets = detectedTargets ?? new();

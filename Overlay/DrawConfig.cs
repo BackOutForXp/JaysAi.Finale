@@ -14,8 +14,8 @@ namespace JaysAi.Finale.Overlay
 
         // === Debug Console ===
         public static bool DebugOverlayEnabled { get; set; } = true;
-        public static Color DebugTextColor { get; set; } = Colors.Lime;
-        public static Color DebugBackgroundColor { get; set; } = Colors.Black;
+        public static System.Windows.Media.Color DebugTextColor { get; set; } = Colors.Lime;
+        public static System.Windows.Media.Color DebugBackgroundColor { get; set; } = Colors.Black;
         public static double DebugOpacity { get; set; } = 0.95;
 
         // === ESP Styling ===

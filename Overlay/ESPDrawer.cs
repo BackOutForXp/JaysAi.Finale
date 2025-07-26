@@ -10,9 +10,9 @@ namespace JaysAi.Finale.Overlay
 {
     public class EspDrawer
     {
-        private readonly ESPModule _espModule;
+        private readonly Modules.ESPModule _espModule;
 
-        public EspDrawer(ESPModule espModule)
+        public EspDrawer(Modules.ESPModule espModule)
         {
             _espModule = espModule;
         }

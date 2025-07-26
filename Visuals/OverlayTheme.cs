@@ -32,8 +32,8 @@ namespace JaysAi.Finale.Overlay
         public static SKColor ErrorColor { get; set; } = new SKColor(255, 0, 0);
 
         // === Debug Console Theme ===
-        public static Color DebugBackground { get; set; } = Colors.Black;
-        public static Color DebugTextColor { get; set; } = Colors.Lime;
+        public static System.Windows.Media.Color DebugBackground { get; set; } = Colors.Black;
+        public static System.Windows.Media.Color DebugTextColor { get; set; } = Colors.Lime;
 
         // === Reserved Future Themes ===
         public static SKColor Reserved1 { get; set; } = new SKColor(70, 70, 70, 100);
