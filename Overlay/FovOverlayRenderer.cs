@@ -1,48 +1,35 @@
 ﻿// Neural v3.1 — FovOverlayRenderer.cs
+using JaysAi.Finale.Overlay;
+using JaysAi.Finale.Settings;
 using SkiaSharp;
-using System;
 
-namespace JaysAi.Finale.Overlay
+namespace JaysAi.Finale.Visuals
 {
-    public class FovOverlayRenderer
+    public class FovOverlayRenderer : IOverlayRenderer
     {
-        public bool IsEnabled { get; set; } = true;
-        public float Radius { get; set; } = 120f;
-        public SKColor Color { get; set; } = new SKColor(255, 255, 0, 180); // Yellow
-        public float Thickness { get; set; } = 2f;
-        public bool FillEnabled { get; set; } = false;
-        public SKColor FillColor { get; set; } = new SKColor(255, 255, 0, 40); // Transparent yellow
+        public bool IsActive { get; set; } = true;
 
-        public void Draw(SKCanvas canvas, int screenWidth, int screenHeight)
+        public void Render(SKCanvas canvas, int screenWidth, int screenHeight)
         {
-            if (!IsEnabled || canvas == null) return;
+            if (!IsActive || !UserSettings.Instance.Get("FovOverlayEnabled", true))
+                return;
 
-            float centerX = screenWidth / 2f;
-            float centerY = screenHeight / 2f;
+            float fovRadius = UserSettings.Instance.Get("FovRadius", 120f);
+            float thickness = UserSettings.Instance.Get("FovThickness", 1.5f);
+            var color = UserSettings.Instance.Get("FovColor", SKColors.Orange);
 
-            // Fill circle
-            if (FillEnabled)
+            using var paint = new SKPaint
             {
-                using var fillPaint = new SKPaint
-                {
-                    Style = SKPaintStyle.Fill,
-                    Color = FillColor,
-                    IsAntialias = true
-                };
-
-                canvas.DrawCircle(centerX, centerY, Radius, fillPaint);
-            }
-
-            // Border circle
-            using var borderPaint = new SKPaint
-            {
+                IsAntialias = true,
                 Style = SKPaintStyle.Stroke,
-                StrokeWidth = Thickness,
-                Color = Color,
-                IsAntialias = true
+                StrokeWidth = thickness,
+                Color = color
             };
 
-            canvas.DrawCircle(centerX, centerY, Radius, borderPaint);
+            float cx = screenWidth / 2f;
+            float cy = screenHeight / 2f;
+
+            canvas.DrawCircle(cx, cy, fovRadius, paint);
         }
     }
 }

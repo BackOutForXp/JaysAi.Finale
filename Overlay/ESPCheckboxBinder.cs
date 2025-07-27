@@ -1,28 +1,17 @@
-﻿// Neural v3.0 — EspCheckboxBinder.cs
-using JaysAi.Finale.Features;
+﻿// Neural v3.1
+using JaysAi.Finale.Settings;
 using System.Windows.Controls;
 
-namespace JaysAi.Finale.Overlay
+namespace JaysAi.Finale.UI
 {
     public static class EspCheckboxBinder
     {
-        public static void BindToCheckbox(System.Windows.Controls.CheckBox checkbox, ESPModuleManager espModule)
+        public static void Bind(System.Windows.Controls.CheckBox checkbox, string settingKey = "EspEnabled")
         {
-            if (checkbox == null || espModule == null)
-                return;
+            checkbox.IsChecked = UserSettings.Instance.Get(settingKey, false);
 
-            // Set initial state based on ESP state
-            checkbox.IsChecked = espModule.IsEnabled;
-
-            // Update ESPModule when checkbox is clicked
-            checkbox.Checked += (_, _) => espModule.Enable();
-            checkbox.Unchecked += (_, _) => espModule.Disable();
-
-            // Optional: react to programmatic changes
-            espModule.OnStateChanged += state =>
-            {
-                checkbox.Dispatcher.Invoke(() => checkbox.IsChecked = state);
-            };
+            checkbox.Checked += (_, _) => UserSettings.Instance.Set(settingKey, true);
+            checkbox.Unchecked += (_, _) => UserSettings.Instance.Set(settingKey, false);
         }
     }
 }

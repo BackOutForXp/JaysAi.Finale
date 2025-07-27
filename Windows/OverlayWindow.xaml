@@ -1,0 +1,19 @@
+﻿<!-- Neural v3.1 — OverlayWindow.xaml -->
+<Window x:Class="JaysAi.Finale.Windows.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:visuals="clr-namespace:JaysAi.Finale.Visuals"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        WindowState="Maximized"
+        Focusable="False"
+        IsHitTestVisible="False"
+        Title="OverlayWindow">
+    <Grid>
+        <visuals:RenderSkia x:Name="SkiaOverlay" />
+    </Grid>
+</Window>

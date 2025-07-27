@@ -1,32 +1,37 @@
 ﻿// Neural v3.1 — CrosshairRenderer.cs
+using JaysAi.Finale.Overlay;
+using JaysAi.Finale.Settings;
 using SkiaSharp;
 
-namespace JaysAi.Finale.Overlay
+namespace JaysAi.Finale.Visuals
 {
     public class CrosshairRenderer : IOverlayRenderer
     {
-        private readonly CrosshairDrawer _drawer;
-
         public bool IsActive { get; set; } = true;
 
-        public CrosshairRenderer()
+        public void Render(SKCanvas canvas, int screenWidth, int screenHeight)
         {
-            _drawer = new CrosshairDrawer();
-        }
+            if (!IsActive || !UserSettings.Instance.Get("CrosshairEnabled", true))
+                return;
 
-        public void Enable() => IsActive = true;
-        public void Disable() => IsActive = false;
-        public void Toggle() => IsActive = !IsActive;
+            float size = UserSettings.Instance.Get("CrosshairSize", 8f);
+            float thickness = UserSettings.Instance.Get("CrosshairThickness", 1f);
+            var color = UserSettings.Instance.Get("CrosshairColor", SKColors.LimeGreen);
 
-        public void SetColor(SKColor color) => _drawer.Color = color;
-        public void SetSize(float size) => _drawer.Size = size;
-        public void SetThickness(float thickness) => _drawer.Thickness = thickness;
-        public void SetStyle(CrosshairStyle style) => _drawer.Style = style;
+            using var paint = new SKPaint
+            {
+                IsAntialias = true,
+                Style = SKPaintStyle.Stroke,
+                StrokeWidth = thickness,
+                Color = color
+            };
 
-        public void Draw(SKCanvas canvas, int screenWidth, int screenHeight)
-        {
-            if (!IsActive || canvas == null) return;
-            _drawer.Draw(canvas, screenWidth, screenHeight);
+            float cx = screenWidth / 2f;
+            float cy = screenHeight / 2f;
+
+            // Draw crosshair (simple + pattern)
+            canvas.DrawLine(cx - size, cy, cx + size, cy, paint);
+            canvas.DrawLine(cx, cy - size, cx, cy + size, paint);
         }
     }
 }

@@ -1,70 +1,59 @@
-﻿// Neural v3.1 — RuntimeBehaviorLog.cs
+﻿// Neural v3.1
 using JaysAi.Finale.Data;
+using JaysAi.Finale.Utility;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Numerics;
+using System.IO;
+using System.Text;
 
 namespace JaysAi.Finale.AI
 {
     public class RuntimeBehaviorLog
     {
-        private readonly ConcurrentQueue<BehaviorEntry> _logQueue;
-        private readonly int _maxEntries;
+        private readonly StringBuilder _logBuilder = new();
+        private string _logPath = "";
+        private DateTime _startTime;
 
-        public RuntimeBehaviorLog(int maxEntries = 250)
+        public void StartSession()
         {
-            _maxEntries = maxEntries;
-            _logQueue = new ConcurrentQueue<BehaviorEntry>();
+            _startTime = DateTime.Now;
+            var filename = $"behavior-log-{_startTime:yyyyMMdd-HHmmss}.txt";
+            _logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs", filename);
+
+            Directory.CreateDirectory(Path.GetDirectoryName(_logPath)!);
+            _logBuilder.Clear();
+            _logBuilder.AppendLine($"=== AI Session Started: {_startTime} ===");
         }
 
-        public void Log(string behaviorType, string details, Enemy? target = null)
+        public void LogUpdate(List<TrackedTarget> targets, List<PredictedTarget> predictions)
         {
-            if (_logQueue.Count >= _maxEntries)
-                _logQueue.TryDequeue(out _);
+            _logBuilder.AppendLine($"[{DateTime.Now:HH:mm:ss.fff}]");
 
-            _logQueue.Enqueue(new BehaviorEntry
+            for (int i = 0; i < targets.Count; i++)
             {
-                Timestamp = DateTime.UtcNow,
-                BehaviorType = behaviorType,
-                Details = details,
-                TargetId = target?.ID ?? -1
-            });
+                var target = targets[i];
+                var prediction = i < predictions.Count ? predictions[i] : null;
+
+                _logBuilder.AppendLine(
+                    $"- Target {target.Id}: FOV={target.FovDistance:F1}, " +
+                    $"Conf={target.Confidence:F2}, Predicted={prediction?.PredictedPosition}");
+            }
+
+            _logBuilder.AppendLine();
         }
 
-        public void LogUpdate(List<TrackedTarget> targets, Dictionary<int, Vector3> predictions)
+        public void EndSession()
         {
-            foreach (var target in targets)
-            {
-                if (predictions.TryGetValue(target.ID, out var predicted))
-                {
-                    Log("Prediction", $"Predicted Position={predicted}", target.Enemy);
-                }
+            _logBuilder.AppendLine($"=== Session Ended: {DateTime.Now} ===");
 
-                Log("Tracking", $"Visible={target.IsVisible} Smoothed={target.SmoothedPosition}", target.Enemy);
+            try
+            {
+                File.WriteAllText(_logPath, _logBuilder.ToString());
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogError("Failed to write behavior log", ex);
             }
         }
-
-        public IEnumerable<BehaviorEntry> GetRecentEntries(int limit = 50)
-        {
-            var list = new List<BehaviorEntry>(_logQueue);
-            return list.Count > limit ? list.GetRange(list.Count - limit, limit) : list;
-        }
-
-        public void Clear()
-        {
-            while (_logQueue.TryDequeue(out _)) { }
-        }
-
-        public record BehaviorEntry
-        {
-            public DateTime Timestamp { get; init; }
-            public string BehaviorType { get; init; } = string.Empty;
-            public string Details { get; init; } = string.Empty;
-            public int TargetId { get; init; }
-        }
-
-        public void StartSession() => Log("Session", "AI Runtime session started");
-        public void EndSession() => Log("Session", "AI Runtime session ended");
     }
 }

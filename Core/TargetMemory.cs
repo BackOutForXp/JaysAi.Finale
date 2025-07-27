@@ -1,99 +1,67 @@
-﻿//neural v3.0
-
-using System;
-using System.Collections.Concurrent;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Data;
-using JaysAi.Finale.Structures;
+using System.Numerics;
 
-namespace JaysAi.Finale.Core
+namespace JaysAi.Finale.AI
 {
     public class TargetMemory
     {
-        private readonly ConcurrentDictionary<int, TrackedTarget> _trackedTargets = new();
-        private readonly TimeSpan _decayTime;
-        private readonly object _lock = new();
+        public int EnemyId { get; }
+        public string EnemyName { get; }
 
-        public TargetMemory(TimeSpan? decayTime = null)
-        {
-            _decayTime = decayTime ?? TimeSpan.FromSeconds(1.5);
-        }
+        public List<float> SnapScores { get; } = new();
+        public List<Vector3> PositionHistory { get; } = new();
+        public List<bool> VisibilityHistory { get; } = new();
+        public List<bool> SnapSuccessHistory { get; } = new();
 
-        public void Update(int id, DetectedObject obj)
-        {
-            if (obj == null) return;
-
-            lock (_lock)
-            {
-                if (!_trackedTargets.ContainsKey(id))
-                    _trackedTargets[id] = new TrackedTarget(id);
-
-                _trackedTargets[id].Update(obj);
-            }
-        }
-
-        public TrackedTarget? GetStrongestTarget(Func<TrackedTarget, float> scoreFunc)
-        {
-            lock (_lock)
-            {
-                CleanupExpired();
-
-                return _trackedTargets.Values
-                    .Where(t => !t.IsExpired)
-                    .OrderByDescending(scoreFunc)
-                    .FirstOrDefault();
-            }
-        }
-
-        public IEnumerable<TrackedTarget> GetAllTargets()
-        {
-            lock (_lock)
-            {
-                CleanupExpired();
-                return _trackedTargets.Values.ToList();
-            }
-        }
-
-        public void Reset()
-        {
-            lock (_lock)
-                _trackedTargets.Clear();
-        }
-
-        private void CleanupExpired()
-        {
-            var now = DateTime.UtcNow;
-            var expiredKeys = _trackedTargets
-                .Where(pair => (now - pair.Value.LastSeen) > _decayTime)
-                .Select(pair => pair.Key)
-                .ToList();
-
-            foreach (var key in expiredKeys)
-                _trackedTargets.TryRemove(key, out _);
-        }
-    }
-
-    public class TrackedTarget
-    {
-        public int Id { get; }
-        public DetectedObject LastKnownObject { get; private set; }
         public DateTime LastSeen { get; private set; }
+        public int SnapAttempts { get; private set; }
+        public int SnapSuccesses { get; private set; }
 
-        public bool IsExpired => (DateTime.UtcNow - LastSeen).TotalSeconds > 1.5;
-
-        public TrackedTarget(int id)
+        public TargetMemory(int id, string name)
         {
-            Id = id;
+            EnemyId = id;
+            EnemyName = name;
             LastSeen = DateTime.UtcNow;
-            LastKnownObject = new DetectedObject();
         }
 
-        public void Update(DetectedObject obj)
+        public void RecordObservation(Vector3 position, float score, bool isVisible)
         {
-            LastKnownObject = obj;
             LastSeen = DateTime.UtcNow;
+
+            PositionHistory.Add(position);
+            SnapScores.Add(score);
+            VisibilityHistory.Add(isVisible);
+
+            // Keep only latest 50 frames
+            if (PositionHistory.Count > 50) PositionHistory.RemoveAt(0);
+            if (SnapScores.Count > 50) SnapScores.RemoveAt(0);
+            if (VisibilityHistory.Count > 50) VisibilityHistory.RemoveAt(0);
+        }
+
+        public void RecordSnapAttempt(bool success)
+        {
+            SnapAttempts++;
+            if (success) SnapSuccesses++;
+            SnapSuccessHistory.Add(success);
+            if (SnapSuccessHistory.Count > 50) SnapSuccessHistory.RemoveAt(0);
+        }
+
+        public float GetSnapSuccessRate()
+        {
+            return SnapAttempts == 0 ? 0f : (float)SnapSuccesses / SnapAttempts;
+        }
+
+        public bool IsFrequentlyVisible(float threshold = 0.5f)
+        {
+            if (VisibilityHistory.Count == 0) return false;
+            int visibleCount = VisibilityHistory.FindAll(v => v).Count;
+            return (float)visibleCount / VisibilityHistory.Count >= threshold;
+        }
+
+        public bool IsHighConfidence(float snapThreshold = 0.6f)
+        {
+            return GetSnapSuccessRate() >= snapThreshold && IsFrequentlyVisible();
         }
     }
 }

@@ -1,54 +1,50 @@
-﻿// Neural v3.1 — BehaviorTrigger.cs
+﻿// Neural v3.1
 using JaysAi.Finale.Data;
-using JaysAi.Finale.Aimbot;
-using JaysAi.Finale.Modules;
+using JaysAi.Finale.Input;
+using JaysAi.Finale.Utility;
 using System;
+using System.Collections.Generic;
 
 namespace JaysAi.Finale.AI
 {
-    public enum BehaviorCondition
-    {
-        Always,
-        EnemyInSight,
-        CloseRange,
-        LowHealth,
-        Firing,
-        Zoomed
-    }
-
     public class BehaviorTrigger
     {
-        public BehaviorCondition Condition { get; set; }
-        public float RangeThreshold { get; set; } = 25f;
+        private List<Func<TrackedTarget, bool>> _triggers = new();
 
-        public bool Evaluate(TargetInfo target, PlayerState player)
+        public void RegisterTriggers()
         {
-            return Condition switch
+            _triggers.Add(target =>
             {
-                BehaviorCondition.Always => true,
-                BehaviorCondition.EnemyInSight => target != null && target.IsVisible,
-                BehaviorCondition.CloseRange => target != null && target.Distance <= RangeThreshold,
-                BehaviorCondition.LowHealth => player.Health <= 25,
-                BehaviorCondition.Firing => player.IsFiring,
-                BehaviorCondition.Zoomed => player.IsZoomed,
-                _ => false
-            };
+                if (target.Confidence > 0.85 && target.FovDistance < 50f)
+                {
+                    InputEmulator.TriggerFire();
+                    LogManager.Log($"🔥 Fired at high-confidence target {target.Id}");
+                    return true;
+                }
+                return false;
+            });
+
+            _triggers.Add(target =>
+            {
+                if (target.FovDistance < 30f && target.Velocity.Length() > 5f)
+                {
+                    InputEmulator.SoftAimAssist(target);
+                    return true;
+                }
+                return false;
+            });
         }
 
-        public static BehaviorTrigger Create(BehaviorCondition condition, float range = 25f)
+        public void Evaluate(List<TrackedTarget> targets)
         {
-            return new BehaviorTrigger
+            foreach (var target in targets)
             {
-                Condition = condition,
-                RangeThreshold = range
-            };
+                foreach (var condition in _triggers)
+                {
+                    if (condition(target))
+                        break;
+                }
+            }
         }
-    }
-
-    public class PlayerState
-    {
-        public bool IsFiring { get; set; }
-        public bool IsZoomed { get; set; }
-        public float Health { get; set; }
     }
 }

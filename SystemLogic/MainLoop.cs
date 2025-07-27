@@ -1,77 +1,54 @@
-﻿// Neural v3.0 — MainLoop.cs
-using System;
-using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
-using JaysAi.Finale.AI;
-using JaysAi.Finale.Input;
+﻿using JaysAi.Finale.AI;
+using JaysAi.Finale.Features;
 using JaysAi.Finale.Modules;
 using JaysAi.Finale.Overlay;
-using JaysAi.Finale.Helpers;
+using JaysAi.Finale.Targeting;
+using System;
+using System.Collections.Generic;
 
-namespace JaysAi.Finale.SystemLogic
+namespace JaysAi.Finale
 {
     public class MainLoop
     {
-        private static CancellationTokenSource _cts;
-        private static Task _loopTask;
-        private static readonly Stopwatch _frameTimer = new();
+        private readonly NeuralContext _neural;
+        private readonly ESP _esp;
+        private readonly AimAssist _aim;
+        private bool _running;
 
-        public static bool IsRunning { get; private set; } = false;
-        public static int TargetFps { get; set; } = 144;
-
-        public static void Start()
+        public MainLoop()
         {
-            if (IsRunning) return;
-
-            _cts = new CancellationTokenSource();
-            _loopTask = Task.Run(() => RunLoop(_cts.Token));
-            IsRunning = true;
+            _neural = new NeuralContext();
+            _esp = new ESP();
+            _aim = new AimAssist(_neural.ProfileManager);
         }
 
-        public static void Stop()
+        public void Start()
         {
-            if (!IsRunning) return;
+            _running = true;
 
-            _cts.Cancel();
-            IsRunning = false;
-        }
-
-        private static async Task RunLoop(CancellationToken token)
-        {
-            var delay = TimeSpan.FromMilliseconds(1000.0 / TargetFps);
-
-            while (!token.IsCancellationRequested)
+            while (_running)
             {
-                _frameTimer.Restart();
+                List<Enemy> enemies = _esp.Scan();
 
-                try
-                {
-                    // 1. Poll input
-                    InputManager.Update();
+                // Update AI memory
+                _neural.MemoryManager.Update(enemies);
 
-                    // 2. Update AI logic
-                    AiManager.Tick();
+                // Train the AI
+                _neural.Train();
 
-                    // 3. Run prediction
-                    PredictionEngine.Tick();
+                // Use profile-aware aim logic
+                if (LearningToggleModule.Enabled)
+                    _aim.Execute(enemies);
 
-                    // 4. Update assist modules
-                    SnapAssistController.Tick();
-
-                    // 5. Delay for framerate sync
-                    _frameTimer.Stop();
-                    var elapsed = _frameTimer.ElapsedMilliseconds;
-                    var sleepTime = delay.TotalMilliseconds - elapsed;
-
-                    if (sleepTime > 0)
-                        await Task.Delay((int)sleepTime, token);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[MainLoop] {ex.Message}");
-                }
+                System.Threading.Thread.Sleep(16); // ~60fps
             }
+
+            _neural.Save();
+        }
+
+        public void Stop()
+        {
+            _running = false;
         }
     }
 }

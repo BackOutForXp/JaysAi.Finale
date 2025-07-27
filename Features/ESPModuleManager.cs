@@ -1,13 +1,9 @@
 ﻿// neural v3.1
-using System;
-using System.Collections.Generic;
-using System.Timers;
 using JaysAi.Finale.Data;
 using JaysAi.Finale.Modules;
-using JaysAi.Finale.Overlay;
 using JaysAi.Finale.Settings;
 using JaysAi.Finale.Utility;
-using JaysAi.Finale.Visuals;
+using System.Timers;
 
 namespace JaysAi.Finale.Features
 {
@@ -23,6 +19,7 @@ namespace JaysAi.Finale.Features
         public bool Active => _isEnabled;
 
         public event Action<bool> OnStateChanged;
+
         public event Action<string, bool> OnAutoOptimized;
 
         public ESPModuleManager()

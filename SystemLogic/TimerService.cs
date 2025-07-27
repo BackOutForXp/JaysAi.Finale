@@ -1,64 +1,35 @@
-﻿// neural v3.0
+﻿// Neural v3.1 — TimerService.cs
 using System;
-using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Diagnostics;
 
-namespace JaysAi.Finale.SystemLogic
+namespace JaysAi.Finale.Utility
 {
-    public sealed class TimerService : IDisposable
+    public class TimerService
     {
-        private readonly ConcurrentDictionary<string, Timer> _timers = new();
-        private readonly ConcurrentDictionary<string, CancellationTokenSource> _cancellationTokens = new();
+        private readonly Stopwatch _stopwatch;
 
-        public void Schedule(string key, TimeSpan interval, Action callback, bool autoReset = true)
+        public TimerService()
         {
-            Cancel(key);
-
-            var cts = new CancellationTokenSource();
-            _cancellationTokens[key] = cts;
-
-            void ExecuteCallback(object? _)
-            {
-                if (cts.IsCancellationRequested) return;
-
-                try
-                {
-                    callback();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[TimerService] Error in callback for '{key}': {ex.Message}");
-                }
-
-                if (!autoReset)
-                    Cancel(key);
-            }
-
-            var timer = new Timer(ExecuteCallback, null, interval, autoReset ? interval : Timeout.InfiniteTimeSpan);
-            _timers[key] = timer;
+            _stopwatch = Stopwatch.StartNew();
         }
 
-        public void Cancel(string key)
-        {
-            if (_timers.TryRemove(key, out var timer))
-                timer.Dispose();
+        public float ElapsedSeconds => _stopwatch.ElapsedMilliseconds / 1000f;
 
-            if (_cancellationTokens.TryRemove(key, out var cts))
-                cts.Cancel();
+        public long ElapsedMilliseconds => _stopwatch.ElapsedMilliseconds;
+
+        public void Restart()
+        {
+            _stopwatch.Restart();
         }
 
-        public void CancelAll()
+        public bool HasElapsed(float seconds)
         {
-            foreach (var key in _timers.Keys)
-                Cancel(key);
+            return ElapsedSeconds >= seconds;
         }
 
-        public bool IsRunning(string key) => _timers.ContainsKey(key);
-
-        public void Dispose()
+        public bool HasElapsedMilliseconds(long milliseconds)
         {
-            CancelAll();
+            return ElapsedMilliseconds >= milliseconds;
         }
     }
 }

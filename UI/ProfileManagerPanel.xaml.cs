@@ -1,55 +1,76 @@
-﻿// neural v3.0
+﻿using System;
+using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using JaysAi.Finale.Settings;
-using System.Collections.ObjectModel;
+using JaysAi.Finale.Loader;
 
-namespace JaysAi.Finale.UI.Settings
+namespace JaysAi.Finale.UI
 {
-    public partial class ProfileManager : UserControl
+    public partial class ProfileManagerPanel : UserControl
     {
-        private ObservableCollection<string> _profiles;
+        private SettingsManager _manager => LoaderBootstrap.SettingsManager;
+        private AppSettings _settings => LoaderBootstrap.Settings;
 
-        public ProfileManager()
+        public ProfileManagerPanel()
         {
             InitializeComponent();
-            LoadProfiles();
+            LoadProfileList();
+
+            LoadButton.Click += (_, _) => LoadSelectedProfile();
+            SaveButton.Click += (_, _) => SaveCurrentProfile();
+            DeleteButton.Click += (_, _) => DeleteSelectedProfile();
+            SaveAsNewButton.Click += (_, _) => SaveAsNewProfile();
         }
 
-        private void LoadProfiles()
+        private void LoadProfileList()
         {
-            _profiles = new ObservableCollection<string>(SettingsManager.Instance.GetAvailableProfiles());
-            ProfileList.ItemsSource = _profiles;
+            ProfileDropdown.ItemsSource = _manager.GetAvailableProfiles();
+            if (ProfileDropdown.Items.Count > 0)
+                ProfileDropdown.SelectedIndex = 0;
         }
 
-        private void Load_Click(object sender, RoutedEventArgs e)
+        private void LoadSelectedProfile()
         {
-            if (ProfileList.SelectedItem is string profile)
+            if (ProfileDropdown.SelectedItem is string profile)
             {
-                SettingsManager.Instance.ApplyProfile(profile);
-                MessageBox.Show($"Loaded profile: {profile}", "Profile", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-        }
-
-        private void Save_Click(object sender, RoutedEventArgs e)
-        {
-            string profileName = Microsoft.VisualBasic.Interaction.InputBox("Enter profile name to save:", "Save Profile", "Default");
-            if (!string.IsNullOrWhiteSpace(profileName))
-            {
-                SettingsManager.Instance.SaveCurrentProfile(profileName);
-                LoadProfiles();
-            }
-        }
-
-        private void Delete_Click(object sender, RoutedEventArgs e)
-        {
-            if (ProfileList.SelectedItem is string profile)
-            {
-                if (MessageBox.Show($"Delete profile: {profile}?", "Confirm Delete", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                var loaded = _manager.Load<AppSettings>(profile);
+                if (loaded != null)
                 {
-                    SettingsManager.Instance.DeleteProfile(profile);
-                    LoadProfiles();
+                    LoaderBootstrap.Settings = loaded;
+                    MessageBox.Show($"Loaded profile: {profile}", "JaysAi", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
+            }
+        }
+
+        private void SaveCurrentProfile()
+        {
+            if (ProfileDropdown.SelectedItem is string profile)
+            {
+                _manager.Save(profile, _settings);
+                MessageBox.Show($"Saved profile: {profile}", "JaysAi", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void SaveAsNewProfile()
+        {
+            string name = NewProfileNameBox.Text.Trim();
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                _manager.Save(name, _settings);
+                LoadProfileList();
+                MessageBox.Show($"Profile '{name}' saved.", "JaysAi", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void DeleteSelectedProfile()
+        {
+            if (ProfileDropdown.SelectedItem is string profile)
+            {
+                _manager.Delete(profile);
+                LoadProfileList();
+                MessageBox.Show($"Deleted profile: {profile}", "JaysAi", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
     }

@@ -1,53 +1,60 @@
-﻿// neural v3.1
-using JaysAi.Finale.Data;
+﻿using JaysAi.Finale.AI;
 using JaysAi.Finale.Overlay;
 using JaysAi.Finale.Settings;
-using JaysAi.Finale.Utility;
-using JaysAi.Finale.Visuals;
+using JaysAi.Finale.SystemLogic;
+using SkiaSharp;
 using System.Collections.Generic;
 
-namespace JaysAi.Finale.Features
+namespace JaysAi.Finale.Modules
 {
-    public static class ESP
+    public class ESP : IModule
     {
-        private static bool _isEnabled;
-        private static readonly List<ESPObject> _trackedObjects = new();
+        private readonly AppSettings _settings;
+        private readonly EnemyScanner _scanner;
+        private readonly EspObject _espObject;
+        private readonly IWorldToScreen _w2s;
+        private List<Enemy> _visibleEnemies = new();
 
-        public static void Initialize()
+        public ESP(AppSettings settings, EnemyScanner scanner)
         {
-            OverlayRenderer.RegisterPersistentDraw(DrawESP);
+            _settings = settings;
+            _scanner = scanner;
+            _espObject = new EspObject(settings);
+            _w2s = settings.WorldToScreenConverter;
         }
 
-        public static void SetEnabled(bool enabled)
+        public void Initialize()
         {
-            _isEnabled = enabled;
+            // Optionally preload scanner data
         }
 
-        public static void UpdateObjects(List<Enemy> enemies)
+        public void Shutdown()
         {
-            _trackedObjects.Clear();
+            _visibleEnemies.Clear();
+        }
 
-            foreach (var enemy in enemies)
+        public void Tick()
+        {
+            if (!_settings.EnableESP) return;
+
+            _scanner.Scan();
+            _visibleEnemies = _scanner.VisibleEnemies;
+        }
+
+        public void Draw(SKCanvas canvas, SKPaint paint)
+        {
+            if (!_settings.EnableESP || _visibleEnemies == null)
+                return;
+
+            foreach (var enemy in _visibleEnemies)
             {
-                if (enemy.IsVisible)
+                if (!enemy.IsAlive) continue;
+
+                if (_w2s.TryProject(enemy.Position, out var screenPos))
                 {
-                    _trackedObjects.Add(new ESPObject(enemy));
+                    enemy.ScreenPosition = screenPos;
+                    _espObject.Draw(canvas, paint, enemy, screenPos);
                 }
-            }
-        }
-
-        public static void Clear()
-        {
-            _trackedObjects.Clear();
-        }
-
-        private static void DrawESP(SkiaSharp.SKCanvas canvas, int screenWidth, int screenHeight)
-        {
-            if (!_isEnabled) return;
-
-            foreach (var obj in _trackedObjects)
-            {
-                obj.Draw(canvas, screenWidth, screenHeight);
             }
         }
     }

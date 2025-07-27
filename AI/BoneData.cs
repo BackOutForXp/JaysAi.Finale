@@ -1,68 +1,36 @@
-﻿// Neural v3.1 — BoneData.cs
-using System.Collections.Generic;
-using System.Numerics;
+﻿using System.Numerics;
 
 namespace JaysAi.Finale.AI
 {
-    public enum BoneType
-    {
-        Head,
-        Neck,
-        Chest,
-        Spine,
-        Pelvis,
-        LeftShoulder,
-        RightShoulder,
-        LeftArm,
-        RightArm,
-        LeftLeg,
-        RightLeg,
-        Unknown
-    }
-
     public class BoneData
     {
-        public int ID { get; set; }
-        public BoneType Type { get; set; }
-        public Vector3 Position { get; set; }
-        public Vector2 ScreenPosition { get; set; }
+        public Vector3 Head { get; set; } = Vector3.Zero;
+        public Vector3 Chest { get; set; } = Vector3.Zero;
+        public Vector3 Stomach { get; set; } = Vector3.Zero;
+        public Vector3 Feet { get; set; } = Vector3.Zero;
 
-        public BoneData(int id, BoneType type, Vector3 pos, Vector2 screenPos)
+        public bool HasValidBones =>
+            Head != Vector3.Zero &&
+            Chest != Vector3.Zero;
+
+        public Vector3 GetPrimaryTarget(BoneTarget targetPreference)
         {
-            ID = id;
-            Type = type;
-            Position = pos;
-            ScreenPosition = screenPos;
+            return targetPreference switch
+            {
+                BoneTarget.Head => Head,
+                BoneTarget.Chest => Chest,
+                BoneTarget.Stomach => Stomach,
+                BoneTarget.Feet => Feet,
+                _ => Chest
+            };
         }
-
-        public bool IsCritical => Type == BoneType.Head || Type == BoneType.Chest;
     }
 
-    public static class BoneMap
+    public enum BoneTarget
     {
-        public static readonly Dictionary<BoneType, int> DefaultBoneIDs = new()
-        {
-            { BoneType.Head, 8 },
-            { BoneType.Neck, 7 },
-            { BoneType.Chest, 6 },
-            { BoneType.Spine, 5 },
-            { BoneType.Pelvis, 4 },
-            { BoneType.LeftShoulder, 14 },
-            { BoneType.RightShoulder, 15 },
-            { BoneType.LeftArm, 16 },
-            { BoneType.RightArm, 17 },
-            { BoneType.LeftLeg, 18 },
-            { BoneType.RightLeg, 19 }
-        };
-
-        public static BoneType GetBoneTypeByID(int id)
-        {
-            foreach (var pair in DefaultBoneIDs)
-            {
-                if (pair.Value == id)
-                    return pair.Key;
-            }
-            return BoneType.Unknown;
-        }
+        Head,
+        Chest,
+        Stomach,
+        Feet
     }
 }

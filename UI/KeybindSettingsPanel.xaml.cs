@@ -1,40 +1,43 @@
-﻿// neural v3.0
+﻿using JaysAi.Finale.Loader;
+using JaysAi.Finale.Settings;
 using System.Windows;
 using System.Windows.Controls;
-using JaysAi.Finale.Settings;
-using JaysAi.Finale.Input;
-using JaysAi.Finale.Input.Keybinds;
+using System.Windows.Input;
 
-namespace JaysAi.Finale.Overlay.Panels
+namespace JaysAi.Finale.UI
 {
     public partial class KeybindSettingsPanel : UserControl
     {
+        private AppSettings _settings => LoaderBootstrap.Settings;
+
         public KeybindSettingsPanel()
         {
             InitializeComponent();
-            Loaded += KeybindSettingsPanel_Loaded;
+            Loaded += OnLoaded;
         }
 
-        private void KeybindSettingsPanel_Loaded(object sender, RoutedEventArgs e)
+        private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            AimKeyBind.Text = UserSettings.Instance.Keybinds.AimKey.ToString();
-            ESPKeyBind.Text = UserSettings.Instance.Keybinds.ESPKey.ToString();
-        }
+            // Populate all key dropdowns with available Keys
+            var keys = Enum.GetValues(typeof(Key)).Cast<Key>()
+                           .Where(k => k >= Key.A && k <= Key.Z || k >= Key.D0 && k <= Key.D9 || k == Key.LeftShift || k == Key.RightShift || k == Key.LeftCtrl || k == Key.RightCtrl)
+                           .Distinct()
+                           .ToList();
 
-        private void AimKeyBind_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (Enum.TryParse(AimKeyBind.Text, out System.Windows.Input.Key newKey))
-            {
-                UserSettings.Instance.Keybinds.AimKey = newKey;
-            }
-        }
+            EspKeyDropdown.ItemsSource = keys;
+            AimKeyDropdown.ItemsSource = keys;
+            PanicKeyDropdown.ItemsSource = keys;
 
-        private void ESPKeyBind_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (Enum.TryParse(ESPKeyBind.Text, out System.Windows.Input.Key newKey))
-            {
-                UserSettings.Instance.Keybinds.ESPKey = newKey;
-            }
-        }
-    }
-}
+            // Set current selections from settings
+            EspKeyDropdown.SelectedItem = GetKeyFromString(_settings.ESP_ToggleKey);
+            AimKeyDropdown.SelectedItem = GetKeyFromString(_settings.Aim_HoldKey);
+            PanicKeyDropdown.SelectedItem = GetKeyFromString(_settings.PanicKey);
+
+            AllowKeybindsCheckbox.IsChecked = _settings.KeybindsEnabled;
+
+            // Bind events
+            EspKeyDropdown.SelectionChanged += (_, _) =>
+                _settings.ESP_ToggleKey = EspKeyDropdown.SelectedItem?.ToString();
+
+            AimKeyDropdown.SelectionChanged += (_, _) =>
+                _settings.Aim_HoldKey = AimKeyDropdown.SelectedItem?.ToString()

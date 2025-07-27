@@ -1,62 +1,50 @@
-﻿// neural v3.0
-using System;
+﻿// Neural v3.1
 using System.Numerics;
 
 namespace JaysAi.Finale.Input
 {
-    public sealed class ControllerState
+    public class ControllerState
     {
-        public Vector2 LeftStick { get; private set; }
-        public Vector2 RightStick { get; private set; }
-        public float LeftTrigger { get; private set; }
-        public float RightTrigger { get; private set; }
-        public ControllerButtons Buttons { get; private set; }
+        public Vector2 LeftStick { get; set; }
+        public Vector2 RightStick { get; set; }
 
-        public float DeadzoneThreshold { get; set; } = 0.1f;
+        public float LeftTrigger { get; set; }
+        public float RightTrigger { get; set; }
 
-        public void Update(ControllerInputState input)
+        public bool A { get; set; }
+        public bool B { get; set; }
+        public bool X { get; set; }
+        public bool Y { get; set; }
+
+        public bool DPadUp { get; set; }
+        public bool DPadDown { get; set; }
+        public bool DPadLeft { get; set; }
+        public bool DPadRight { get; set; }
+
+        public bool Start { get; set; }
+        public bool Back { get; set; }
+
+        public bool LeftBumper { get; set; }
+        public bool RightBumper { get; set; }
+
+        public bool LeftStickPressed { get; set; }
+        public bool RightStickPressed { get; set; }
+
+        public bool IsConnected { get; set; } = false;
+
+        public void Reset()
         {
-            LeftStick = ApplyDeadzone(input.LeftStick);
-            RightStick = ApplyDeadzone(input.RightStick);
-            LeftTrigger = input.LeftTrigger;
-            RightTrigger = input.RightTrigger;
-            Buttons = input.Buttons;
-        }
+            LeftStick = Vector2.Zero;
+            RightStick = Vector2.Zero;
+            LeftTrigger = 0;
+            RightTrigger = 0;
 
-        private Vector2 ApplyDeadzone(Vector2 raw)
-        {
-            var length = raw.Length();
-            return length < DeadzoneThreshold ? Vector2.Zero : raw;
+            A = B = X = Y = false;
+            DPadUp = DPadDown = DPadLeft = DPadRight = false;
+            Start = Back = false;
+            LeftBumper = RightBumper = false;
+            LeftStickPressed = RightStickPressed = false;
+            IsConnected = false;
         }
-
-        public bool IsButtonPressed(ControllerButtons button)
-        {
-            return (Buttons & button) != 0;
-        }
-
-        public override string ToString()
-        {
-            return $"LStick:{LeftStick} RStick:{RightStick} LT:{LeftTrigger} RT:{RightTrigger} Buttons:{Buttons}";
-        }
-    }
-
-    [Flags]
-    public enum ControllerButtons
-    {
-        None = 0,
-        A = 1 << 0,
-        B = 1 << 1,
-        X = 1 << 2,
-        Y = 1 << 3,
-        LB = 1 << 4,
-        RB = 1 << 5,
-        Back = 1 << 6,
-        Start = 1 << 7,
-        LS = 1 << 8,
-        RS = 1 << 9,
-        DPadUp = 1 << 10,
-        DPadDown = 1 << 11,
-        DPadLeft = 1 << 12,
-        DPadRight = 1 << 13
     }
 }

@@ -1,39 +1,45 @@
-﻿// neural v3.0
+﻿using System;
 using System.Windows;
-using JaysAi.Finale.Core;
-using JaysAi.Finale.SystemLogic;
 using JaysAi.Finale.Settings;
 using JaysAi.Finale.Loader;
 
-namespace JaysAi.Finale.UI.Loader
+namespace JaysAi.Finale.UI
 {
     public partial class LoaderGUI : Window
     {
+        private AppSettings _settings => LoaderBootstrap.Settings;
+
         public LoaderGUI()
         {
             InitializeComponent();
-            lblStatus.Text = "Loader initialized. Ready.";
+
+            Loaded += OnLoaded;
+            Closing += OnClosing;
         }
 
-        private async void BtnLaunch_Click(object sender, RoutedEventArgs e)
+        private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            lblStatus.Text = "Starting JaysAi Neural System...";
+            LoaderBootstrap.Initialize();
 
-            // Initialize settings and core logic
-            AppSettings.Load();
-            SettingsManager.Instance.ApplyProfile("Default");
+            // Bind checkboxes to AppSettings
+            EspCheckbox.IsChecked = _settings.EnableESP;
+            AimAssistCheckbox.IsChecked = _settings.EnableAimAssist;
+            StickAssistCheckbox.IsChecked = _settings.EnableStickAssist;
 
-            // Run startup logic
-            bool initialized = await LoaderStartup.InitializeAsync();
-            if (!initialized)
-            {
-                lblStatus.Text = "Initialization failed.";
-                return;
-            }
+            // Event handlers to live update AppSettings
+            EspCheckbox.Checked += (_, _) => _settings.EnableESP = true;
+            EspCheckbox.Unchecked += (_, _) => _settings.EnableESP = false;
 
-            lblStatus.Text = "JaysAi loaded successfully.";
-            new MainOverlayWindow().Show();
-            this.Close();
+            AimAssistCheckbox.Checked += (_, _) => _settings.EnableAimAssist = true;
+            AimAssistCheckbox.Unchecked += (_, _) => _settings.EnableAimAssist = false;
+
+            StickAssistCheckbox.Checked += (_, _) => _settings.EnableStickAssist = true;
+            StickAssistCheckbox.Unchecked += (_, _) => _settings.EnableStickAssist = false;
+        }
+
+        private void OnClosing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            LoaderBootstrap.Shutdown();
         }
     }
 }

@@ -1,55 +1,60 @@
 ﻿// Neural v3.1 — TrackTarget.cs
-using System;
-using System.Numerics;
 using JaysAi.Finale.Data;
+using JaysAi.Finale.Helpers;
+using JaysAi.Finale.Settings;
+using JaysAi.Finale.SystemLogic;
+using JaysAi.Finale.Utility;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace JaysAi.Finale.AI
 {
-    /// <summary>
-    /// Manages the locked-on tracked target. 
-    /// Sits between AimAssist and the AI’s real-time tracking loop.
-    /// </summary>
     public class TrackTarget
     {
-        public TrackedTarget Tracked { get; private set; }
-        public bool IsLocked { get; private set; }
+        private readonly List<TrackedTarget> _targets = new();
 
-        private readonly TimeSpan visibilityTimeout = TimeSpan.FromMilliseconds(1000);
-
-        public void LockOn(TrackedTarget target)
+        public void Initialize()
         {
-            Tracked = target;
-            IsLocked = true;
+            _targets.Clear();
         }
 
-        public void Unlock()
+        public void UpdateTracking()
         {
-            Tracked = null;
-            IsLocked = false;
-        }
+            var rawObjects = EnemyScanner.Scan();
 
-        public void Update()
-        {
-            if (!IsLocked || Tracked == null)
-                return;
-
-            if (Tracked.IsLost(visibilityTimeout))
+            _targets.Clear();
+            foreach (var obj in rawObjects)
             {
-                Unlock();
-                return;
+                if (!WorldToScreenConverter.TryConvert(obj.WorldPosition, out var screenPos))
+                    continue;
+
+                var target = new TrackedTarget
+                {
+                    Id = obj.Id,
+                    Position3D = obj.WorldPosition,
+                    ScreenPosition = screenPos,
+                    IsVisible = obj.IsVisible,
+                    Health = obj.Health,
+                    Distance = obj.Distance,
+                    Velocity = obj.Velocity,
+                    ScreenBox = BoundingBoxHelper.GetBoundingBox(screenPos, UserSettings.Instance.Get<float>("EspBoxSize", 50f))
+                };
+
+                _targets.Add(target);
             }
-
-            Tracked.Update(Tracked.Enemy.HeadPosition, Tracked.Enemy.IsVisible);
         }
 
-        public Vector3 GetTargetPosition()
+        public List<TrackedTarget> GetTargets()
         {
-            return Tracked?.PredictNextPosition() ?? Vector3.Zero;
+            return _targets.ToList();
         }
 
-        public bool HasValidTarget()
+        public TrackedTarget? GetNearestVisible()
         {
-            return IsLocked && Tracked != null && !Tracked.IsLost(visibilityTimeout);
+            return _targets
+                .Where(t => t.IsVisible)
+                .OrderBy(t => t.Distance)
+                .FirstOrDefault();
         }
     }
 }

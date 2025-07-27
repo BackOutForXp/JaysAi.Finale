@@ -1,69 +1,58 @@
-﻿// neural v3.1
-using JaysAi.Finale.Data;
-using SkiaSharp;
-using System.Collections.Generic;
+﻿using SkiaSharp;
+using JaysAi.Finale.AI;
+using JaysAi.Finale.Math;
+using JaysAi.Finale.Settings;
 
 namespace JaysAi.Finale.Overlay
 {
-    public class ESPObject
+    public class EspObject
     {
-        public string Name { get; set; }
-        public float Health { get; set; }
-        public float MaxHealth { get; set; }
-        public SKRect? ScreenBox { get; set; }
-        public Vector3D? WorldPosition { get; set; }
-        public bool IsVisible { get; set; }
-        public List<SKPoint> SkeletonPoints { get; set; }
-        public int? ID { get; set; }
-        public float Confidence { get; set; }
+        private readonly AppSettings _settings;
 
-        public ESPObject()
+        public EspObject(AppSettings settings)
         {
-            SkeletonPoints = new List<SKPoint>();
+            _settings = settings;
         }
 
-        public ESPObject(Enemy enemy)
+        public void Draw(SKCanvas canvas, SKPaint paint, Enemy enemy, Vector2 screenPos)
         {
-            Name = enemy.Name;
-            Health = enemy.Health;
-            MaxHealth = enemy.MaxHealth;
-            ScreenBox = enemy.ScreenBox;
-            WorldPosition = enemy.WorldPosition;
-            IsVisible = enemy.IsVisible;
-            ID = enemy.ID;
-            Confidence = enemy.Confidence;
-            SkeletonPoints = enemy.SkeletonPoints ?? new List<SKPoint>();
-        }
-
-        public void Draw(SKCanvas canvas, int screenWidth, int screenHeight)
-        {
-            if (!IsVisible || ScreenBox == null)
+            if (!enemy.IsAlive || screenPos == default)
                 return;
 
-            var box = ScreenBox.Value;
+            paint.IsAntialias = true;
 
-            using var paint = new SKPaint
+            if (_settings.ESP_DrawBox)
             {
-                Style = SKPaintStyle.Stroke,
-                StrokeWidth = 2,
-                Color = SKColors.Red,
-                IsAntialias = true
-            };
+                float boxWidth = _settings.ESP_BoxWidth;
+                float boxHeight = _settings.ESP_BoxHeight;
 
-            canvas.DrawRect(box, paint);
+                paint.Style = SKPaintStyle.Stroke;
+                paint.Color = SKColors.Red;
+                paint.StrokeWidth = 1.5f;
+
+                canvas.DrawRect(screenPos.X - boxWidth / 2, screenPos.Y - boxHeight, boxWidth, boxHeight, paint);
+            }
+
+            if (_settings.ESP_ShowHealthBar)
+            {
+                float barHeight = 40;
+                float healthPct = enemy.Health / 100f;
+                float barWidth = 4;
+
+                paint.Style = SKPaintStyle.Fill;
+                paint.Color = SKColors.Gray;
+                canvas.DrawRect(screenPos.X - 30, screenPos.Y - barHeight, barWidth, barHeight, paint);
+
+                paint.Color = SKColor.FromHsv(healthPct * 120, 1, 1);
+                canvas.DrawRect(screenPos.X - 30, screenPos.Y - (barHeight * healthPct), barWidth, barHeight * healthPct, paint);
+            }
+
+            if (_settings.ESP_ShowDistance)
+            {
+                paint.Color = SKColors.White;
+                paint.TextSize = 14;
+                canvas.DrawText($"{enemy.Distance:F1}m", screenPos.X + 5, screenPos.Y - 5, paint);
+            }
         }
-    }
-
-    // Consider moving this to Data/Shared/
-    public struct Vector3D
-    {
-        public float X, Y, Z;
-
-        public Vector3D(float x, float y, float z)
-        {
-            X = x; Y = y; Z = z;
-        }
-
-        public override string ToString() => $"({X:F1}, {Y:F1}, {Z:F1})";
     }
 }

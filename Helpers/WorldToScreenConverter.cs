@@ -1,20 +1,39 @@
-﻿// Neural v3.1 — WorldToScreenConverter.cs
+﻿using System;
 using System.Numerics;
+using JaysAi.Finale.Settings;
 
-namespace JaysAi.Finale.Helpers
+namespace JaysAi.Finale.AI
 {
-    public static class WorldToScreenConverter
+    public interface IWorldToScreen
     {
-        public static Vector2? Project(Vector3 worldPosition)
+        bool TryProject(Vector3 worldPos, out Vector2 screenPos);
+    }
+
+    public class WorldToScreenConverter : IWorldToScreen
+    {
+        private readonly AppSettings _settings;
+
+        public WorldToScreenConverter(AppSettings settings)
         {
-            // Placeholder projection logic — replace with actual game matrix later
-            if (worldPosition.Z <= 0.1f)
-                return null;
+            _settings = settings;
+        }
 
-            float screenX = worldPosition.X / worldPosition.Z * 100 + 960; // assume screen center at 960x540
-            float screenY = worldPosition.Y / worldPosition.Z * 100 + 540;
+        public bool TryProject(Vector3 worldPos, out Vector2 screenPos)
+        {
+            screenPos = default;
 
-            return new Vector2(screenX, screenY);
+            // Placeholder logic — replace with your memory-based camera matrix projection
+            var fakeCameraPos = new Vector3(0, 0, 0); // assume camera is at origin
+            var dir = worldPos - fakeCameraPos;
+
+            if (dir.Z <= 0.01f)
+                return false;
+
+            float x = (_settings.ScreenWidth / 2f) + (dir.X / dir.Z) * (_settings.ScreenWidth / 2f);
+            float y = (_settings.ScreenHeight / 2f) - (dir.Y / dir.Z) * (_settings.ScreenHeight / 2f);
+
+            screenPos = new Vector2(x, y);
+            return true;
         }
     }
 }

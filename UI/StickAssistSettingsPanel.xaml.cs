@@ -1,53 +1,42 @@
-﻿// neural v3.0
-using System;
-using System.Globalization;
+﻿// Neural v3.1 — StickAssistSettingsPanel.xaml.cs
 using System.Windows;
 using System.Windows.Controls;
 using JaysAi.Finale.Settings;
-using JaysAi.Finale.Modules;
 
-namespace JaysAi.Finale.UI.Settings
+namespace JaysAi.Finale.UI
 {
-    public partial class StickAssistPanel : UserControl
+    public partial class StickAssistSettingsPanel : UserControl
     {
-        public StickAssistPanel()
+        public StickAssistSettingsPanel()
         {
             InitializeComponent();
-            LoadDefaults();
+            DataContext = UserSettings.Instance;
         }
 
-        private void LoadDefaults()
+        private void StickAssistEnabled_Checked(object sender, RoutedEventArgs e)
         {
-            DeadzoneSlider.Value = SettingsManager.Instance.StickDeadzone;
-            DeadzoneValue.Text = DeadzoneSlider.Value.ToString("F2");
-            ProportionalInput.Text = SettingsManager.Instance.PID_P.ToString(CultureInfo.InvariantCulture);
-            IntegralInput.Text = SettingsManager.Instance.PID_I.ToString(CultureInfo.InvariantCulture);
-            DerivativeInput.Text = SettingsManager.Instance.PID_D.ToString(CultureInfo.InvariantCulture);
+            UserSettings.Instance.Set("StickAssistEnabled", true);
         }
 
-        private void DeadzoneSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        private void StickAssistEnabled_Unchecked(object sender, RoutedEventArgs e)
         {
-            DeadzoneValue.Text = e.NewValue.ToString("F2");
+            UserSettings.Instance.Set("StickAssistEnabled", false);
         }
 
-        private void Apply_Click(object sender, RoutedEventArgs e)
+        private void StrengthSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (float.TryParse(ProportionalInput.Text, out float p) &&
-                float.TryParse(IntegralInput.Text, out float i) &&
-                float.TryParse(DerivativeInput.Text, out float d))
+            if (IsLoaded)
             {
-                SettingsManager.Instance.StickDeadzone = (float)DeadzoneSlider.Value;
-                SettingsManager.Instance.PID_P = p;
-                SettingsManager.Instance.PID_I = i;
-                SettingsManager.Instance.PID_D = d;
-
-                MessageBox.Show("Stick Assist settings applied.", "Success", MessageBoxButton.OK);
+                UserSettings.Instance.Set("StickAssistStrength", (float)e.NewValue);
             }
-            else
+        }
+
+        private void RadiusSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (IsLoaded)
             {
-                MessageBox.Show("Invalid PID values.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                UserSettings.Instance.Set("StickAssistFovRadius", (float)e.NewValue);
             }
         }
     }
 }
-

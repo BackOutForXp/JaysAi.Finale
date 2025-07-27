@@ -1,52 +1,71 @@
-﻿// neural v3.0
-using SkiaSharp;
-using System;
+﻿using SkiaSharp;
 
-namespace JaysAi.Finale.Overlay
+namespace JaysAi.Finale.Visuals
 {
     public static class DrawingUtils
     {
-        public static void DrawText(SKCanvas canvas, string text, float x, float y, SKPaint paint)
+        public static void DrawBox(SKCanvas canvas, float x, float y, float width, float height, SKColor color, float stroke = 2)
         {
-            if (string.IsNullOrWhiteSpace(text)) return;
+            using var paint = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                Color = color,
+                StrokeWidth = stroke,
+                IsAntialias = true
+            };
+
+            canvas.DrawRect(x, y, width, height, paint);
+        }
+
+        public static void DrawLine(SKCanvas canvas, float x1, float y1, float x2, float y2, SKColor color, float stroke = 1)
+        {
+            using var paint = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                Color = color,
+                StrokeWidth = stroke,
+                IsAntialias = true
+            };
+
+            canvas.DrawLine(x1, y1, x2, y2, paint);
+        }
+
+        public static void DrawCircle(SKCanvas canvas, float x, float y, float radius, SKColor color, float stroke = 2)
+        {
+            using var paint = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                Color = color,
+                StrokeWidth = stroke,
+                IsAntialias = true
+            };
+
+            canvas.DrawCircle(x, y, radius, paint);
+        }
+
+        public static void DrawText(SKCanvas canvas, string text, float x, float y, float size, SKColor color)
+        {
+            using var paint = new SKPaint
+            {
+                Color = color,
+                TextSize = size,
+                IsAntialias = true,
+                IsStroke = false
+            };
+
             canvas.DrawText(text, x, y, paint);
         }
 
-        public static void DrawBox(SKCanvas canvas, float x, float y, float width, float height, SKPaint paint)
+        public static void DrawFilledBox(SKCanvas canvas, float x, float y, float width, float height, SKColor fillColor)
         {
-            var rect = new SKRect(x, y, x + width, y + height);
-            canvas.DrawRect(rect, paint);
-        }
-
-        public static void DrawCircle(SKCanvas canvas, float cx, float cy, float radius, SKPaint paint)
-        {
-            canvas.DrawCircle(cx, cy, radius, paint);
-        }
-
-        public static void DrawLine(SKCanvas canvas, float x0, float y0, float x1, float y1, SKPaint paint)
-        {
-            canvas.DrawLine(x0, y0, x1, y1, paint);
-        }
-
-        public static void DrawCrosshair(SKCanvas canvas, float cx, float cy, float size, SKPaint paint)
-        {
-            DrawLine(canvas, cx - size, cy, cx + size, cy, paint);
-            DrawLine(canvas, cx, cy - size, cx, cy + size, paint);
-        }
-
-        public static void DrawBorderedText(SKCanvas canvas, string text, float x, float y, SKPaint foreground, SKPaint background, float borderSize = 1f)
-        {
-            if (string.IsNullOrWhiteSpace(text)) return;
-
-            for (float dx = -borderSize; dx <= borderSize; dx++)
+            using var paint = new SKPaint
             {
-                for (float dy = -borderSize; dy <= borderSize; dy++)
-                {
-                    canvas.DrawText(text, x + dx, y + dy, background);
-                }
-            }
+                Style = SKPaintStyle.Fill,
+                Color = fillColor,
+                IsAntialias = true
+            };
 
-            canvas.DrawText(text, x, y, foreground);
+            canvas.DrawRect(x, y, width, height, paint);
         }
     }
 }

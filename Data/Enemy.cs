@@ -1,62 +1,38 @@
-﻿// Neural v3.1 — Enemy.cs
-using System;
-using System.Numerics;
-using JaysAi.Finale.AI;
+﻿using System.Numerics;
 
-namespace JaysAi.Finale.Data
+namespace JaysAi.Finale.AI
 {
     public class Enemy
     {
-        public int ID { get; set; }
+        public int Id { get; set; }
         public string Name { get; set; }
-
-        public Vector3 HeadPosition { get; set; }
-        public Vector3 ChestPosition { get; set; }
-        public Vector3 FeetPosition { get; set; }
-
-        public Vector3 Position => ChestPosition;
-        public Vector3 Velocity { get; set; } = Vector3.Zero;
-
+        public Vector3 Position { get; set; }
+        public Vector3 Velocity { get; set; }
         public Vector2 ScreenPosition { get; set; }
+
         public float Distance { get; set; }
+        public float Health { get; set; }
 
+        public BoneData Bones { get; set; } = new();
         public bool IsVisible { get; set; }
-        public bool IsTracked { get; set; }
-        public bool IsTargeted { get; set; }
+        public bool IsAlive { get; set; }
 
-        public float ConfidenceScore { get; set; }
-
-        public TargetInfo TargetInfo { get; set; }
-        public BoneData BoneData { get; set; }
-
-        public DateTime LastSeen { get; set; }
+        public MotionSample LastMotion { get; set; }
 
         public Enemy()
         {
-            TargetInfo = new TargetInfo(this, ChestPosition);
-            BoneData = new BoneData();
-            LastSeen = DateTime.UtcNow;
-        }
-
-        public void UpdatePosition(Vector3 head, Vector3 chest, Vector3 feet)
-        {
-            HeadPosition = head;
-            ChestPosition = chest;
-            FeetPosition = feet;
-            LastSeen = DateTime.UtcNow;
-        }
-
-        public void UpdateScreen(Vector2 screenPos, float distance)
-        {
-            ScreenPosition = screenPos;
-            Distance = distance;
-        }
-
-        public void ResetFlags()
-        {
+            Position = Vector3.Zero;
+            Velocity = Vector3.Zero;
+            ScreenPosition = Vector2.Zero;
             IsVisible = false;
-            IsTracked = false;
-            IsTargeted = false;
+            IsAlive = false;
+            Health = 100f;
+            Distance = 0f;
+        }
+
+        public bool IsValid()
+        {
+            return IsAlive && Position != Vector3.Zero && Health > 0;
         }
     }
 }

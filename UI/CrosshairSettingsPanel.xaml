@@ -1,30 +1,35 @@
-﻿<!-- neural v3.0 -->
-<UserControl x:Class="JaysAi.Finale.UI.Panels.CrosshairSettingsPanel"
+﻿<UserControl x:Class="JaysAi.Finale.UI.CrosshairSettingsPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             mc:Ignorable="d" 
-             d:DesignHeight="200" d:DesignWidth="400">
-    <Grid Background="Transparent">
-        <StackPanel Margin="10">
-            <TextBlock Text="Crosshair Settings" FontWeight="Bold" FontSize="16" Margin="0 0 0 10" />
+             Background="#1E1E1E"
+             Height="300" Width="600">
 
-            <CheckBox Content="Enable Crosshair" IsChecked="{Binding EnableCrosshair}" Margin="0 0 0 5"/>
-            <StackPanel Orientation="Horizontal" Margin="0 0 0 5">
-                <TextBlock Text="Color:" VerticalAlignment="Center" Width="60"/>
-                <TextBox Width="100" Text="{Binding CrosshairColor}" />
-            </StackPanel>
+    <StackPanel Margin="20" Spacing="12">
+        <TextBlock Text="Crosshair Settings" FontSize="18" FontWeight="Bold" Foreground="White"/>
 
-            <StackPanel Orientation="Horizontal" Margin="0 0 0 5">
-                <TextBlock Text="Size:" VerticalAlignment="Center" Width="60"/>
-                <Slider Width="150" Minimum="1" Maximum="20" Value="{Binding CrosshairSize}" />
-            </StackPanel>
-
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Opacity:" VerticalAlignment="Center" Width="60"/>
-                <Slider Width="150" Minimum="0" Maximum="1" Value="{Binding CrosshairOpacity}" />
-            </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Size:" Foreground="White" VerticalAlignment="Center"/>
+            <Slider x:Name="CrosshairSizeSlider" Minimum="5" Maximum="50" Width="200" />
         </StackPanel>
-    </Grid>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Thickness:" Foreground="White" VerticalAlignment="Center"/>
+            <Slider x:Name="CrosshairThicknessSlider" Minimum="1" Maximum="10" Width="200" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Color:" Foreground="White" VerticalAlignment="Center"/>
+            <ComboBox x:Name="CrosshairColorDropdown" Width="150">
+                <ComboBoxItem Content="Red" />
+                <ComboBoxItem Content="Green" />
+                <ComboBoxItem Content="Blue" />
+                <ComboBoxItem Content="White" />
+                <ComboBoxItem Content="Yellow" />
+                <ComboBoxItem Content="Cyan" />
+            </ComboBox>
+        </StackPanel>
+
+        <CheckBox x:Name="CrosshairDotCheckbox" Content="Enable Center Dot" Foreground="White"/>
+        <CheckBox x:Name="CrosshairCircleCheckbox" Content="Enable Outer Circle" Foreground="White"/>
+    </StackPanel>
 </UserControl>

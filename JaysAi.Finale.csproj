@@ -31,5 +31,17 @@
     <PackageReference Include="Unity.Interception" Version="5.11.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Legacy\" />
+    <Folder Include="Modules\Aim\" />
+    <Folder Include="Overlay\Helpers\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="UI\StealthSettingsPanel.xaml.cs">
+      <Generator>MSBuild:Compile</Generator>
+    </Compile>
+  </ItemGroup>
+
 </Project>
 

@@ -1,45 +1,37 @@
-﻿// neural v3.0
-using System;
+﻿// Neural v3.1 — FeatureToggleManager.cs
 using System.Collections.Generic;
-using JaysAi.Finale.SystemLogic;
 
-namespace JaysAi.Finale.SystemLogic
+namespace JaysAi.Finale.Features
 {
-    public class FeatureToggleManager
+    public static class FeatureToggleManager
     {
-        private readonly Dictionary<string, Action<bool>> _onToggleCallbacks = new();
+        private static readonly Dictionary<string, bool> _toggles = new();
 
-        public FeatureToggleManager()
+        public static void Enable(string featureName)
         {
-            FeatureToggle.FeatureToggled += OnFeatureToggled;
+            _toggles[featureName] = true;
         }
 
-        private void OnFeatureToggled(string featureName, bool isEnabled)
+        public static void Disable(string featureName)
         {
-            if (_onToggleCallbacks.TryGetValue(featureName, out var callback))
-            {
-                callback?.Invoke(isEnabled);
-            }
+            _toggles[featureName] = false;
         }
 
-        public void RegisterCallback(string featureName, Action<bool> onToggle)
+        public static void Toggle(string featureName)
         {
-            if (string.IsNullOrWhiteSpace(featureName)) return;
-
-            _onToggleCallbacks[featureName] = onToggle;
-
-            // Immediate invoke with current state
-            onToggle(FeatureToggle.IsEnabled(featureName));
+            _toggles[featureName] = !_toggles.GetValueOrDefault(featureName, false);
         }
 
-        public void UnregisterCallback(string featureName)
+        public static bool IsEnabled(string featureName)
         {
-            _onToggleCallbacks.Remove(featureName);
+            return _toggles.TryGetValue(featureName, out var enabled) && enabled;
         }
 
-        public void Dispose()
+        public static void Reset()
         {
-            _onToggleCallbacks.Clear();
+            _toggles.Clear();
         }
+
+        public static IReadOnlyDictionary<string, bool> GetAll() => _toggles;
     }
 }

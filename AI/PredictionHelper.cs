@@ -1,50 +1,31 @@
-﻿// Neural v3.1 — PredictionHelper.cs
-using System;
+﻿using JaysAi.Finale.AI;
+using JaysAi.Finale.Data;
 using System.Numerics;
 
-namespace JaysAi.Finale.AI
+namespace JaysAi.Finale.Utility
 {
     public static class PredictionHelper
     {
         /// <summary>
-        /// Predicts the future position of a moving target based on current velocity and delay.
+        /// Predicts future enemy position using velocity and deltaTime.
         /// </summary>
-        public static Vector3 PredictFuturePosition(Vector3 currentPosition, Vector3 velocity, float delaySeconds)
+        public static Vector3 Predict(Enemy enemy, float deltaTime)
         {
-            return currentPosition + velocity * delaySeconds;
+            if (!enemy.IsAlive || enemy.Position == default || enemy.Velocity == Vector3.Zero)
+                return enemy.Position;
+
+            return enemy.Position + (enemy.Velocity * deltaTime);
         }
 
         /// <summary>
-        /// Calculates linear velocity between two positions and time delta.
+        /// Predicts screen position assuming W2S converter is injected.
         /// </summary>
-        public static Vector3 CalculateVelocity(Vector3 start, Vector3 end, float deltaTime)
+        public static bool TryPredictScreen(Enemy enemy, float deltaTime, IWorldToScreen w2s, out Vector2 screenPos)
         {
-            if (deltaTime <= 0.0001f) return Vector3.Zero;
-            return (end - start) / deltaTime;
-        }
+            screenPos = default;
 
-        /// <summary>
-        /// Calculates distance between two 3D points.
-        /// </summary>
-        public static float Distance(Vector3 a, Vector3 b)
-        {
-            return Vector3.Distance(a, b);
-        }
-
-        /// <summary>
-        /// Calculates 2D screen space distance between two vectors.
-        /// </summary>
-        public static float Distance2D(Vector2 a, Vector2 b)
-        {
-            return Vector2.Distance(a, b);
-        }
-
-        /// <summary>
-        /// Determines if a velocity vector is negligible (target is mostly stationary).
-        /// </summary>
-        public static bool IsNearlyStatic(Vector3 velocity, float threshold = 0.1f)
-        {
-            return velocity.Length() < threshold;
+            var predicted = Predict(enemy, deltaTime);
+            return w2s.TryProject(predicted, out screenPos);
         }
     }
 }

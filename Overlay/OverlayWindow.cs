@@ -1,53 +1,75 @@
-﻿// Neural v3.0 — OverlayWindow.cs
+﻿using JaysAi.Finale.AI;
+using JaysAi.Finale.Features;
+using JaysAi.Finale.Settings;
+using JaysAi.Finale.SystemLogic;
+using SkiaSharp;
+using SkiaSharp.Views.Desktop;
+using SkiaSharp.Views.WPF;
 using System;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
-using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace JaysAi.Finale.Overlay
 {
     public class OverlayWindow : Window
     {
-        public OverlayWindow()
-        {
-            InitializeOverlay();
-        }
+        private readonly AppSettings _settings;
+        private readonly SKElement _skElement;
+        private readonly SkiaRenderer _renderer;
+        private DispatcherTimer _renderTimer;
 
-        private void InitializeOverlay()
+        public OverlayWindow(AppSettings settings)
         {
+            _settings = settings;
+            _renderer = new SkiaRenderer(_settings);
+
+            Title = "JaysAi Overlay";
             Width = SystemParameters.PrimaryScreenWidth;
             Height = SystemParameters.PrimaryScreenHeight;
             Top = 0;
             Left = 0;
-
             WindowStyle = WindowStyle.None;
-            ResizeMode = ResizeMode.NoResize;
-            Topmost = true;
             AllowsTransparency = true;
+            Background = null;
+            Topmost = true;
             ShowInTaskbar = false;
-            Background = Brushes.Transparent;
-            IsHitTestVisible = false;
 
-            Loaded += (_, _) => EnableClickThrough();
+            _skElement = new SKElement();
+            _skElement.PaintSurface += OnPaintSurface;
+
+            Content = _skElement;
+
+            Loaded += (_, _) => MakeClickThrough();
+            StartRendering();
         }
 
-        private void EnableClickThrough()
+        private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
+        {
+            var canvas = e.Surface.Canvas;
+            canvas.Clear(SKColors.Transparent);
+
+            var visibleEnemies = EnemyScanner.LastVisible;
+            var target = AimAssist.LastTarget;
+
+            _renderer.Render(canvas, visibleEnemies, target);
+        }
+
+        private void StartRendering()
+        {
+            _renderTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(1000f / _settings.OverlayFPS)
+            };
+            _renderTimer.Tick += (_, _) => _skElement.InvalidateVisual();
+            _renderTimer.Start();
+        }
+
+        private void MakeClickThrough()
         {
             var hwnd = new WindowInteropHelper(this).Handle;
-            int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW);
+            int exStyle = NativeMethods.GetWindowLong(hwnd, -20);
+            NativeMethods.SetWindowLong(hwnd, -20, exStyle | 0x80000 | 0x20); // WS_EX_LAYERED | WS_EX_TRANSPARENT
         }
-
-        // Win32 constants and interop
-        private const int GWL_EXSTYLE = -20;
-        private const int WS_EX_TRANSPARENT = 0x00000020;
-        private const int WS_EX_TOOLWINDOW = 0x00000080;
-
-        [DllImport("user32.dll")]
-        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-        [DllImport("user32.dll")]
-        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
     }
 }

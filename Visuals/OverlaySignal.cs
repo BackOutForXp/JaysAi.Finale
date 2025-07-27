@@ -1,4 +1,4 @@
-﻿// Neural v3.0 — OverlaySignal.cs
+﻿// Neural v3.1 — OverlaySignal.cs
 using System;
 
 namespace JaysAi.Finale.Overlay
