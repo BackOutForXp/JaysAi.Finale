@@ -2,7 +2,7 @@
 using System.Windows;
 using SkiaSharp;
 
-namespace JaysAi.Finale.Utility
+namespace JaysAi.Finale.Utilit
 {
     public static class ScreenHelper
     {
